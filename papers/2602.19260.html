@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>The Price Is Not Right: Neuro-Symbolic Methods Outperform VLAs on Structured Long-Horizon Manipulation Tasks with Significantly Lower Energy Consumption - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>The Price Is Not Right: Neuro-Symbolic Methods Outperform VLAs on Structured Long-Horizon Manipulation Tasks with Significantly Lower Energy Consumption</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.19260" target="_blank" rel="noreferrer">2602.19260</a></span>
+        <span>作者: Matthias Scheutz Team</span>
+        <span>日期: 2026-02-22</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-行动模型因其能够融合自然语言指令与视觉输入来生成机器人操作动作，被视为实现通用机器人策略的一条有前景的路径。然而，这类端到端的基础模型在结构化、长视野的机器人操作任务上的有效性、泛化能力以及计算和能源成本仍不明确。本文针对这一痛点，对经过微调的开源VLA模型与一种结合了基于PDDL的符号规划和学习的底层控制的神经符号架构进行了头对头的实证比较。核心思路是：在模拟的汉诺塔操作任务上，系统性地评估两种范式在任务性能、泛化能力和能源消耗方面的表现，以揭示在结构化长视野操作任务中，显式结合符号推理的神经符号方法相比端到端VLA模型所具有的潜在优势。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文比较了两种主要方法：基于微调开源模型 <code>π_0</code> 的VLA方法，以及一种从演示中学习符号抽象和神经技能的神经符号模型。</p>
+<p><strong>1. VLA方法</strong>：采用 <code>π_0</code> 模型，使用LoRA进行微调。输入为来自静态摄像头和腕部摄像头的RGB图像、本体感知状态以及自然语言指令。模型输出为7维的机器人末端执行器动作。本文评估了其两种配置：</p>
+<ul>
+<li><strong>端到端VLA</strong>：接收高级指令“Play Towers of Hanoi”，必须从数据中隐式推断任务结构和约束，直接输出底层动作。</li>
+<li><strong>规划器引导VLA</strong>：接收由外部规划器（如VLM）分解后的子任务指令序列（例如“Pick the blue block”），旨在将规划与执行分离，以评估其纯执行性能。</li>
+</ul>
+<p><strong>2. 神经符号方法</strong>：该方法遵循一个分层的“任务与运动规划”流程，其核心创新在于完全从少量演示中自动学习符号规划域和底层技能，无需手动指定规则。</p>
+<ul>
+<li><strong>符号抽象</strong>：从原始演示轨迹中提取节点转换，构建状态转换图，并通过基于ASP的求解器自动推断出一个PDDL形式的符号规划域 <code>σ = ⟨ℰ, ℱ, 𝒪⟩</code>。这包括实体集合、谓词集合和操作符集合。</li>
+<li><strong>物体检测</strong>：为了与VLA的输入模态公平对比，NSM同样只使用图像和本体感知数据。它训练一个YOLOv8检测器结合回归器，从双摄像头视图估计3D物体姿态，进而计算末端执行器与目标物体之间的相对位姿，作为策略的输入。</li>
+<li><strong>技能学习</strong>：每个符号操作符 <code>o_i ∈ 𝒪</code> 关联一个神经技能 <code>π_i</code>。每个技能进一步分解为多个动作步骤子策略 <code>π_{i,j}</code>，并学习终止条件。策略使用扩散模型进行训练，以捕捉动作的多模态分布。</li>
+<li><strong>执行流程</strong>：在测试时，用户指定初始状态和目标状态，系统将其转化为PDDL规划问题 <code>T = ⟨ℰ, ℱ, 𝒪, s_0, s_g⟩</code>。一个经典规划器（如Metric-FF）生成一个符号操作符序列计划 <code>𝒫 = [o_1, …, o_{|𝒫|}]</code>。随后，机器人依次执行每个操作符对应的神经技能 <code>π_i</code>，直至完成整个任务。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.19260v1/figures/overview_vertical.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：VLA模型与神经符号模型的实验对比概览。两者接收相同的模拟感官输入。VLA模型根据高级任务描述或规划器指导生成动作，而NSM则进行符号规划并通过学习到的策略执行。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>基准测试</strong>：在Robosuite仿真环境中设计了汉诺塔操作任务变体，包括：(1) 单次移动；(2) 3块汉诺塔；(3) 4块汉诺塔。任务要求遵守“大块不能放在小块上”的规则。</li>
+<li><strong>对比方法</strong>：<ul>
+<li>E2E-VLA：端到端VLA。</li>
+<li>PG-VLA：规划器引导VLA（使用最优计划，以隔离规划质量的影响）。</li>
+<li>NSM：神经符号模型。</li>
+</ul>
+</li>
+<li><strong>评估指标</strong>：任务成功率、任务推进率（完成子任务的百分比）、单次尝试能耗、训练能耗。</li>
+</ul>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><p><strong>任务性能</strong>：</p>
+<ul>
+<li><strong>单次移动</strong>：NSM成功率高达99%，E2E-VLA为87%，PG-VLA仅为59.6%。</li>
+<li><strong>3块汉诺塔</strong>：NSM成功率为95%，任务推进率97.3%；E2E-VLA成功率为34%，推进率49.6%；PG-VLA成功率为0%，推进率23.9%。</li>
+<li><strong>4块汉诺塔（泛化）</strong>：NSM成功率为78%，推进率84.4%；两种VLA模型均完全失败（成功率为0%）。</li>
+</ul>
+</li>
+<li><p><strong>能源消耗</strong>：</p>
+<ul>
+<li><strong>训练阶段</strong>：VLA模型的LoRA微调耗时约1.5天，而NSM训练仅需34分钟。VLA微调的总能耗（约65 MJ）比NSM训练（0.85 MJ）高出近两个数量级。</li>
+<li><strong>推理/执行阶段</strong>：由于VLA需要GPU进行推理，其执行单次任务的总功率（<del>115 W）远高于仅使用CPU的NSM（</del>19 W）。结合更长的任务执行时间，VLA完成单次3块汉诺塔任务的能耗（<del>7.96 kJ）比NSM（</del>0.83 kJ）高出一个数量级。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.19260v1/figures/agent_and_wrist_images.png" alt="数据集观察示例"></p>
+<blockquote>
+<p><strong>图2</strong>：数据集中观察示例。左图：智能体视角RGB图像。右图：腕部摄像头RGB图像。</p>
+</blockquote>
+<ol start="3">
+<li><strong>消融实验与分析</strong>：<ul>
+<li><strong>规划性能</strong>：论文还评估了GPT-5、Qwen和PaliGemma等VLM为汉诺塔任务生成规划的能力。结果表明，即使使用强大的VLM生成规划，PG-VLA的执行性能仍然很差，说明瓶颈主要在于VLA模型对长视野、结构化动作序列的执行能力，而非规划质量。</li>
+<li><strong>数据效率</strong>：NSM仅从50个简单的“堆叠”任务演示中学习符号域和技能，就能推广到更复杂的汉诺塔任务。而VLA模型虽然在包含完整汉诺塔解决的300条轨迹上训练，但其性能仍不理想，显示出在从演示数据中隐式学习结构化约束方面的低效性。</li>
+</ul>
+</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>实证对比</strong>：首次对VLA与神经符号方法在结构化长视野操作任务上进行了系统的头对头比较，揭示了后者在任务成功率、泛化能力和能源效率方面的显著优势。</li>
+<li><strong>能源成本量化</strong>：明确测量并报告了VLA模型在微调和执行过程中巨大的能源消耗，为评估机器人AI方法的可持续性提供了重要维度。</li>
+<li><strong>方法验证</strong>：强化了从演示中自动学习符号抽象与神经技能的神经符号框架的有效性，证明其能够以极高的数据效率和能源效率处理复杂任务。</li>
+</ol>
+<p><strong>局限性</strong>：本文工作主要在模拟环境中进行，任务领域（汉诺塔）具有明确、离散的结构化规则。VLA在更开放、非结构化的真实世界任务中的潜力未被探索。此外，NSM依赖于从演示中提取符号抽象，其可扩展性至极其复杂或定义模糊的领域仍有待研究。</p>
+<p><strong>后续启示</strong>：研究表明，对于具有清晰逻辑结构的长期任务，纯粹依赖数据驱动的端到端VLA模型可能并非最优选择。将符号推理的严谨性、可解释性与神经网络在连续控制中的灵活性相结合的神经符号方法，提供了一条更高效、更可靠的路径。未来的通用机器人系统可能需要采用混合架构，根据任务特性动态选择或融合不同的推理与执行范式。同时，能源消耗应成为机器人算法评估的关键指标之一。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对结构化长视野操作任务，比较了视觉-语言-动作模型与神经符号方法的性能与能效。核心问题是评估VLA模型在此类任务中的有效性与效率。研究方法上，对比了微调的开源VLA模型与一种结合PDDL符号规划和扩散低层控制的神经符号架构。实验基于模拟的汉诺塔任务。核心结论显示，在3块任务中，神经符号方法成功率高达95%，远优于最佳VLA的34%；在4块新任务中，神经符号方法仍保持78%成功率，而VLA完全失败。此外，VLA微调的能耗比神经符号方法高出近两个数量级。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.19260" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

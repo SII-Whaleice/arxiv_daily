@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>HeRO: Hierarchical 3D Semantic Representation for Pose-aware Object Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>HeRO: Hierarchical 3D Semantic Representation for Pose-aware Object Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.18817" target="_blank" rel="noreferrer">2602.18817</a></span>
+        <span>作者: Shuaicheng Liu Team</span>
+        <span>日期: 2026-02-21</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人模仿学习领域的主流方法已从基于2D图像的策略发展为显式编码几何的3D表示。其中，3D扩散策略（DP3）等方法通过处理点云来更好地捕获空间关系。然而，这些纯几何策略通常缺乏显式的部件级语义理解，这在姿态感知操作（例如，区分鞋子的“鞋头”和“鞋跟”）中至关重要。G3Flow等工作尝试用基础模型特征丰富3D表示，但其产生的整体性语义表示可能导致不同部件级别的语义变得难以区分，限制了在需要精细部件感知的任务中的性能。</p>
+<p>本文针对现有3D方法在姿态感知操作中缺乏细粒度、空间一致的部件级语义表示这一痛点，提出了一个新的视角：通过构建分层语义场来耦合几何与语义。其核心思路是，首先融合来自DINOv2和Stable Diffusion的互补视觉特征，构建稠密且具有判别性的3D语义场；然后，设计一个置换不变的分层条件模块，利用全局和局部语义场来指导扩散策略，从而生成精确、姿态感知的操作动作。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>HeRO框架通过一个两阶段流程生成精确的、姿态感知的操作动作，整体框架如图3所示。</p>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/pipeline.png" alt="方法概述"></p>
+<blockquote>
+<p><strong>图3</strong>：方法整体框架。(a) 密集语义提升：从序列帧中跟踪物体6D姿态，并将来自DINOv2和Stable Diffusion的融合2D特征提升为以物体为中心的稠密语义点云。(b) 分层条件模块：将该点云抽象为分层的物体部件点云，并通过两条路径对扩散策略进行条件控制：作为动作去噪器的全局条件，以及通过置换不变的精炼模块在每个去噪步骤注入的细粒度局部指导。</p>
+</blockquote>
+<p><strong>1. 密集语义提升 (Dense Semantic Lifting)</strong><br>该模块旨在为几何点云注入稠密的语义特征。输入是RGB-D观测序列，输出是全局语义场 ℱᴳ 和一组局部语义场 ℱᴸ。</p>
+<ul>
+<li><strong>特征提取</strong>：对于首帧 RGB 图像 I₀，并行提取两种互补特征：DINOv2提供的具有判别性、细粒度的视觉特征 f_dino，以及Stable Diffusion（连接其第2、5、8层特征）提供的具有全局语义一致性的先验特征 f_sd。</li>
+<li><strong>特征融合</strong>：首先对两种特征进行PCA降维至共同维度d，然后通过可学习的权重α和β进行加权融合：f_fused = α f’_dino + β f’_sd。</li>
+<li><strong>3D提升</strong>：将物体点云 𝒫₀（通过最远点采样下采样至1024个点）中的每个点投影到图像平面，并通过双线性插值采样对应的融合特征f_i，构建初始全局语义场 ℱ₀ᴳ = {(p_i⁽⁰⁾, f_i)}。</li>
+<li><strong>时序传播</strong>：通过跟踪物体6D位姿轨迹 Φ_t = (R_t, t_t)，对点云位置进行刚性变换（语义特征保持不变），从而在整个操作序列中维持语义场的时空一致性，得到完整的 ℱᴳ = {ℱ_tᴳ}。</li>
+</ul>
+<p><strong>2. 分层条件模块 (Hierarchical Conditioning Module, HCM)</strong><br>该模块负责将构建的语义场转化为扩散策略的条件，其架构如图4所示。它包含全局条件和局部条件两条路径。</p>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/network.png" alt="分层条件模块架构"></p>
+<blockquote>
+<p><strong>图4</strong>：分层条件模块架构。采用双路径设计指导动作去噪器。全局路径将整个点云处理为单一的全局条件以提供高层上下文。局部路径将点云划分为语义部件，由置换不变的精炼器编码为一组细粒度嵌入。这些局部条件被注入去噪器，使生成的动作兼具全局一致性和局部精确性。</p>
+</blockquote>
+<ul>
+<li><strong>局部场构建</strong>：在每个时间步t，将全局语义场 ℱ_tᴳ 分解为K=8个局部语义场 ℱ_tᴸ = {ℱ_tᴸ,ᵏ}。具体方法是将点的坐标与语义特征拼接后，沿第一主成分（通常对应物体的主要伸长轴）排序并均匀划分，从而获得空间和语义连贯的物体区域。</li>
+<li><strong>全局条件</strong>：整合三种特征流形成全局条件向量 f_t^global：1) 场景特征 f_t^g：使用PointNet编码 ℱ_tᴳ；2) 机器人特征 f_t^r：使用MLP编码机器人关节状态；3) 部件特征 f_t^p：分别编码每个局部场后聚合。三者拼接后为扩散去噪器提供全面的上下文。</li>
+<li><strong>置换不变部件条件</strong>：局部场 ℱ_tᴸ 是无序集合（例如，ℱ_tᴸ,¹ 在不同鞋子上可能对应“鞋头”或“鞋跟”）。为避免引入顺序敏感偏差，设计了置换不变的处理流程：1) <strong>部件特征提取</strong>：使用PointNet编码每个局部场，得到部件特征集合 F_t^p；2) <strong>部件间推理</strong>：对 F_t^p 施加无位置编码的自注意力，实现部件间信息交换；3) <strong>交叉注意力条件注入</strong>：将精炼后的部件特征通过交叉注意力层注入扩散U-Net，其中U-Net特征作为查询，部件特征作为键和值。</li>
+</ul>
+<p><strong>3. 扩散策略学习</strong><br>基于条件扩散模型训练动作生成策略。网络 ε_θ 以加噪的动作 a_t、扩散时间步 t 以及从HCM提取的所有条件特征 c_i 为输入，预测噪声 ε。损失函数为标准去噪分数匹配损失。</p>
+<p><strong>核心创新点</strong>：1) <strong>互补特征融合</strong>：首次在机器人操作中融合DINOv2的判别性特征与Stable Diffusion的全局一致性特征，构建了既精细又连贯的3D语义场。2) <strong>分层与置换不变条件</strong>：提出了全局与局部相结合的分层条件机制，并针对局部部件的无序性设计了置换不变的条件注入方式，克服了整体全局条件缺乏部件细节的局限。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>任务与基准</strong>：在RoboTwin 2.0基准的六个挑战性姿态感知任务上进行评估（如图5所示），包括放置双鞋、扫描物体、挂杯子、放置手机支架、拾取多样瓶子和放置物体秤。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/simulated_experiments_tasks.png" alt="模拟操作任务"></p>
+<blockquote>
+<p><strong>图5</strong>：模拟操作任务。在RoboTwin 2.0基准的六个挑战性任务上评估我们的方法。这些任务需要精确的位姿估计和对物体部件语义的细致理解才能成功交互。</p>
+</blockquote>
+<ul>
+<li><strong>对比基线</strong>：Diffusion Policy (DP), 3D Diffusion Policy (DP3), DP3 w/ color, G3Flow。</li>
+<li><strong>平台</strong>：模拟实验在RoboTwin 2.0环境中进行；真实世界实验使用配备RealSense D435i相机的AgileX Cobot Magic双臂机器人（如图6）。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/real_world_setup.png" alt="真实世界实验设置"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界实验设置。我们的实验装置由一个配备RealSense D435i头戴式相机的AgileX Cobot Magic双臂机器人组成。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>标准基准性能</strong>：如表I所示，HeRO在六个任务上取得了32.3%的平均成功率，达到了新的SOTA性能，比之前的最佳方法G3Flow平均高出6.5%。在最具挑战性的“放置双鞋”任务上，HeRO的成功率达到33.0%，比G3Flow（20.7%）显著提升了12.3%。</li>
+<li><strong>泛化到未见物体</strong>：在跨物体泛化测试中（训练集与测试集物体不同），HeRO同样以24.4%的平均成功率领先，比G3Flow（17.7%）高出6.7%。特别是在“放置双鞋”任务上，优势达到12%。</li>
+<li><strong>真实世界验证</strong>：如表III所示，在真实机器人上，HeRO在三个任务上的平均成功率为26.7%，优于DP3（6.7%）和G3Flow（16.7%）。</li>
+</ol>
+<p><strong>定性结果与消融分析</strong>：<br>图7展示了策略执行的定性对比。在“放置双鞋”任务中，G3Flow执行了错误的旋转导致失败，而HeRO实现了正确对齐。在“挂杯子”任务中，G3Flow未能将杯柄对准挂钩，而HeRO凭借其细粒度语义表征成功完成了任务。</p>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/task_visualization.png" alt="策略执行定性对比"></p>
+<blockquote>
+<p><strong>图7</strong>：策略执行的定性比较。对于放置双鞋（左），G3Flow执行了错误的旋转导致任务失败，而我们的方法实现了正确对齐。对于挂杯子（右），G3Flow未能将杯柄与架子对齐。相比之下，我们策略的细粒度语义表征实现了精确的杯柄定向和成功的任务完成。</p>
+</blockquote>
+<p>图8通过特征可视化说明了HeRO语义表示的质量。与G3Flow相比，HeRO生成的语义场在物体不同部件（如鞋头、鞋跟）上表现出更高的区分度和空间一致性。</p>
+<p><img src="https://arxiv.org/html/2602.18817v1/figs/semantics_visualization.png" alt="语义可视化"></p>
+<blockquote>
+<p><strong>图8</strong>：语义可视化。与基线G3Flow相比，我们的密集语义场更平滑、更一致。</p>
+</blockquote>
+<p><strong>消融实验总结</strong>：论文通过消融实验验证了各核心组件的贡献。结果表明：（1）同时使用DINOv2和Stable Diffusion特征比单独使用任一特征性能更优；（2）分层条件机制（同时使用全局和局部条件）显著优于仅使用全局条件；（3）置换不变的局部条件注入方式优于使用位置编码或简单拼接的方式。这些实验共同证明了所提出的密集语义提升和分层条件模块的有效性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了HeRO框架，通过密集语义提升模块，融合DINOv2和Stable Diffusion的互补特征，构建了兼具几何精确性和语义一致性的细粒度3D语义场。</li>
+<li>设计了一种用于扩散策略的分层条件模块（HCM），该模块通过全局上下文和一组置换不变的部件感知特征来共同指导动作生成，克服了整体全局条件的局限性。</li>
+<li>在模拟和真实世界的多种挑战性姿态感知操作任务上进行了广泛验证，证明了该方法建立了新的技术水平，并展示了优异的泛化能力。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，该方法依赖于现成的视觉基础模型（DINOv2, Stable Diffusion）和6D物体姿态估计器（FoundationPose）。这些组件的性能瓶颈可能会影响整个系统的鲁棒性。此外，当前方法主要处理刚性物体操作。</p>
+<p><strong>启示</strong>：HeRO的工作表明，将不同基础模型的互补优势（局部判别性与全局一致性）结合，是构建更强大机器人感知表征的有效途径。其分层、置换不变的条件机制为如何在生成模型中有效集成结构化、非顺序的语义信息提供了范例。未来研究可以探索更高效的语义场构建方式，或将此框架扩展到非刚性物体和更复杂的交互任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人模仿学习中纯几何策略缺乏部件级语义理解的问题，提出HeRO方法。该方法通过分层语义场耦合几何与语义，关键技术包括：利用密集语义提升融合DINOv2的几何敏感特征与Stable Diffusion的全局一致特征，构建全局与局部语义场；采用置换不变网络的分层条件模块调节扩散去噪器，生成姿态感知操作策略。实验表明，HeRO在放置双鞋任务上成功率提升12.3%，在六项挑战性任务上平均提升6.5%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.18817" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

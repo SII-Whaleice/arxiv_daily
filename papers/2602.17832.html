@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MePoly: Max Entropy Polynomial Policy Optimization - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>MePoly: Max Entropy Polynomial Policy Optimization</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.17832" target="_blank" rel="noreferrer">2602.17832</a></span>
+        <span>作者: Maani Ghaffari Team</span>
+        <span>日期: 2026-02-19</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>随机最优控制为解决复杂决策问题提供了统一的数学框架，涵盖了最大熵强化学习和模仿学习等范式。然而，传统的参数化策略（如高斯策略）难以表示解决方案的多模态特性。基于扩散的策略旨在恢复多模态，但缺乏显式的概率密度，这使得策略梯度优化变得复杂。本文针对这一痛点，提出了一种新的策略参数化方法MePoly，其核心思路是：基于多项式能量模型构建一个具有显式、易处理概率密度的策略族，从而实现精确的熵最大化，并有效捕捉复杂的非凸流形。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>MePoly的整体框架根据任务类型（强化学习RL或模仿学习IL）有所不同。在RL中，策略网络直接输出多项式分布的自然参数λ_ϕ(s)，策略π_ϕ(a|s)即由此参数化的能量模型。在IL中，为处理高维动作序列，采用了两阶段方法：第一阶段使用变分自编码器学习轨迹的紧凑潜表示z；第二阶段在潜空间z上，使用MePoly作为先验策略π_ϕ(z|s)进行学习。</p>
+<p>其核心模块是基于多项式能量模型的策略参数化。策略被定义为与能量函数E_ϕ(s, a)相关的吉布斯-玻尔兹曼分布：π_ϕ(a|s) = exp(-E_ϕ(s, a)) / ∫exp(-E_ϕ(s, a)) da。能量函数被结构化为一个多项式：E_ϕ(s, a) = -⟨λ_ϕ(s), T(a)⟩，其中T(a)是定义在动作a上的特征向量（多项式基函数），λ_ϕ(s)是由神经网络预测的自然参数。通过包含交叉项，该公式自然地构建了一个联合分布。</p>
+<p><img src="https://arxiv.org/html/2602.17832v1/fig/cover.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：策略参数化的概念性比较。在非凸动作流形上：(A) 单峰高斯将质量集中在单一均值周围，表达能力有限且易发生模式坍塌。(B) 扩散模型可以通过迭代采样表示复杂支撑集，但缺乏易处理的似然函数且需要多步生成。(C) MePoly产生了一个表达能力强的显式密度，可以贴合流形，同时保留可用于学习的易处理的对数概率和熵。</p>
+</blockquote>
+<p>具体实现中，为提高数值稳定性，并未使用标准单项式基，而是采用了正交的勒让德多项式基。其L²正交性解耦了自然参数λ_ϕ(s)，使得不同阶次能捕捉不同的频率分量，起到了谱正则化的作用，能产生更平滑的能量景观。</p>
+<p>该方法的关键创新在于提供了显式密度和可计算的熵。通过将动作归一化到紧凑域a ∈ [-1, 1]^{n_a}，配分函数A(λ_ϕ(s)) = log ∫ exp(⟨λ_ϕ(s), T(a)⟩) da的积分是有限且可处理的，可以通过数值求积法稳定计算。这使得精确的对数概率log π(a|s)和熵ℋ(π) = -𝔼[log π]能够被直接用于最大熵和KL正则化目标中，实现稳定的策略优化。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在多个基准上进行评估：1）SmoothWorld导航任务（2D连续空间）；2）Bandit任务（评估复杂分布建模能力）；3）Manipulation任务（高维机械臂操作）。</p>
+<p>对比的基线方法包括：对于RL任务，对比了PPO（高斯策略）、PPO（高斯混合模型GMM）以及基于流匹配的策略（FPO）；对于IL任务，主要对比了当前基准方法Diffusion Policy。</p>
+<p>关键实验结果如下：在SmoothWorld多模态导航任务中，MePoly在成功率上优于所有基线，例如在“Slit”环境中，MePoly的成功率为98.6%，而PPO-GMM为83.2%，提升了15.4%。更重要的是，如图2所示，MePoly能产生覆盖多个可行路径类别（如不同目标和绕行路线）的多样化轨迹，而基线方法常常坍塌到单一模式或无法表示有效的替代方案。</p>
+<p><img src="https://arxiv.org/html/2602.17832v1/fig/fig-smoothworld-comp.png" alt="轨迹样本对比"></p>
+<blockquote>
+<p><strong>图2</strong>：多模态导航任务上的轨迹样本。MePoly能持续产生多样、不同的可行路线，覆盖多个类别（如不同目标和穿过缝隙/绕过障碍物的路径），而基线方法在高度非凸环境中常坍塌到单一模式或无法表示其他有效解决方案。</p>
+</blockquote>
+<p>在Bandit任务中，MePoly被用于拟合一个复杂的双纽线分布。如图4所示，MePoly生成的样本紧密遵循底层弯曲的支撑集并保持了全局拓扑结构。相比之下，基线方法（高斯、GMM、FPO）无法捕捉非凸和多模态结构，导致显著的几何失配，并坍塌为单峰或碎片化的近似。</p>
+<p><img src="https://arxiv.org/html/2602.17832v1/fig/fig-bandit-comp.png" alt="样本质量对比"></p>
+<blockquote>
+<p><strong>图4</strong>：样本质量比较。MePoly生成的样本紧密遵循底层弯曲的支撑集并保持全局拓扑。基线方法则无法捕捉非凸和多模态结构，导致几何失配并坍塌为单峰或碎片化近似。</p>
+</blockquote>
+<p>消融实验验证了使用正交基（勒让德多项式）的重要性。如图3右侧所示，使用标准多项式基时，样本明显更模糊且保真度更低。而使用勒让德基（左侧）则能随着多项式阶数K的增加，渐近地逼近目标样本分布，验证了其理论上的通用逼近能力。</p>
+<p><img src="https://arxiv.org/html/2602.17832v1/fig/fig-bandit-abla.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图3</strong>：消融实验。左侧显示MePoly（使用勒让德基）随阶数增加渐近逼近样本分布。右侧使用标准多项式基，样本明显更模糊、保真度更低，表明正交基对稳定准确的流形逼近至关重要。</p>
+</blockquote>
+<p>在Manipulation任务中，MePoly在性能上与Diffusion Policy相当，但推理速度显著更快（单步前向传递 vs. 多步去噪）。如图5所示，在模拟的机械臂插孔任务中，MePoly实现了与Diffusion Policy相近的高成功率。</p>
+<p><img src="https://arxiv.org/html/2602.17832v1/fig/fig-maniskill.png" alt="机械臂操作结果"></p>
+<blockquote>
+<p><strong>图5</strong>：机械臂操作任务（插孔）的成功率对比。MePoly与Diffusion Policy性能相当，但推理速度更快。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）提出了一个基于多项式最大熵分布的、具有通用逼近能力的策略类，为连续控制中的多模态策略学习提供了新的参数化视角。2）该策略提供了显式的概率密度，支持精确、易处理的对数似然和熵计算，使其能够无缝集成到需要这些量的最大熵和KL正则化目标中。3）通过数值求积和离散CDF采样，实现了高效的单步采样，适合高频控制回路，并在多个基准上实证了其在表达性和缓解模式坍塌方面的优势。</p>
+<p>论文提到的局限性包括：多项式阶数K的选择需要在表达能力和计算成本之间权衡；对于非常高维的动作空间，尽管通过潜空间压缩可以缓解，但多项式基的数量会随维度和阶数组合增长，可能面临计算挑战。</p>
+<p>这项工作对后续研究的启示在于：它展示了将经典的最大熵原理与具有理论保证的显式密度模型相结合的有效性。未来可以探索更高效的基函数（如稀疏网格）以扩展到更高维度，或研究将MePoly与模型预测控制（MPC）结合，利用其可处理的密度进行实时、基于推理的规划。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对随机最优控制中传统参数化策略难以表示多模态解、而扩散基策略缺乏显式概率密度导致优化复杂的问题，提出MePoly方法。该方法基于多项式能量基模型进行策略参数化，提供显式易处理的概率密度，实现精确熵最大化，并利用矩问题的理论保证通用逼近能力。实验表明，MePoly能有效捕获复杂非凸流形，在多个基准测试中性能优于基线。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.17832" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Enhancing Goal Inference via Correction Timing - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Enhancing Goal Inference via Correction Timing</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.18603" target="_blank" rel="noreferrer">2602.18603</a></span>
+        <span>作者: Tesca Fitzgerald Team</span>
+        <span>日期: 2026-02-20</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在交互式机器人学习领域，当机器人执行任务时，人类可以通过物理干预来纠正机器人的运动，这是一种高效且直观的反馈形式。现有从纠正中学习的工作主要将纠正视为新的演示（由修改后的机器人行为组成）或偏好（相对于原始行为更偏好修改后的轨迹）。然而，这些方法忽略了一个基本要素：人类决定干预机器人行为的时机本身。这个决策受到多种因素的影响，包括机器人的任务进度、与人类期望的对齐程度、动态特性、运动可读性和最优性等。本文旨在探究纠正时机这一决策信号是否能为推断这些与任务相关的影响因素提供有用信息。具体而言，本文研究了纠正时机信号在三个潜在应用中的价值：(1) 识别可能促使人们进行纠正的机器人运动特征；(2) 基于纠正时机和初始方向，快速推断人类纠正的最终目标；(3) 学习更精确的任务目标约束。本文的核心思路是利用纠正时机信息来改进目标推断，尤其是在纠正刚开始时，结合时空线索进行更早、更准确的推断。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出了一种两阶段方法来建模和利用人类纠正时机以改进机器人学习。第一阶段训练一个基于Transformer的时机预测模型，用于分析机器人运动的哪些特征会引发人类干预。第二阶段训练一个目标推断模型，整合纠正的空间（<code>s_c</code>）和时间（<code>t_c</code>）特征来推断目标分布 <code>P(g | ξ, t_c, s_c)</code>，并与仅使用空间信息的基线 <code>P(g | ξ, s_c)</code> 进行比较，以评估时机信息的价值。</p>
+<p><img src="https://arxiv.org/html/2602.18603v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：人类干预示意图。机器人在执行预规划轨迹 ξ 时，人类在时刻 <code>t_c</code> 进行干预，产生纠正轨迹 <code>c</code>。时机信息由 <code>t_c</code> 表示，空间信息包括抓取位置 <code>c_p</code>、初始纠正方向 <code>c_p&#39;</code> 和释放位置 <code>c_l</code>。</p>
+</blockquote>
+<p><strong>第一阶段：预测纠正时机</strong><br>首先，从机器人预规划轨迹 <code>ξ</code> 和目标 <code>g</code> 中提取七类时间序列特征，这些特征基于先前研究与人类感知和干预决策的关联。这些特征包括：</p>
+<ul>
+<li><strong>期望对齐特征</strong>：计算当前速度与基于PID控制器生成的最优参考速度的余弦相似度（F1），以及当前位置与最优下一位置的欧氏距离（F2）。还计算了当前速度与直接指向目标的方向向量的余弦相似度（F3）。</li>
+<li><strong>动态相关特征</strong>：运动一致性（F4），即当前速度与前一时刻速度的余弦相似度。</li>
+<li><strong>任务性能相关特征</strong>：基于 Dragan 等人工作的可读性分数（F5）；到目标的距离所表示的任务进度（F6）；以及基于Boltzmann理性模型、以路径效率定义的“最优性”比率（F7）。</li>
+</ul>
+<p>模型输入是将轨迹 <code>ξ</code> 转换为一个特征序列 <code>Φ(ξ, g) ∈ ℝ^(T×7)</code>。采用Transformer编码器架构处理这一序列数据，以捕捉非马尔可夫性的纠正决策。模型输出是一个累积分布函数序列 <code>P_CDF(t) = P(t_c ≤ t | ξ, g)</code>，表示在给定轨迹和目标的条件下，在或早于时间步 <code>t</code> 发生纠正的概率。通过差分得到概率密度函数 <code>P(t | ξ, g)</code>，用于后续推断。</p>
+<p><strong>第二阶段：增强目标推断</strong><br>本文定义了三种模型来推断代表机器人对目标位置估计的目标分布 <code>P(g | ·)</code>：</p>
+<ol>
+<li><strong>WHERE模型（基线）</strong>：仅使用纠正的空间信息。对于<strong>RQ2（从纠正开始时推断）</strong>，模型使用抓取位置 <code>c_p</code> 和初始速度 <code>c_p&#39;</code>。它首先通过一个多层感知机预测释放位置 <code>c_l</code>，然后使用一个高斯混合模型建模 <code>P_GMM(c_l | g)</code>，最终近似得到 <code>P(g | c_p, c_p&#39;)</code>。对于<strong>RQ3（从纠正结束时推断）</strong>，模型直接使用观测到的释放位置 <code>c_l</code> 和GMM得到 <code>P(g | c_l)</code>。</li>
+<li><strong>WHEN模型</strong>：仅使用纠正时机信息 <code>t_c</code>。根据贝叶斯规则，在假设目标先验均匀分布的条件下，有 <code>P(g | t_c, ξ) ∝ P(t_c | g, ξ)</code>，其中似然项来自第一阶段的时机预测模型。</li>
+<li><strong>COMBINED模型</strong>：整合时空信息。对于RQ2，模型结合WHEN模型的时机似然和WHERE模型（基于起始信息）的空间似然：<code>P(g | t_c, c_p, c_p&#39;, ξ) ∝ P(t_c | g, ξ) * P_GMM(MLP(c_p, c_p&#39;) | g)</code>。论文还引入了加权版本 <code>P_w(g | ·)</code>，通过超参数 <code>α ∈ [0,1]</code> 调整时机与空间信息的相对权重。对于RQ3，模型结合时机信息和基于释放位置 <code>c_l</code> 的空间信息。</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验使用了先前用户研究收集的数据集，包含 <code>N=120</code> 名参与者，总计 7,435 个交互片段和 3,585 条纠正轨迹。机器人执行拾取-放置任务，参与者可随时干预纠正。评估采用离线方式。</p>
+<p><strong>时机预测模型分析（RQ1）</strong><br>通过特征消融实验评估各特征对预测人类干预时机的重要性。使用F1分数（精确率和召回率的调和平均数）作为评估指标。</p>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/F1_all.png" alt="特征消融实验F1分数"></p>
+<blockquote>
+<p><strong>图3</strong>：不同特征组合下时机预测模型的F1分数。包含所有特征的完整模型（紫色）性能最佳（F1=0.71），显著优于仅使用任务进度（F6，绿色，F1=0.64）或最优性（F7，橙色，F1=0.66）的模型。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/prediction_ratio_all.png" alt="预测比率与真实纠正时间关系"></p>
+<blockquote>
+<p><strong>图4</strong>：模型预测的纠正概率密度与真实纠正时间的关系图。模型预测的PDF峰值（红色虚线）与人类实际纠正时间的分布（蓝色直方图）基本吻合，表明模型能够捕捉人类干预的典型时机。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/f1_boxplots_by_tr.png" alt="不同轨迹类型下的F1分数"></p>
+<blockquote>
+<p><strong>图6</strong>：在不同预规划轨迹类型下，完整时机预测模型的F1分数箱线图。模型在所有轨迹类型上均表现稳定，F1中位数在0.7左右，表明其泛化能力。</p>
+</blockquote>
+<p>关键结果：包含所有七类特征的完整模型取得了最高的F1分数（0.71）。单独使用任务进度（F6）或最优性（F7）特征也取得了相对较好的性能（F1分别为0.64和0.66），但完整模型性能更优，表明人类干预决策是多种运动特征共同作用的结果。</p>
+<p><strong>目标推断评估（RQ2 &amp; RQ3）</strong><br>使用KL散度衡量推断出的目标分布 <code>P(g | ·)</code> 与真实目标分布 <code>P*(g)</code> 之间的差异，KL散度越低表示推断越准确。</p>
+<p><strong>RQ2结果（从纠正开始时推断目标）</strong>：比较WHERE（仅空间）、WHEN（仅时机）和COMBINED（时空结合）模型。</p>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/kld_tr_aggre_target.png" alt="从纠正开始时推断目标的KL散度"></p>
+<blockquote>
+<p><strong>图7</strong>：在推断目标位置的任务中，COMBINED模型（结合时空信息）的KL散度中位数最低，表现显著优于仅使用时机的WHEN模型和仅使用空间起始信息的WHERE模型。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/kld_tr_aggre_target_leaving.png" alt="从纠正开始时推断离开位置（中间目标）的KL散度"></p>
+<blockquote>
+<p><strong>图8</strong>：在推断纠正结束时的释放位置（作为中间目标）的任务中，COMBINED模型同样表现最佳，KL散度中位数最低。</p>
+</blockquote>
+<p>关键结果：COMBINED模型在推断最终目标和中间释放位置时，KL散度均显著低于WHERE和WHEN模型。这表明，在纠正刚开始、仅有起始位置和方向信息时，结合纠正时机信息能够显著提升目标推断的准确性。</p>
+<p><strong>RQ3结果（从纠正结束时推断目标）</strong>：此时WHERE模型直接使用真实的释放位置 <code>c_l</code>。</p>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/kld_mean_vs_alpha_tr80.png" alt="时空信息权重α对KL散度的影响"></p>
+<blockquote>
+<p><strong>图9</strong>：在利用纠正结束信息（<code>c_l</code>）推断目标时，KL散度均值随权重α变化的曲线。当α=0（即完全依赖空间信息）时性能最佳，加入时机信息（α&gt;0）反而导致KL散度上升。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.18603v1/goal_infer_paper/kld_tr_stacked.png" alt="从纠正结束时推断目标的KL散度对比"></p>
+<blockquote>
+<p><strong>图10</strong>：当拥有精确的纠正结束位置信息时，WHERE模型（仅空间）的KL散度已经非常低。COMBINED模型（α=0.5）与之相比没有显著优势，WHEN模型（仅时机）性能最差。</p>
+</blockquote>
+<p>关键结果：当已经获得纠正结束的精确空间信息（<code>c_l</code>）时，仅使用空间信息的WHERE模型已经能实现很低（中位数约0.02）的KL散度。结合时机信息（COMBINED模型）并未带来显著提升，甚至可能因引入噪声而降低性能。这表明，对于学习精确的任务目标约束，纠正结束时的空间信息已经足够，时机信息的增益有限。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了将人类纠正行为的“时机”作为一种独立且富含信息的学习信号的新视角，突破了以往工作仅关注纠正“空间”信息的局限；2) 通过系统的特征分析和建模，揭示了机器人运动特征（如期望对齐、任务进度、最优性）与人类干预决策之间的关联；3) 实证表明，纠正时机信息能够有效增强从纠正<strong>起始</strong>线索进行的早期目标推断，但在利用纠正<strong>结束</strong>信息进行精细目标约束学习时增益有限。</p>
+<p>论文提到的局限性包括：研究场景局限于桌面拾取-放置任务，且机器人轨迹是预定义的；实验为离线分析，未在线测试模型如何实时改善机器人学习性能。</p>
+<p>本工作对后续研究的启示在于：纠正时机反映了人类对机器人任务表现的内部评估阈值，可作为理解人类意图的补充信号。未来的工作可以探索在更复杂的任务和动态环境中利用时机信号，并研究如何将此时机预测模型集成到在线学习框架中，使机器人能主动预测干预需求或更早地调整其行为目标。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文研究如何利用人类纠正机器人的**时机**来增强目标推断。针对现有方法忽视纠正时机信号的问题，提出将**纠正时机**作为一种学习信号，用于快速推断任务目标及识别易引发纠正的机器人运动特征。实验结果表明，该方法在**目标推断**和**特征识别**两个应用上取得了改进的学习效果。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.18603" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

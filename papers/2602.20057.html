@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AdaWorldPolicy: World-Model-Driven Diffusion Policy with Online Adaptive Learning for Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>AdaWorldPolicy: World-Model-Driven Diffusion Policy with Online Adaptive Learning for Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.20057" target="_blank" rel="noreferrer">2602.20057</a></span>
+        <span>作者: Dong Xu Team</span>
+        <span>日期: 2026-02-23</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人操作需要策略能够在接触丰富且动态变化的环境中可靠地感知、预测和行动。当前主流方法主要包括两类：一是基于视觉-语言-动作的大规模预训练模型，它们需要大量人类演示数据，且在接触丰富的任务中难以泛化到未见或动态环境；二是基于世界模型的方法，它们能提供丰富的物理动态信息，但许多现有方法仅将世界模型用作离线评估的被动“数字孪生”，或采用离线训练策略，无法动态适应现实环境的变化。本文针对在动态场景下以最少人力投入充分挖掘世界模型潜力这一挑战，提出了一个新视角：将世界模型从被动预测器转变为主动监督者，并结合力-力矩反馈来缓解动态力变化。本文的核心思路是提出一个统一的多模态框架，通过世界模型提供监督信号，驱动一个包含动作专家和力预测器的扩散策略进行在线自适应学习，从而实现对视觉和物理域变化的快速闭环适应。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>AdaWorldPolicy是一个为新颖环境中反应式、自监督在线适应而设计的统一多模态框架。其核心是将世界模型、动作专家和力预测器三个模块协同集成在一个基于扩散的网络架构中。</p>
+<p><img src="https://arxiv.org/html/2602.20057v1/fig/awp-2_overall.drawio.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：AdaWorldPolicy的网络架构与工作流程。该框架建立在一个共享的多模态Transformer骨干网络上，协同集成了三个模块：用于视觉预测的世界模型、用于物理动态建模的力预测器以及用于策略生成的动作模型。所有模块均实现为流匹配扩散Transformer，并通过共享的多模态自注意力层进行交互。</p>
+</blockquote>
+<p><strong>整体框架与模块</strong>：框架包含三个并行组件，均采用流匹配扩散Transformer实现：</p>
+<ol>
+<li><strong>世界模型</strong>：基于预训练的Cosmos-Predict2构建，负责预测未来的视觉状态。</li>
+<li><strong>力预测器</strong>：一个轻量级DiT，扩展系统对物理动态的预测能力，预测未来的力-力矩读数。</li>
+<li><strong>动作模型</strong>：一个轻量级DiT，作为生成机器人动作的核心策略。</li>
+</ol>
+<p>这些模块通过多模态自注意力层相互连接，实现深度特征交换，同时保持各自独立的计算路径。整个框架以共享输入为条件，包括通过T5-XXL提取的文本嵌入、通过MLP提取的机器人状态向量以及扩散噪声水平，它们通过adaLN层注入到三个骨干网络中。</p>
+<p><strong>双模式操作</strong>：框架的运作模式由动作模型的输入角色决定，通过输入掩码实现“切换”：</p>
+<ul>
+<li><strong>模式 I：动作生成</strong>：动作令牌输入为纯噪声，其对应掩码设为零。模型根据给定观测去噪该令牌，生成动作序列。损失函数为基于流匹配的动作生成损失 ℒ₁。</li>
+<li><strong>模式 II：未来想象</strong>：提供一个已知的具体动作作为条件，其掩码设为全1。这使世界模型（和力预测器）能够基于该动作想象未来状态，预测未来观测。损失函数为未来想象损失 ℒ₂。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.20057v1/fig/awp-3_stages.drawio.png" alt="模式细节"></p>
+<blockquote>
+<p><strong>图3</strong>：统一模型在两种不同模式下的输入输出细节。模式I根据观测历史预测未来动作序列；模式II根据观测历史和真实动作序列预测未来观测序列。</p>
+</blockquote>
+<p><strong>联合训练</strong>：框架通过单个流匹配损失进行端到端训练。在训练期间，以概率 p_a 在动作生成模式和未来想象模式之间随机切换。总损失是两种模式损失的加权和：ℒ_total = p_a · L₁ + (1 - p_a) · L₂。</p>
+<p><strong>在线自适应学习</strong>：为了弥补离线预训练与真实世界域偏移之间的差距，本文提出了在线自适应学习策略。该策略在每次动作执行后形成一个紧密的闭环：</p>
+<ol>
+<li>动作生成：根据当前观测生成并执行动作。</li>
+<li>未来想象：基于相同观测和执行的动作，预测未来状态。</li>
+<li>损失与更新：利用真实未来状态与预测状态之间的差异计算损失（在VAE编码器的潜在空间中），该损失驱动网络参数的在线更新。</li>
+</ol>
+<p>为实现高效的在线适应，采用低秩自适应技术，仅更新一小部分（&lt;0.1%）可训练的低秩矩阵参数，显著降低了计算和内存开销。</p>
+<p><strong>创新点</strong>：与现有方法相比，本文的创新在于：1) 提出了一个深度集成的统一扩散框架，世界模型、动作模型和力预测器通过MMSA紧密交互；2) 世界模型不仅是预测器，更成为学习循环的一部分，其预测误差作为自监督信号来校正视觉和动态力偏移；3) 设计了双模式操作与AdaOL策略，实现了基于实时反馈的、轻量级的闭环在线适应。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>模拟基准</strong>：在三个多样化的模拟基准上进行评估（如<strong>图4</strong>所示）：<ol>
+<li><strong>LIBERO-10</strong>：测试长视野、组合技能。</li>
+<li><strong>Variant PushT</strong>：修改经典PushT任务，专门测试对背景纹理、随机时变光照和颜色的分布外鲁棒性，成功率通过IoU衡量。</li>
+<li><strong>CALVIN</strong>：使用ABC→D评估协议，测试跨域适应能力，要求机器人连续完成五个任务。</li>
+</ol>
+</li>
+<li><strong>真实世界设置</strong>：使用配备夹爪相机、腕部力-力矩传感器和静态第三方相机的6自由度机械臂。在清扫咖啡豆、放置鸡蛋、倒水和擦白板四个具有挑战性的长视野任务上进行评估，并引入了视觉和物理扰动作为域偏移。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.20057v1/fig/awp-4_benchmark.drawio.png" alt="模拟基准"></p>
+<blockquote>
+<p><strong>图4</strong>：实验中使用的模拟基准可视化：用于分布外鲁棒性的Variant PushT，用于长视野技能的LIBERO，以及用于跨域语言条件任务的CALVIN基准。</p>
+</blockquote>
+<p><strong>对比方法与关键结果</strong>：</p>
+<ol>
+<li><strong>LIBERO-10</strong>：如表1所示，基础AWP架构（无在线学习）在仅使用静态相机和全多模态输入两种设置下均取得了最先进的结果，成功率分别达到0.91和0.96，优于UVA、MODE等方法，证明了MMSA设计的优势。</li>
+<li><strong>Variant PushT</strong>：如表2所示，在视觉域偏移下，离线训练的AWP性能显著下降，而启用在线学习后，性能得到一致且大幅恢复。在线学习的AWP在所有具有挑战性的分布外场景中都是表现最好的方法。</li>
+<li><strong>CALVIN</strong>：如表3所示，基础AWP模型在长序列任务完成方面再次达到最先进水平。启用在线学习后提供了进一步的一致性能提升（约1%），证明了TTA策略的有效性。</li>
+<li><strong>真实世界实验</strong>：如<strong>图5</strong>所示，在存在光照、纹理、物体替换、白板倾斜等域偏移的复杂操作任务中，AdaWorldPolicy结合AdaOL策略能够成功完成任务，验证了其在实际动态环境中的有效性。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.20057v1/fig/awp-5_real.drawio.png" alt="真实实验"></p>
+<blockquote>
+<p><strong>图5</strong>：真实机器人评估概览。实验设置包括多模态传感的机械臂。在四个多样化操作任务上测试方法，并引入视觉和物理扰动来评估AdaOL策略的有效性。</p>
+</blockquote>
+<p><strong>消融实验分析</strong>：论文通过消融实验验证了各组件贡献。结果表明，移除力预测器会导致在涉及物理交互的任务上性能下降；禁用在线自适应学习策略会导致在分布外场景下的适应能力显著降低；而完整的AdaWorldPolicy框架（包含世界模型、动作模型、力预测器和AdaOL）实现了最佳的综合性能。此外，使用LoRA进行参数高效更新使得在线推理速度仅比无适应的基线慢约5%，确保了实用性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>提出了统一的多模态框架AdaWorldPolicy</strong>：首次将世界模型、动作专家和力预测器深度集成在一个基于扩散的架构中，通过多模态自注意力实现协同，充分利用世界模型的潜力和力反馈来应对接触丰富的动态环境。</li>
+<li><strong>提出了新颖的测试时在线自适应学习策略</strong>：通过双模式切换和基于预测误差的自监督信号，实现了对视觉和物理域偏移的快速、轻量级闭环适应，显著提升了策略在分布外场景下的鲁棒性。</li>
+<li><strong>在多样化的基准上实现了最先进的性能</strong>：在模拟和真实机器人实验中均验证了框架的有效性，特别是在引入在线学习后，能在保持域内性能的同时，将分布外性能提升超过5%。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，尽管采用了LoRA等高效技术，在线适应过程仍会引入一定的计算开销。此外，框架的性能依赖于预训练世界模型的质量和覆盖范围，在模拟与真实世界差距极大的场景下可能仍需进一步改进。</p>
+<p><strong>启示</strong>：本研究展示了将世界模型主动融入策略学习与在线适应循环的强大潜力，为构建能持续从环境中学习并适应的机器人系统提供了新思路。未来工作可以探索更高效的适应机制、将更多传感器模态纳入统一预测框架，以及研究如何减少对高质量预训练世界模型的依赖。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文提出AdaWorldPolicy框架，以提升机器人在动态环境中的操作适应能力。核心通过**世界模型驱动**的扩散策略，结合**在线自适应学习**，利用**流匹配扩散变换器**统一实现世界模型、动作专家与力预测器。关键创新是**AdaOL策略**，能在动作生成与未来想象模式间动态切换，形成闭环更新。实验表明，该方法在模拟与真实机器人任务中取得**最先进性能**，并能有效适应分布外动态场景。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.20057" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
