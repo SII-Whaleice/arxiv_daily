@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>BFA++: Hierarchical Best-Feature-Aware Token Prune for Multi-View Vision Language Action Model - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>BFA++: Hierarchical Best-Feature-Aware Token Prune for Multi-View Vision Language Action Model</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.20566" target="_blank" rel="noreferrer">2602.20566</a></span>
+        <span>作者: Hua Chen Team</span>
+        <span>日期: 2026-02-24</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>视觉-语言-动作（VLA）模型通过整合大型视觉语言模型（VLM）来联合理解指令和视觉输入，在机器人操作领域取得了显著突破。然而，视觉令牌数量的大幅增加，尤其是来自多视角输入时，对实时机器人操作构成了严峻挑战。现有的VLM加速技术，如令牌剪枝，在直接应用于VLA模型时往往导致性能下降。这是因为它们忽略了不同视角之间的关系，并且未能考虑到机器人操作的动态性和任务特定性。具体而言，VLA模型由于预训练数据有限和固定的动作输出空间，难以学习鲁棒的注意力机制，这带来了两个主要挑战：在视图间层面，模型无法可靠地估计不同相机视角的动态重要性；在视图内层面，模型可能关注无关区域（如背景或干扰物）而非任务相关区域。</p>
+<p>本文针对VLA模型在多视图输入下存在的视觉令牌冗余和注意力分配不当这一具体痛点，提出了一种新的动态令牌剪枝视角。核心思路是设计一个分层的、任务感知的令牌剪枝框架，通过视图间和视图内两级重要性预测器来指导剪枝，在提升计算效率的同时保留对操作至关重要的视觉线索。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>BFA++的整体框架是一个即插即用的动态令牌剪枝模块，其流程如图2所示。首先，利用离线标注系统获得视图间和视图内重要性的真实标签。然后，在VLA模型的后训练阶段，联合训练两个轻量级的重要性预测器网络。在推理时，对于输入的多个视图图像，先通过视觉编码器提取令牌特征，然后由预测器分别计算每个视图的重要性权重（视图间重要性）和每个视图内各个令牌的重要性分数（视图内重要性）。接着，基于这些分数执行分层剪枝：先在各视图内部进行局部剪枝，再对所有视图的剩余令牌进行全局排序和剪枝，最终将筛选后的令牌送入后续的LLM主干网络进行动作预测。</p>
+<p><img src="https://arxiv.org/html/2602.20566v1/x2.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：BFA++ 的流程。左侧展示了我们的即插即用令牌剪枝模块如何集成到VLA模型中。右侧详细说明了流程：首先通过离线标注获得真实重要性标签，并训练两个重要性预测器；然后基于预测的视图内重要性进行局部剪枝；最后结合视图间和视图内重要性进行全局剪枝，得到最终的剪枝后令牌。</p>
+</blockquote>
+<p>核心模块包括两级重要性预测器和分层剪枝策略。</p>
+<ol>
+<li><p><strong>两级重要性预测器</strong>：</p>
+<ul>
+<li>**视图间重要性预测器 (Inter-IP)**：输入是所有视图视觉编码器输出的CLS令牌 <code>{T_cls^v}</code>，输出是每个视图的重要性权重 <code>S_inter</code>。该网络学习判断在特定任务阶段，哪个相机视角对于当前操作更为关键。</li>
+<li>**视图内重要性预测器 (Intra-IP)**：输入是单个视觉令牌 <code>T_Image^{v,n}</code>，输出是该令牌在其所属视图 <code>v</code> 内的重要性分数 <code>S_intra^{v,n}</code>。该网络学习识别视图内与任务相关的区域，如机械手末端执行器和目标物体。<br>两个预测器均为轻量级网络，与VLA主干模型在训练时联合优化。</li>
+</ul>
+</li>
+<li><p><strong>分层令牌剪枝策略</strong>：</p>
+<ul>
+<li><strong>局部剪枝</strong>：首先，在每个视图内部，根据预测的视图内重要性分数 <code>S_intra^{v,n}</code> 对令牌进行排序。为了确保重要性分数的空间连贯性，避免出现孤立的、重要性突变的区域，论文引入了空间自适应加权（公式3）对原始分数进行平滑处理。平滑后的分数用于在每个视图内独立地剪除固定比例 <code>α_v</code> 的最不重要令牌。</li>
+<li><strong>全局剪枝</strong>：局部剪枝后，对来自所有视图的剩余令牌进行全局重要性排序。每个令牌的最终全局重要性分数 <code>S_final^{v,n}</code> 由其视图内重要性分数 <code>S_intra^{v,n}</code> 乘以其所属视图的视图间重要性权重 <code>S_inter^v</code> 得到（公式4）。然后，根据 <code>S_final^{v,n}</code> 对所有剩余令牌进行统一排序，并剪除排名最低的 <code>β</code> 比例的令牌。这确保了无论令牌来自哪个视图，最重要的信息都被保留。</li>
+</ul>
+</li>
+<li><p><strong>与VLA后训练集成</strong>：在VLA模型的后训练阶段，除了标准的动作预测损失 <code>L_action</code>，还引入了两个辅助损失来监督重要性预测器：视图间重要性损失 <code>L_inter</code> 和视图内重要性损失 <code>L_intra</code>，两者均使用二元交叉熵（BCE）损失。总损失为 <code>L_total = L_action + λ1*L_inter + λ2*L_intra</code>。</p>
+</li>
+</ol>
+<p>与现有方法相比，BFA++的创新点在于：1) <strong>任务感知的监督信号</strong>：通过离线标注系统为视图间和视图内重要性提供明确的监督，使剪枝过程能够针对机器人操作任务动态保留关键信息，而非基于无监督的注意力或相似度分数。2) <strong>分层剪枝结构</strong>：先局部（视图内）后全局（跨视图）的两阶段剪枝策略，更精细地处理了空间冗余和视角冗余。3) <strong>空间自适应加权</strong>：在局部剪枝前对重要性分数进行平滑，避免了因分数突变而误剪关键区域。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在RoboTwin仿真基准和真实世界机器人任务上进行。使用的VLA基线模型是 π₀ 和 RDT。对比的剪枝基线方法包括为VLM设计的DART以及前作BFA。所有方法均在相同数据集上进行了相同步数的重新训练。</p>
+<p>关键实验结果如下：在RoboTwin仿真基准上（表I），BFA++在 π₀ 模型上实现了约10.3 Hz的控制频率（原始 π₀ 为6.5 Hz），平均成功率从0.496提升至0.583（相对提升约17.5%）；在RDT模型上实现了1.5 Hz的控制频率（原始RDT为1.0 Hz），平均成功率从0.470提升至0.565（相对提升约20.2%）。在真实世界任务中（表II），BFA++同样在两种基线模型上均取得了显著的成功率提升。</p>
+<p><img src="https://arxiv.org/html/2602.20566v1/x1.png" alt="方法对比"></p>
+<blockquote>
+<p><strong>图1</strong>：BFA++与其他方法的对比。与现有令牌剪枝方法相比，我们的方法不仅提高了推理速度，还显著提升了任务成功率。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.20566v1/x7.png" alt="令牌分布可视化"></p>
+<blockquote>
+<p><strong>图7</strong>：基线模型和BFA++生成令牌的t-SNE可视化。基线模型的令牌（左）来自三个视图的令牌高度混合，表明存在大量冗余信息。BFA++剪枝后（右），不同视图的令牌被很好地区分开来，表明冗余被有效消除。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.20566v1/x8.png" alt="注意力热图对比"></p>
+<blockquote>
+<p><strong>图8</strong>：基线模型和BFA++的Grad-CAM注意力热图对比。基线模型（b）的注意力较为分散。应用BFA++后（c），视觉编码器的注意力更集中于机械手和交互物体等关键区域。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.20566v1/Picture/fig7-a.png" alt="重要性可视化"><br><img src="https://arxiv.org/html/2602.20566v1/Picture/fig7-b.png" alt="剪枝可视化"><br><img src="https://arxiv.org/html/2602.20566v1/Picture/fig-9c-add.png" alt="视图间重要性变化"></p>
+<blockquote>
+<p><strong>图9</strong>：BFA++的可视化结果。(a) 视图内重要性预测器（Intra-IP）预测的令牌重要性（暖色表示更重要）。(b) 最终保留的令牌可视化（白色区域）。(c) 在整个操作过程中，视图间重要性预测器（Inter-IP）预测的各视图重要性权重动态变化，反映了不同阶段关键视角的切换。</p>
+</blockquote>
+<p>消融实验（表IV）验证了各个组件的贡献：</p>
+<ul>
+<li>**移除分层剪枝 (<code>w/o Hierarchical</code>)**：直接融合两级分数进行端到端排序剪枝，成功率显著下降，因为容易丢弃腕部相机的重要信息。</li>
+<li>**移除空间自适应加权 (<code>w/o Adaptive Weight</code>)**：不使用距离加权平滑重要性分数，在所有四个任务上性能均下降。</li>
+<li>**移除视图间或视图内预测器 (<code>w/o Inter-IP</code> 或 <code>w/o Intra-IP</code>)**：仅使用单级重要性进行剪枝，性能均不如完整模型。</li>
+<li><strong>与其他剪枝策略对比</strong>：与随机丢弃、在线丢弃、自适应池化等方法相比，BFA++的设计取得了最佳的性能与速度平衡。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一种针对VLA模型的分层令牌剪枝框架BFA++，通过视图间和视图内两级监督重要性预测，实现了任务感知的动态令牌选择。2) 设计了一个包含局部和全局两阶段的剪枝策略，并引入了空间自适应加权来提升剪枝的鲁棒性。3) 在仿真和真实机器人任务上进行了广泛验证，表明BFA++能同时显著提升推理速度（最高1.8倍）和操作成功率（约10%），证明了在VLA场景中，有指导的、上下文敏感的令牌剪枝比全视觉处理或通用无监督剪枝更有效。</p>
+<p>论文自身提到的局限性包括：1) 重要性预测器的训练依赖于离线标注系统，这需要额外的标注工作或依赖其他模型（如VLM、检测器）。2) 引入两个预测器带来了额外的计算开销，尽管它们是轻量级的。</p>
+<p>这项工作对后续研究的启示在于：对于数据有限且任务敏感的具身AI模型（如VLA），引入领域知识或显式监督来引导模型关注关键信息，是提升其效率和性能的有效途径。未来的工作可以探索更高效或自监督的重要性标注方法，以及将这种分层重要性感知机制扩展到其他多模态或时序模型中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对多视角视觉语言动作模型在处理多视角输入时视觉令牌激增、导致实时机器人操作效率低下的核心问题，提出BFA++动态令牌修剪框架。该方法采用分层最佳特征感知修剪策略，关键通过内部视角预测器筛选任务相关区域以抑制噪声，跨视角预测器识别关键视角以减少冗余，从而高效保留视觉线索。实验在RoboTwin基准和真实任务中验证，BFA++在π0和RDT模型上成功率提升约10%，推理速度分别加速1.8倍和1.5倍。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.20566" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

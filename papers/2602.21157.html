@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>HALO: A Unified Vision-Language-Action Model for Embodied Multimodal Chain-of-Thought Reasoning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>HALO: A Unified Vision-Language-Action Model for Embodied Multimodal Chain-of-Thought Reasoning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.21157" target="_blank" rel="noreferrer">2602.21157</a></span>
+        <span>作者: Song Guo Team</span>
+        <span>日期: 2026-02-24</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前主流的视觉-语言-动作模型通常直接将感知输入映射到动作指令，缺乏对任务结构进行显式推理或预测动作对环境状态影响的机制。这导致模型在长视野任务或分布外场景中表现不佳。现有方法试图引入文本思维链或视觉子目标预测来增强推理，但往往未能提供一个统一的、类人的框架来协同处理文本推理、视觉预见和动作预测。例如，一些工作仅进行文本推理而缺乏对视觉状态演变的显式建模，另一些则仅生成视觉子目标图像而缺乏语义推理能力。</p>
+<p>本文针对现有VLA模型在复杂、长视野任务中因缺乏多模态推理和预见能力而受限的痛点，提出了一个统一的具身多模态思维链推理范式。其核心思路是设计一个名为HALO的模型，通过模仿人类“思考-想象-执行”的认知过程，依次进行文本任务推理、视觉子目标预测，并以此为基础生成动作，从而将高级语义意图与精确的、基于视觉的电机控制桥接起来。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>HALO的整体框架是一个顺序生成过程：给定语言指令和历史观测，模型首先生成文本推理链，然后基于此预测未来的视觉子目标图像，最后结合推理链和子目标图像生成动作序列。该过程通过一个统一的混合专家架构实现。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：HALO整体框架。模型首先进行文本推理和任务规划，然后预测视觉子目标提供细粒度指导，最后基于EM-CoT生成动作。该过程通过混合专家架构实现，包含多模态理解、视觉生成和动作预测三个专家。</p>
+</blockquote>
+<p><strong>统一架构</strong>：HALO采用混合专家架构，包含三个参数独立但通过共享自注意力机制交互的专家：1）<strong>多模态理解专家</strong>：负责文本推理链的生成，采用自回归方式。2）<strong>视觉生成专家</strong>：负责预测未来子目标图像，采用基于流匹配的扩散模型。3）<strong>动作预测专家</strong>：负责生成连续动作序列，采用流匹配损失进行训练。模态间的切换由特殊令牌控制。视觉编码采用双路径设计：用于理解的ViT分支提取高层语义特征；用于生成的VAE分支提供空间紧凑的潜在特征。</p>
+<p><strong>EM-CoT数据合成流程</strong>：为了大规模训练模型生成中间推理步骤，论文构建了一个自动化的数据合成流程。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x2.png" alt="EM-CoT数据合成流程"></p>
+<blockquote>
+<p><strong>图2</strong>：EM-CoT数据合成流程概览。该流程分三个阶段将原始机器人轨迹转换为EM-CoT数据：基于规则匹配提取动作基元；使用VLM作为标注器生成任务规划、分解轨迹并为每个子任务生成文本推理；选择每个子任务的终止帧作为视觉子目标图像。</p>
+</blockquote>
+<p><strong>训练方法</strong>：训练分为两个阶段。第一阶段是<strong>通用预训练</strong>，旨在建立强大的多模态基础能力。模型在三种异构数据上联合训练：1）<strong>VQA数据</strong>（如LLaVA-NeXT-779k），用于学习多模态理解，使用交叉熵损失。2）<strong>视觉生成数据</strong>（如OXE机器人轨迹和SSv2自我中心视频），用于学习物理动态，建模为未来帧预测任务，使用MSE损失。3）<strong>动作预测数据</strong>（如OXE），用于学习基础操作技能，使用L1流匹配损失。总预训练损失为加权和：ℒ_pt = 0.25ℒ_CE + 0.5ℒ_MSE + ℒ_L1。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x4.png" alt="训练流程概览"></p>
+<blockquote>
+<p><strong>图4</strong>：训练流程概览。HALO训练包含两个阶段：阶段1在通用VQA、视觉生成和动作预测数据上进行预训练以建立基础技能；阶段2引入EM-CoT增强的微调，注入多步推理和预见能力。</p>
+</blockquote>
+<p>第二阶段是<strong>EM-CoT增强的微调</strong>。在预训练模型基础上，使用合成的EM-CoT数据集进行微调，使模型学会生成完整的“思维-预见-动作”链。微调损失联合优化文本推理、视觉子目标和动作预测：ℒ_ft = ℒ_𝐫 + ℒ_𝐨̂ + ℒ_𝐚。为防止灾难性遗忘，微调时混入了通用VQA数据。</p>
+<p><strong>创新点</strong>：1) <strong>统一的EM-CoT推理范式</strong>：首次在VLA模型中系统性地整合了文本推理与视觉预见。2) <strong>解耦的混合专家架构</strong>：通过MoT架构将异构的文本生成、图像生成和动作预测能力解耦，避免了单一模型中的能力冲突，同时通过共享注意力实现协作。3) <strong>自动化的EM-CoT数据合成流程</strong>：利用VLM自动为机器人轨迹标注文本推理和视觉子目标，实现了大规模监督数据的生成。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在<strong>RoboTwin 2.0仿真基准</strong>（包含50个挑战性操作任务）和<strong>真实世界环境</strong>中进行。对比的基线方法包括：<strong>π₀</strong>、<strong>RDT-1B</strong>和<strong>Diffusion Policy</strong>。此外，还设置了<strong>HALO-w/o EM-CoT</strong>（即去掉EM-CoT推理链的HALO变体）以验证EM-CoT的有效性。</p>
+<p><strong>关键定量结果</strong>：在RoboTwin 2.0上，HALO在简单和困难设置下均超越所有基线方法。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x7.png" alt="定量结果"></p>
+<blockquote>
+<p><strong>表1</strong>：在RoboTwin 2.0模拟器上的定量结果。HALO在简单和困难设置下均超越所有基线方法，平均成功率分别达到80.5%和26.4%。</p>
+</blockquote>
+<p>具体而言，HALO在简单任务上的平均成功率达到**80.5%<strong>，在困难任务上达到</strong>26.4%<strong>，分别比最强的基线π₀高出</strong>34.1%<strong>和</strong>10.1%<strong>。即使在未使用EM-CoT的情况下，HALO-w/o EM-CoT也大幅超越π₀（简单任务+28.9%），证明了其预训练建立的基础能力之强。而Diffusion Policy等纯反应式策略在随机化环境（困难设置）中成功率骤降至</strong>0.6%**，凸显了推理能力的重要性。</p>
+<p><strong>消融实验</strong>：论文对训练配方和EM-CoT设计进行了消融研究。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x8.png" alt="消融研究"></p>
+<blockquote>
+<p><strong>表2</strong>：训练配方和EM-CoT的消融研究。左表显示完整预训练（使用V/T/A所有数据）效果最佳；右表显示同时使用文本推理和视觉子目标的完整EM-CoT设计性能最优。</p>
+</blockquote>
+<ol>
+<li><strong>训练配方有效性</strong>：移除任何一部分预训练数据都会导致性能下降。特别是，如果完全不用任何预训练数据（w/o V+T+A），模型在困难任务上的成功率降至**0%**，证明了多任务预训练对建立基础能力的必要性。</li>
+<li><strong>EM-CoT组件贡献</strong>：同时使用文本推理和视觉子目标的完整HALO性能最优。单独移除文本推理（w/o T）或视觉子目标（w/o V）都会导致性能下降，尤其是在困难任务上（分别从26.4%降至18.3%和22.5%），表明两种模态的推理具有互补性。</li>
+</ol>
+<p><strong>定性结果</strong>：可视化展示了HALO生成的EM-CoT在干净和随机化环境下的表现。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/figures/case_vis.jpg" alt="定性分析"></p>
+<blockquote>
+<p><strong>图5</strong>：EM-CoT定性分析。在干净设置下，模型生成的文本推理和子目标图像与真实情况高度一致；在未见过的随机化设置下，EM-CoT仍能保持鲁棒性并生成合理的推理。</p>
+</blockquote>
+<p>在干净环境下，HALO生成的文本推理和子目标图像与真实情况高度一致。在具有激进随机化的未见过的场景中，模型仍能生成合理的EM-CoT（例如，正确识别目标并规划轨迹），表明其进行的是真正的语义推理而非简单的模式匹配。</p>
+<p><strong>真实世界实验</strong>：论文在四个真实机器人任务上验证HALO，并设置了包含视觉干扰、光照变化等挑战的泛化场景。</p>
+<p><img src="https://arxiv.org/html/2602.21157v1/x5.png" alt="真实世界设置"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界任务设置。(a) 基础设置：包括工具使用、双手协作等四个任务。(b) 泛化设置：包含视觉干扰、光照变化等挑战性场景。</p>
+</blockquote>
+<p>结果表明，HALO在基础任务上取得了高成功率，并且在泛化场景下展现出强大的鲁棒性，成功应对了训练中未见的干扰。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 提出了<strong>具身多模态思维链</strong>这一新范式，通过顺序的文本推理、视觉预见和动作预测来模拟人类认知过程。2) 设计了一个<strong>统一的混合专家架构</strong>，有效解耦并整合了文本、视觉和动作生成三种异构能力。3) 构建了一个<strong>自动化EM-CoT数据合成流程</strong>，为大规模训练此类模型提供了数据基础。</p>
+<p>论文提到的局限性包括：模型参数量较大（约45亿），计算开销可能较高；EM-CoT数据合成依赖于外部VLM的质量。</p>
+<p>本工作对后续研究的启示在于：为构建更具推理和规划能力的具身智能体提供了一个可扩展的框架；证明了将高级语义推理与低级感知-动作循环紧密结合的有效性；其数据合成方法为获取大规模、高质量的机器人推理数据开辟了新途径。未来的工作可以探索更高效的架构、更精细的推理步骤生成，以及将EM-CoT应用于更广泛的机器人任务和交互场景中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对现有视觉-语言-动作模型在长视野任务中缺乏多模态推理能力的问题，提出HALO模型。其核心是**具身多模态思维链**推理方法，通过**混合Transformer架构**将文本任务推理、视觉子目标预测与动作生成解耦并协同。实验表明，该模型在RoboTwin基准上比基线策略成功率提升**34.1%**，且各组件均有效提升了任务完成率与泛化能力。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.21157" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

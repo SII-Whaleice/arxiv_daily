@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>IG-RFT: An Interaction-Guided RL Framework for VLA Models in Long-Horizon Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>IG-RFT: An Interaction-Guided RL Framework for VLA Models in Long-Horizon Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.20715" target="_blank" rel="noreferrer">2602.20715</a></span>
+        <span>作者: Huixu Dong Team</span>
+        <span>日期: 2026-02-24</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型通过大规模行为克隆预训练，展现出作为通用机器人策略的巨大潜力。然而，当部署到新的真实世界领域时，由于分布偏移和高质量演示数据的稀缺，VLA模型在泛化到长视野复杂任务方面存在困难。主流的领域适应方法是监督微调，但该方法无法有效评估和利用演示数据，对训练数据的质量和数量要求苛刻。相比之下，强化学习能更有效地探索、评估和利用数据以改进策略，但将其应用于真实世界VLA微调面临探索效率、训练稳定性和样本成本的挑战。现有真实世界RL系统多使用稀疏奖励，导致在线训练不稳定和信用分配问题，且在长视野任务中，不同子阶段的状态分布方差差异显著，在整个周期应用均匀的探索噪声会导致资源利用低效。</p>
+<p>本文针对上述痛点，提出了一种新颖的交互引导强化学习微调系统IG-RFT，其核心思路是：通过动态调节基于机器人交互状态的探索强度，并设计一种结合轨迹级和子任务级的混合密集奖励函数，以实现对基于流的VLA模型高效、稳定的策略优化。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>IG-RFT系统是一个三阶段的强化学习微调框架，旨在使基于流的VLA模型掌握真实世界中的长视野复杂操作任务。其整体流程如论文图1所示，包含监督微调、离线RL和人在回路RL三个阶段，实现从初始策略学习到策略演进的渐进式过渡。</p>
+<p><img src="https://arxiv.org/html/2602.20715v1/fig/overview.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：交互引导强化学习微调系统概览。该系统集成了一个基于多头Q-Former的评论家模型，以提供密集的价值估计和交互引导。密集价值函数的监督目标是我们设计的通用混合价值函数。我们利用交互信号来调制流匹配的初始噪声，以平衡RL的探索与利用。训练过程经历三个阶段：监督微调、使用提出的IG-AWR算法进行数据高效的离线RL，以及最终的人在回路RL精调，以掌握长视野真实世界操作任务。</p>
+</blockquote>
+<p>系统的核心创新在于<strong>交互引导的优势加权回归算法</strong>和<strong>通用混合奖励函数</strong>。</p>
+<p><strong>1. 交互引导的优势加权回归</strong><br>IG-AWR算法的核心思想是根据机器人的交互状态动态调制探索强度。具体分为两步：</p>
+<ul>
+<li><strong>交互信号提取</strong>：为了高效、自动地为VLA演示数据标注交互状态，系统利用全局视觉观测。在每一时间步t，首先使用机器人分割模型RoboEngine生成二值机器人掩码Mt，然后应用RAFT估计密集光流场Ft。交互状态It通过公式(1)计算，其本质是统计非机器人像素区域中光流幅度超过阈值δ_flow的像素数量，若超过阈值Θ_pixel，则判定为交互阶段(It=1)。</li>
+<li><strong>动态不确定性调制</strong>：在策略执行阶段，基于评论家网络预测的交互似然概率p_int(s) ∈ [0,1]，动态调节流ODE初始采样噪声的方差。有效采样温度𝒯(s)定义为：𝒯(s) = σ_base ⋅ (1 - α ⋅ p_int(s)) + σ_min。策略通过从分布𝒩(0, 𝒯²(s)𝐈)中采样初始噪声ϵ来生成动作。这使得在非交互阶段（如接近、回缩）采用高方差以鼓励探索轨迹多样性，在交互阶段（如交接、抓取）采用低方差以确保精确、稳定的执行。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.20715v1/fig/IG_flow.png" alt="动态不确定性调制"></p>
+<blockquote>
+<p><strong>图2</strong>：IG-AWR中的动态不确定性调制示意图。该机制根据提取的交互信号It调制流ODE的初始采样噪声ϵ。在非交互阶段（上图），应用较高的方差σ_high以鼓励多样化的轨迹探索。相反，在交互阶段（下图），方差降低为σ_low，以确保接触式操作的精确性和稳定性。</p>
+</blockquote>
+<p>在策略优化方面，采用优势加权回归来最大化基于流的策略的期望回报。IG-AWR的损失函数如公式(3)所示，该目标对具有更高估计优势的数据进行加权，同时保留流ODE结构以实现稳定的策略改进。</p>
+<p><strong>2. 通用混合奖励函数</strong><br>为了在长视野任务中有效引导智能体，设计了一种混合奖励函数，结合了轨迹级成功激励和阶段性子任务反馈。</p>
+<ul>
+<li><strong>轨迹级奖励</strong>：为泛化到各种机器人操作任务，定义如公式(4)所示的轨迹级奖励。若任务成功，则在每个时间步均匀分配总回报1.0；否则为0。</li>
+<li><strong>子任务级奖励</strong>：为解决轨迹级奖励缺乏细粒度反馈的问题，采用基于势能的奖励塑形。定义一个连续单调递增的势函数Φ(ρ)，其中ρ_t = t/T是归一化的时间进度。子任务级奖励r_t^sub定义为相邻时间步势函数值之差，如公式(6)所示。势函数是多个加权Sigmoid函数的和，参数k_i和w_i分别代表第i个子任务的完成时间步和重要性权重。</li>
+<li><strong>奖励聚合</strong>：最终奖励是轨迹级奖励和子任务级奖励的加权和，如公式(7)所示：r_t = ω_traj ⋅ r_t^traj + ω_sub ⋅ r_t^sub。相应地，回报G_t从1.0单调递减至0，作为精确的进度指示器。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.20715v1/fig/reward_value.png" alt="奖励与价值函数可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：“包裹打包”任务上提出的奖励塑形机制可视化。(A) 奖励信号r_t结合了恒定的轨迹级奖励和加权的子任务级奖励（峰值），在关键里程碑提供密集反馈。(B) 价值（回报）函数V_t从1.0单调递减至0，随着智能体完成子任务而下降，为评论家提供精确的进度指示。</p>
+</blockquote>
+<p><strong>3. 模型架构与训练流程</strong><br>系统采用π_0.5模型作为执行器模块π_θ。基于VLM骨干网络在当前观测o_t条件下的KV缓存，训练一个评论家网络来回归状态价值V_t^π并预测交互信号I_t。评论家网络基于Q-Former架构，使用可学习的查询通过交叉注意力自适应地从KV缓存中提取相关多模态特征，输出通过三个独立的参数化头分别产生轨迹级价值、子任务级价值和交互信号。</p>
+<p>训练流程分为三个阶段（如算法1所述）：</p>
+<ol>
+<li><strong>阶段I：预热与SFT</strong>。收集演示数据，使用大规模VLM标注子任务信息，获取交互信号、奖励和价值。使用知识隔离训练π_0.5，并同时使用MSE损失进行价值回归、BCE损失进行交互预测来训练评论家模块。</li>
+<li><strong>阶段II：离线RL</strong>。实施IG-AWR算法对VLA进行RL训练，并同时更新评论家模块。</li>
+<li><strong>阶段III：人在回路RL</strong>。在真实世界部署基础策略进行带有人类干预的 rollout。当评论家模块输出的价值停滞或人类识别到潜在失败时，操作员通过遥操作接口进行干预。定期从预收集的演示缓冲区和在线回放缓冲区中采样构建混合数据集，用于通过IG-AWR算法微调策略模块。</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在真实机器人平台上进行，选取了四个涉及多阶段推理、接触式交互、双臂协调以及关节和可变形物体操作的长视野操作任务进行评估：包裹打包、水果装袋、积木堆叠和饮料上架。</p>
+<p><img src="https://arxiv.org/html/2602.20715v1/fig/exp_tasks.png" alt="任务执行序列"></p>
+<blockquote>
+<p><strong>图4</strong>：长视野任务的执行序列可视化。从上到下，展示了四个挑战性任务的成功执行流程：包裹打包、水果装袋、积木堆叠和饮料上架。箭头表示子目标的进展。</p>
+</blockquote>
+<p><strong>基线方法</strong>：1) <strong>SFT</strong>：基于π_0.5模型，仅在演示数据集上通过行为克隆进行微调。2) <strong>离线RL</strong>：将标准离线RL方法应用于π_0.5模型，包括IQL和AWR，缺乏本文的交互引导、密集奖励塑形和人类干预。</p>
+<p><strong>主要结果</strong>：如表I所示，IG-RFT在四个任务上平均成功率达到85.0%，显著优于SFT（18.8%）和标准离线RL基线（IQL: 38.8%, AWR: 40.0%）。特别是在最复杂的“饮料上架”任务中，IG-RFT取得了70%的成功率，而基线方法均低于25%。</p>
+<p><strong>消融实验</strong>：研究验证了IG-AWR和混合奖励函数的关键贡献。<br><img src="https://arxiv.org/html/2602.20715v1/fig/exp_ig_ablation.png" alt="IG-AWR消融"></p>
+<blockquote>
+<p><strong>图5</strong>：IG-AWR算法在“包裹打包”任务上的消融研究。左图：与固定噪声方差的AWR相比，IG-AWR（动态调制）在离线RL阶段实现了更快的收敛和更高的最终成功率。右图：交互信号分类器的消融显示，使用真实标签（GT）或学习到的分类器（Ours）均能有效提升性能，而移除交互引导（w/o IG）则导致性能下降。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.20715v1/fig/exp_flow.png" alt="奖励函数消融"></p>
+<blockquote>
+<p><strong>图6</strong>：奖励函数在“水果装袋”任务上的消融研究。与仅使用轨迹级奖励（Traj-only）或仅使用子任务级奖励（Sub-only）相比，混合奖励（Ours）在离线RL阶段实现了更稳定、更快速的收敛。</p>
+</blockquote>
+<p><strong>系统演进分析</strong>：实验展示了策略性能在三个训练阶段的演变。<br><img src="https://arxiv.org/html/2602.20715v1/fig/exp_value.png" alt="价值函数演进"></p>
+<blockquote>
+<p><strong>图7</strong>：在“包裹打包”任务中，随着训练阶段从SFT推进到离线RL再到人在回路RL，评论家预测的价值函数曲线逐渐变得更加平滑和准确，反映了策略对任务进度估计能力的提升。</p>
+</blockquote>
+<p>消融实验总结：IG-AWR中的动态不确定性调制是提升探索效率和最终性能的关键；混合奖励函数相比单一奖励提供了更有效的学习信号；三阶段训练课程，特别是人在回路RL阶段，对于掌握复杂长视野任务至关重要。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 提出了IG-AWR算法，一种专为基于流的VLA模型设计的RL微调算法，通过利用交互信号有效平衡探索与利用；2) 设计了一种融合轨迹级程序奖励和加权子任务级奖励的混合密集奖励函数，为长视野任务提供平滑且密集的反馈；3) 设计了一个集成人类干预的多阶段强化学习微调系统，通过SFT初始化策略，通过离线RL完成基础策略学习，并通过人在回路RL进一步提升策略性能。</p>
+<p>论文自身提到的局限性包括：交互信号提取依赖于预训练的视觉模型（如RoboEngine和RAFT），其准确性可能影响性能；混合奖励函数中的子任务权重和完成时间需要人工定义或通过大模型自动标注，增加了设置成本；整个系统涉及多个训练阶段和模型，计算和工程复杂度较高。</p>
+<p>本工作为在真实世界中微调VLA模型提供了一套系统性的解决方案，其核心思想——<strong>根据任务结构动态调整学习信号（探索强度、奖励密度）</strong>——对后续研究具有重要启示。未来工作可以探索更自动化的交互状态识别方法、更通用的奖励函数设计，以及将三阶段框架扩展到更广泛的机器人学习范式中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作模型在长时程机器人操作任务中泛化能力不足，以及强化学习微调时探索效率低、样本成本高的问题，提出交互引导的强化学习微调框架IG-RFT。其核心方法包括：基于交互状态动态调整探索强度的IG-AWR算法，以及融合轨迹级与子任务级奖励的混合密集奖励函数。实验表明，在四个长时程任务上，IG-RFT平均成功率高达85.0%，显著优于监督微调和标准离线强化学习方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.20715" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
