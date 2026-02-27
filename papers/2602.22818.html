@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>LeRobot: An Open-Source Library for End-to-End Robot Learning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>LeRobot: An Open-Source Library for End-to-End Robot Learning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.22818" target="_blank" rel="noreferrer">2602.22818</a></span>
+        <span>作者: Thomas Wolf Team</span>
+        <span>日期: 2026-02-26</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人学习领域正经历由机器学习技术驱动的重大变革，其发展得益于日益普及的遥操作系统、大规模开源数据集和可扩展的学习方法。然而，该领域的发展常因工具碎片化而受阻：现有的工具通常是闭源的，且仅针对机器人技术栈中的特定子组件，导致中间件（高-低级控制接口）难以适配，数据集缺乏通用格式和工具，算法实现也因硬件差异和实现细节不同而难以复现。这种生态系统层面的碎片化给研究人员带来了巨大的额外复杂性，将资源从核心科学研究转移到了系统集成上。</p>
+<p>本文针对机器人学习领域工具链割裂、入门门槛高的核心痛点，提出了一个统一的、端到端的解决方案视角。LeRobot 是一个开源库，旨在通过垂直整合整个机器人学习技术栈——从用于电机控制的低级中间件通信，到大规模数据集收集、存储和流式传输，再到高效的算法实现和优化的推理部署——来降低机器人学习的研究和应用门槛。其核心思路是提供一个强调可访问性、可扩展性和开放性的平台，通过统一的接口、标准化的数据格式和可复现的算法实现，加速机器人学习领域的进展。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>LeRobot 被设计为一个覆盖机器人学习全流程的集成库。其整体框架旨在无缝连接硬件控制、数据管理、模型训练与部署。</p>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/lerobot-figure1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：LeRobot 端到端机器人学习开源库的整体框架。它覆盖了整个技术栈，从中间件电机接口到大规模数据收集和数据集流式传输，支持优化的推理栈、SOTA机器人学习算法的可扩展实现，并提供训练自定义模型以及轻松复用预训练模型的支持。</p>
+</blockquote>
+<p>该框架包含四个核心模块，共同解决了前述的碎片化问题：</p>
+<ol>
+<li><strong>统一的机器人集成</strong>：提供了一个一致的、基于 Python 的中间件 API，用于跨多种平台的真实世界电机控制。该中间件桥接了典型的机器学习框架和真实世界机器人，支持从低成本机械臂到仿人手臂和手等多种机器人形态。它被设计为易于扩展和高度可组合，可直接与主流低成本执行器制造商（如 FeeTech 和 Dynamixel）的低级 SDK 接口。</li>
+<li>**标准化的数据集 (LeRobotDataset)**：为了解决机器人数据格式不统一的问题，LeRobot 引入了 <code>LeRobotDataset</code>，一种统一的多模态数据集模式。该格式旨在方便、标准化地访问涵盖高频传感器读数、多路摄像头馈送和遥操作状态信号等多种模态的机器人数据。模式设计为自包含的，包含任务文本描述（用于筛选和语言条件策略）、机器人构型细节以及数据捕获帧率（FPS）等实验参数。一个关键设计原则是可扩展性，其架构可处理包含数百万专家轨迹的大规模存储库。此外，它原生支持流式传输能力，用户无需下载整个语料库即可处理远程托管的大规模数据集，显著降低了使用门槛。</li>
+<li><strong>高效、可复用的算法</strong>：提供了多种最先进的机器人学习算法的干净、基于 PyTorch 的实现，包括强化学习（如 HIL-SERL, TD-MPC）和行为克隆（如 ACT, Diffusion Policy, VQ-BET，以及多任务模型 π₀, SmolVLA）。这些实现针对从头训练自定义模型和使用开源预训练模型进行了优化。库的设计具有高可访问性，提供可组合的代码示例，用于训练（少于 100 行代码）和服务模型（少于 40 行代码）。</li>
+<li><strong>优化的推理栈</strong>：LeRobot 定义了一个自定义的推理栈，旨在在物理和逻辑两个层面上将动作预测与动作执行解耦。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/sec3-async-inf.png" alt="异步推理"></p>
+<blockquote>
+<p><strong>图16</strong>：LeRobot 支持的通用推理方案概述，远程服务器可用于托管计算密集的策略进行推理，而机器人客户端接收动作块流来执行。该方案通过完全自定义用于聚合重叠块的功能 <code>f</code> 提供了可扩展性和灵活性。</p>
+</blockquote>
+<p><strong>物理解耦</strong>允许推理在与机器人低级控制器网络连接的远程机器上运行，从而可以使用比机器人机载资源更强大的计算资源。<strong>逻辑解耦</strong>通过异步生产者-消费者方案实现推理：推理进程以前瞻视野 <code>H</code> 预测动作序列，与环境控制并行进行；环境控制则以固定的控制速率消费动作。重叠的预测通过一个用户可轻松指定的通用聚合函数 <code>f</code> 进行合并，确保动作队列非空，并通过叠加动作预测与执行来防止机器人闲置。这对于预测动作块（action chunks）的现代策略尤为重要。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>LeRobot 库本身的特性、支持范围及社区采用情况构成了其核心“实验”与验证。论文通过一系列数据和图表展示了其影响力、实用性和性能。</p>
+<p><strong>支持的硬件平台与成本</strong>：LeRobot 集成了多种低成本、开源的机器人平台，如 SO-100/101（约 225/550 欧元）、Koch-v1.1（约 670 欧元）、ALOHA-2（约 21k 欧元）等，显著降低了硬件门槛。</p>
+<p><strong>数据集采用情况</strong>：LeRobotDataset 格式已被社区广泛采用。截至 2025 年 9 月，已有超过 16K 个数据集由 2.2K+ 贡献者开源共享。这些数据集不仅来自库直接支持的机器人，也来自社区移植的其他平台（如 Franka Emika Panda, xArm）。</p>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/sec3-downloads_over_time_by_robot_type.png" alt="数据集下载趋势"></p>
+<blockquote>
+<p>**图5(a)**：按机器人类型统计的数据集下载量随时间变化趋势。Franka Emika Panda 和 xArm 等平台由于集中的学术数据收集努力而下载量领先。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/sec3-share_of_datasets_by_robot_type.png" alt="数据集贡献份额"></p>
+<blockquote>
+<p>**图5(d)**：按机器人类型统计的数据集贡献份额。超过 50% 的数据集是在 SO-10X 平台上收集的，这得益于其硬件和 LeRobotDataset 格式的可访问性，推动了去中心化的社区数据收集。</p>
+</blockquote>
+<p><strong>模型性能与采用</strong>：论文评估了库中支持的主要策略模型在不同硬件上的峰值内存消耗和推理延迟。</p>
+<p><strong>表2</strong>：库支持策略模型的峰值内存消耗（全精度 fp32）。ACT 模型最轻量（817.4MB），而 π₀ 模型最大（13.32GB）。<br><strong>表3</strong>：库支持策略模型的平均推理延迟（超过 100 次前向传播）。在高端 GPU（RTX 4090/A100）上，ACT 等轻量级模型可实现约 100-200 Hz 的推理速率（~5-10 ms），而 π₀ 等大型模型则需要数百毫秒，在低端设备上甚至可能超时（5秒限制）。</p>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/sec3-models_uploaded_over_time_by_policy.png" alt="模型上传趋势"></p>
+<blockquote>
+<p><strong>图12</strong>：按策略类型统计的模型上传量随时间变化。ACT 模型的上传量占据主导地位。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22818v1/2602.22818v1/figures/sec3-share_of_models_downloaded_by_policy_type.png" alt="模型下载份额"></p>
+<blockquote>
+<p><strong>图15</strong>：按策略类型统计的模型下载份额。ACT 因其模型小、推理快、且仅需少量（如 50 条）真实世界演示轨迹即可获得良好性能，成为最受欢迎的模型。</p>
+</blockquote>
+<p><strong>模拟基准支持</strong>：虽然 LeRobot 核心聚焦于真实世界机器人应用，但也为算法系统性评估提供了对 LIBERO 和 Meta-World 两个流行模拟基准的支持，便于研究者在受控环境中进行方法对比和验证。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：第一，<strong>提供了一个端到端的集成平台</strong>，通过统一的中间件、标准化的数据集格式、优化的推理栈和可复现的算法实现，解决了机器人学习领域的工具碎片化问题。第二，<strong>推动了开放和可复现的研究</strong>，通过支持低成本硬件、开源数据集格式和流式传输，显著降低了机器人学习的入门门槛，并促进了社区协作。第三，<strong>支持多样化的硬件和算法</strong>，库的设计具有可扩展性，能够兼容从轻量级单任务模型到大规模多任务基础模型的各种算法，并支持多种机器人平台。</p>
+<p>论文自身提到的局限性在于其对模拟环境的支持相对有限，主要将模拟用于算法评估，而非训练，这源于其专注于接触丰富、复杂的真实世界任务。</p>
+<p>LeRobot 的成功实践对后续研究有多重启示：它证明了通过构建<strong>标准化、开放的基础设施</strong>能够有效聚合社区力量，加速领域发展。其<strong>异步解耦的推理架构</strong>为在资源受限的机器人上部署计算密集型模型提供了可行方案。最后，它展示了<strong>轻量级模型（如 ACT）与大规模基础模型（如 π₀）并存</strong>的生态，提示研究者需要根据任务需求、硬件条件和数据规模权衡模型的选择，而非一味追求规模。该库为未来机器人学习研究提供了一个坚实、可扩展的起点。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本论文针对机器人学习领域工具碎片化、闭源的问题，提出了LeRobot开源库。其核心方法是构建一个端到端的机器人学习库，关键技术要点包括：整合从底层中间件通信到大规模数据集收集与流式处理的完整技术栈，支持多种最先进的机器人学习算法，并提供通用的异步推理栈。该库旨在通过提供统一、可扩展且开放的平台，降低机器人学习的入门门槛，并促进可复现的研究。论文未提供具体的性能对比实验数据。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.22818" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

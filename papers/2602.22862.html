@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>GraspLDP: Towards Generalizable Grasping Policy via Latent Diffusion - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>GraspLDP: Towards Generalizable Grasping Policy via Latent Diffusion</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.22862" target="_blank" rel="noreferrer">2602.22862</a></span>
+        <span>作者: Di Huang Team</span>
+        <span>日期: 2026-02-26</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人抓取是操作任务中的关键环节。当前，基于模仿学习的视觉运动策略（如扩散策略）已成为机器人操作的主流方法。然而，对于抓取这一具体任务，这些通用策略在抓取精度和泛化能力上往往不及专门的抓取检测方法。现有方法主要面临三个关键局限性：一是抓取执行不精确；二是空间泛化能力有限；三是对新物体的泛化能力差。</p>
+<p>现有研究主要从两个方向应对：数据驱动策略和先验知识融合。数据驱动方法（如GraspVLA）通过生成海量仿真数据训练大模型，虽能实现零样本泛化，但计算成本极高且推理延迟大，难以实时应用。先验融合方法则将抓取检测网络预测的抓取姿态作为条件输入给策略模型，但这种方式存在两个问题：一方面，输入的抓取姿态与输出的动作序列关联性弱，难以提供有效指导；另一方面，低语义的抓取姿态与高维视觉输入不匹配，导致策略模型难以充分提取抓取的空间分布信息。</p>
+<p>本文针对上述问题，提出了一种基于潜在扩散模型的新型抓取引导框架。核心思路是将动作生成过程分解为目标抓取姿态和运动策略两部分，通过将两者投影到一个共享的潜在空间中来弥合静态目标与动态动作之间的鸿沟，并利用视觉“抓取性”提示来增强策略对可抓取区域的关注。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的GraspLDP是一个两阶段训练的潜在扩散模型，旨在学习一个将观测映射到动作块的视觉运动策略 $\pi:\mathcal{O}\rightarrow\mathcal{A}$。其核心是通过抓取先验（包括抓取姿态和抓取性图）来提升抓取动作的精确性和泛化能力。</p>
+<p><img src="https://arxiv.org/html/2602.22862v1/2602.22862v1/x2.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：GraspLDP框架。左侧为“动作潜在学习”阶段，动作块在VAE编码的潜在空间中，由抓取姿态引导进行精炼。右侧为“潜在动作空间扩散”阶段，抓取性提示用于条件化扩散模型的去噪过程，并通过重建进行增强。</p>
+</blockquote>
+<p>整体框架包含两个核心阶段：</p>
+<ol>
+<li><strong>动作潜在学习阶段</strong>：使用一个轻量级的变分自编码器将动作块 $A$ 压缩为紧凑的动作潜在表示 $\mathbf{Z} = \mathcal{E}(A)$。然后，VAE解码器 $\mathcal{D}$ 将动作潜在 $\mathbf{Z}$ 与对应的抓取姿态 $\mathcal{G}$ 拼接后，重构出动作块 $\hat{A} = \mathcal{D}(\mathbf{Z} \oplus \mathcal{G})$。VAE通过L2重建损失和KL散度惩罚项 $\mathcal{L}<em>{VAE}=\operatorname{MSE}(A,\hat{A})+\lambda\mathcal{L}</em>{KL}$ 进行训练。此阶段使抓取姿态能够直接指导动作潜在空间中的表示学习。</li>
+<li><strong>潜在动作空间扩散阶段</strong>：扩散模型的目标不再是原始动作，而是经过VAE编码的紧凑动作潜在 $\mathbf{Z}$。去噪网络 $\epsilon_{\theta}$ 根据当前观测 $O_t$（包括RGB图像、深度图和本体感觉状态）和扩散步数 $k$，对带噪声的潜在 $\mathbf{Z}_t^k$ 进行去噪。</li>
+</ol>
+<p>方法包含两个核心创新模块：</p>
+<ul>
+<li><strong>视觉抓取性提示</strong>：“抓取性”度量了点云中每个点可供抓取的可能性。本文使用预训练的抓取性网络计算点云中每个点的抓取性分数 $s_i \in [0,1]$，并将其反投影到腕部相机图像的像素空间，生成抓取性图 $M$。将 $M$ 中分数超过阈值 $\tau$ 的像素用特定颜色掩膜，叠加到原始腕部视图图像上，形成视觉提示 $O_{cue}$，作为扩散模型去噪过程的条件输入。为了强化模型对该提示的关注，本文引入了一个自监督重建目标：在每一步反向扩散中，从中间表示重建 $O_{cue}$，损失为 $\mathcal{L}<em>{Recon.}=\operatorname{MSE}(O</em>{cue},\hat{O}<em>{cue})$。最终的扩散策略损失为 $\mathcal{L}</em>{LDP}=\mathcal{L}<em>{Diff.}+\lambda</em>{Recon.}\mathcal{L}_{Recon.}$。</li>
+<li><strong>启发式姿态选择器</strong>：在推理时，预训练的抓取检测器会生成多个候选抓取姿态 $\mathcal{G}={\mathcal{G}_0, \mathcal{G}_1, \dots, \mathcal{G}<em>m}$。HPS的目标是选择最优的 $\mathcal{G}^{*}$。它首先通过碰撞检测和非极大值抑制过滤候选。然后，它综合考虑抓取检测器预测的抓取分数（内在质量）和候选姿态与当前末端执行器姿态 $P$ 之间的SE(3)测地距离 $d</em>{\mathcal{G}_j,W}=\sqrt{\xi^{\top}W,\xi}$（运动学接近度），其中 $\xi=\log(P^{-1}\mathcal{G}<em>j)$，$W$ 为权重矩阵。最终选择使距离 $d$ 最小的抓取姿态作为引导：$\mathcal{G}^{*}=\arg\min</em>{\mathcal{G}_j\in\mathcal{G}};d(\mathcal{G}_j)$。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.22862v1/2602.22862v1/x3.png" alt="推理流程"></p>
+<blockquote>
+<p><strong>图3</strong>：包含启发式姿态选择器的推理流程。展示了从输入观测到生成最终动作块的完整过程，包括抓取检测、姿态选择、潜在扩散和动作解码。</p>
+</blockquote>
+<p>与现有方法相比，本文的创新点在于：1) <strong>潜在空间引导</strong>：将抓取姿态作为条件注入动作潜在空间进行解码，而非简单地与观测拼接，实现了更紧密、更有效的引导。2) <strong>几何驱动的视觉提示</strong>：利用抓取性图提供光照不变的几何先验，直接引导策略关注可抓取区域，并通过自监督重建强化这一条件化过程。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：仿真实验在LIBERO基准上进行，使用约12K条高质量演示进行训练。评估泛化能力时，使用了GraspNet-1Billion中未见过的物体（相似类和全新类）。对比的基线方法包括：Diffusion Policy、OpenVLA（零样本及微调版本）、GraspVLA以及一个本文的基线方法（仅将抓取姿态作为条件输入拼接，不使用潜在空间设计）。评价指标包括成功率（SR）、场景完成率（SCR）和新提出的抓取帧误差（GFE）。</p>
+<p><strong>关键实验结果</strong>：<br>在仿真实验中，GraspLDP在域内抓取任务上取得了80.3%的成功率，相比Diffusion Policy（62.8%）提升了17.5个百分点。在空间泛化、物体泛化和视觉泛化（光照变化）任务上，分别达到了71.1%、58.2%和64.6%的成功率，相比Diffusion Policy分别提升了22.2%、46.8%和48.3个百分点，在所有泛化设置中均表现最佳。</p>
+<p><img src="https://arxiv.org/html/2602.22862v1/2602.22862v1/x5.png" alt="定性结果"></p>
+<blockquote>
+<p><strong>图5</strong>：定性实验结果。(a) 仿真环境中对“马克杯”、“芥末瓶”等物体的抓取试验。(b) 真实世界中对域内、物体泛化、视觉泛化场景的抓取试验，其中使用彩色LED灯带模拟低光照视觉干扰。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22862v1/2602.22862v1/x4.png" alt="延迟对比"></p>
+<blockquote>
+<p><strong>图4</strong>：在RTX 4090 GPU上，三种方法的推理延迟对比（策略动作视野设为8）。GraspLDP相比Diffusion Policy仅增加约15%的延迟，但性能大幅提升；相比GraspVLA（即使加速后）仍有154ms的延迟优势。</p>
+</blockquote>
+<p><strong>消融实验</strong>：<br>如表2所示，移除视觉抓取性提示（w/o GC）会导致所有泛化设置下的性能下降，尤其在视觉泛化上下降7.1%。移除潜在引导并用简单的条件拼接替代（w/o LG w/ CG）会导致更严重的性能下降（域内下降6.8%）和GFE误差增加，表明潜在空间引导更有效。同时移除两者（w/o GC &amp; LG）性能最差。如表3所示，在抓取姿态选择策略的消融中，本文提出的HPS（综合考虑抓取质量和运动学接近度）效果最好，优于仅选择最高分、最近距离或随机选择的方法。</p>
+<p><strong>真实世界与杂乱场景评估</strong>：<br>在真实世界实验中，GraspLDP在训练物体相关设置（ID&amp;SG）上取得84%的成功率，优于Diffusion Policy（65%）和GraspVLA（29%），与开环抓取检测方法Anygrasp（82%）相当。在新物体（OG）和视觉干扰（VG）场景下也表现出色。</p>
+<p><img src="https://arxiv.org/html/2602.22862v1/2602.22862v1/fig/real_world.png" alt="真实世界设置"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界评估设置及用于训练和评估的日常物体。</p>
+</blockquote>
+<p>在真实世界杂乱场景抓取评估中（表5），GraspLDP取得了82.8%的平均成功率和92.3%的场景完成率，显著优于Diffusion Policy和GraspVLA，并与Anygrasp性能接近，展示了其处理复杂场景的能力。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 提出了一个基于潜在扩散的通用抓取策略框架，通过将抓取姿态先验注入动作潜在空间，实现了对动作生成更精确、更紧密的引导。2) 引入了视觉抓取性提示，为策略提供了几何驱动的、光照鲁棒的视觉先验，并通过自监督重建目标强化了条件化过程，显著提升了泛化能力。3) 设计了启发式姿态选择器，在推理时平衡抓取质量与运动学可行性，优化了轨迹平滑度与任务成功率。</p>
+<p>论文提到的局限性在于其性能依赖于预训练的抓取检测器，且额外的抓取性计算和潜在解码步骤带来了轻微的计算开销（约15%延迟增加）。</p>
+<p>本文工作为将成熟的抓取检测先验知识有效融入闭环模仿学习策略提供了新思路。其“潜在空间引导”和“几何视觉提示”的方法范式，对于其他需要结合高精度感知先验与连续决策的机器人任务（如装配、插孔等）具有启发意义。未来研究可探索更高效的先验融合机制，或尝试端到端地联合优化抓取检测与策略学习模块。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对模仿学习抓取策略存在执行不精确、空间与物体泛化能力差的问题，提出GraspLDP方法。该方法基于潜在扩散策略框架，利用预训练抓取检测器的姿态先验引导动作解码，并通过自监督重建目标在扩散过程中嵌入抓取性先验。模拟与真实机器人实验表明，该方法显著优于基线方法，展现出强大的动态抓取能力。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.22862" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

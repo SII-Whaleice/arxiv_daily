@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DySL-VLA: Efficient Vision-Language-Action Model Inference via Dynamic-Static Layer-Skipping for Robot Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DySL-VLA: Efficient Vision-Language-Action Model Inference via Dynamic-Static Layer-Skipping for Robot Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.22896" target="_blank" rel="noreferrer">2602.22896</a></span>
+        <span>作者: Meng Li Team</span>
+        <span>日期: 2026-02-26</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>视觉-语言-动作（VLA）模型通过融合语言模型的推理能力和视觉模型对3D环境的理解，在机器人操作等任务中展现出巨大潜力。然而，其高昂的计算成本导致推理延迟高、控制频率低（如RT-2为1-3 Hz，OpenVLA为3-5 Hz），难以满足机器人实时物理交互（20-50+ Hz）的需求。现有的VLA加速方法，如量化、剪枝、知识蒸馏和早期退出（Early-exit），存在局限性：它们通常对所有动作预测采用统一的处理方式，忽略了机器人操作任务中不同动作的重要性差异。例如，抓取或释放物体等关键步骤需要高精度，而准备性的预抓取动作则可以容忍更多变化。早期退出方法虽然试图动态调整计算负载，但可能因在最终层完全处理前退出而丢失关键信息，影响模型整体性能。</p>
+<p>本文针对VLA模型推理效率低下的问题，提出了一个新的视角：基于动作的重要性差异，动态地跳过VLA模型中不必要的层。核心思路是，将VLA模型的层分为信息层（必须执行）和增量层（可选择跳过），并设计一种智能的跳过决策机制，在保证关键动作精度的同时，大幅降低计算开销。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DySL-VLA的整体框架旨在通过动态-静态层跳过机制加速VLA推理。其核心流程是：对于每一帧的输入（图像观察和语言指令），模型首先通过视觉编码器和语言模型的前几层进行处理。随后，在处理语言模型（LLM）主干网络时，系统会识别并固定执行“静态层”（信息层），而在“动态层”（增量层）前，通过一个先验-后验跳过指导机制来决定是执行该层还是直接跳过一系列动态层至下一个静态层。若选择跳过，则使用一个轻量级适配器来拟合被跳过多层产生的激活变化，最终输出动作预测。</p>
+<p><img src="https://arxiv.org/html/2602.22896v1/2602.22896v1/x3.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图5</strong>：DySL-VLA的推理模式（e）与原始VLA模型（a）、使用多动作头的早期退出（b）、使用适配器的早期退出（c）以及传统层跳过方法（d）的对比。浅色模块表示在当前推理中未被激活。DySL-VLA将层分为静态层（必须执行）和动态层（可跳过），并通过跳过决策和适配器实现高效推理。</p>
+</blockquote>
+<p>该方法包含三个核心模块：</p>
+<ol>
+<li><p><strong>动态-静态层跳过</strong>：这是方法的基础。作者通过分析各层输出激活的平均余弦相似度发现，某些“信息层”会显著改变激活分布，而“增量层”的变化较小。因此，DySL-VLA<strong>静态地保留</strong>这些信息层以确保模型核心能力，而在增量层（即动态层）处进行<strong>动态跳过决策</strong>。当决定跳过时，直接跳至下一个静态层，并使用一个轻量级前馈适配器来总结被跳过的多层信息，以适应下一个静态层的输入。这相比每次只跳过一层的方法（如图5d）能获得更高的加速比，且相比早期退出方法（图5b, c）避免了信息损失。</p>
+</li>
+<li><p><strong>先验-后验跳过指导</strong>：该模块用于智能决定何时发起层跳过。其核心观察是，机器人动作轨迹的连续性可以反映当前动作的重要性：连续、平稳的运动（如自由空间移动）重要性较低，而连续性被破坏的阶段（如抓取、释放时的微调、停顿）则对应高重要性动作。</p>
+<ul>
+<li><strong>先验跳过预测</strong>：在两个静态层之间定义一个“允许跳过点”。该点之前强制保持所有层，之后则激活跳过控制器进行决策。该点的位置根据过去k步动作的连续性变化动态调整：当检测到连续性下降（<code>C_t - C_{t-1} &lt; -η</code>）时，点快速前移以在关键阶段保留更多层；当连续性改善（<code>C_t - C_{t-1} &gt; η</code>）时，点逐步后移以允许跳过。</li>
+<li><strong>后验跳过验证</strong>：为了解决仅凭历史信息无法保证首个关键动作正确性的问题，当首次检测到连续性下降时，系统会使用不跳过任何层的完整模型重新预测当前动作，并用新结果重新计算连续性。这确保了初始关键动作的准确性，且由于重要动作占比较小，额外开销有限。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.22896v1/2602.22896v1/x5.png" alt="先验-后验跳过指导"></p>
+<blockquote>
+<p><strong>图7</strong>：先验-后验跳过指导机制。包含先验跳过预测（动态移动“允许跳过点”）和后验跳过验证（在检测到连续性骤降时重新预测）。</p>
+</blockquote>
+<ol start="3">
+<li><strong>跳过感知的两阶段知识蒸馏</strong>：为了高效训练（仅训练轻量级的跳过控制器和适配器，冻结LLM主干）并解决控制器与适配器联合训练时的收敛问题，提出了两阶段训练策略。<ul>
+<li><strong>第一阶段</strong>：仅训练所有适配器，使其学会拟合从当前动态层到下一个静态层之间所有被跳过层所执行的计算（损失函数如公式4）。</li>
+<li><strong>第二阶段</strong>：联合训练控制器和适配器。为了避免控制器在训练初期总倾向于不跳过，采用了一种分层抽样策略：在每两个静态层之间，按调和衰减概率选择一个动态层进行训练。前向传播时，该层的输出是控制器预测的跳过概率与适配器输出、以及不跳过时真实层输出的加权和（公式5）。损失函数包含任务损失和一个鼓励跳过的归一化损失（公式6）。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.22896v1/2602.22896v1/x7.png" alt="两阶段知识蒸馏"></p>
+<blockquote>
+<p><strong>图9</strong>：跳过感知的两阶段知识蒸馏。(a) 第一阶段仅训练适配器。(b) 第二阶段联合训练控制器和适配器，红色框内的层是当前训练步骤中被选中的层。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在CALVIN基准（使用RoboFlamingo-3B/9B模型）和LIBERO基准（使用OpenVLA-oft-7B模型）上评估。性能指标包括平均成功长度（CALVIN，0-5）和成功率（LIBERO）。同时，在Jetson Orin等机器人常用计算平台上测试了延迟。</p>
+<p><strong>对比方法</strong>：包括基线模型（RoboFlamingo, OpenVLA-oft）、早期退出方法（DeeR-VLA）、传统层跳过方法（FlexiDepth）以及随机跳过等。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>精度与效率</strong>：在CALVIN D-&gt;D数据集上，DySL-VLA (3B)取得了2.89的平均成功长度，优于RoboFlamingo基线(2.82)和早期退出方法DeeR-VLA(2.83)，同时将延迟从51.0ms降低至13.6ms，实现了<strong>3.75倍</strong>的加速。与仅逐层跳过的FlexiDepth相比，DySL-VLA在精度上提升了54.5%（2.89 vs 1.87）。训练成本显著降低，可训练参数减少<strong>85.7倍</strong>，训练步数减少<strong>13.7倍</strong>。</li>
+<li><strong>泛化能力</strong>：在LIBERO数据集上，DySL-VLA (7B)取得了96.5%的平均成功率，优于DeeR-VLA(95.3%)和FlexiDepth(55.2%)，在A6000 GPU上的延迟从53.0ms（原始模型）降低至27.4ms。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.22896v1/2602.22896v1/Figures/latency_breakdown.png" alt="延迟分解"></p>
+<blockquote>
+<p><strong>图10</strong>：LLM主干的延迟分解图。展示了不同方法（DySL-VLA, FlexiDepth, DeeR-VLA）在推理过程中，模型计算、跳过控制器计算和适配器计算各部分所占的时间比例。DySL-VLA通过先验跳过预测减少了控制器开销，并通过跳过多层获得了更高的加速比。</p>
+</blockquote>
+<p><strong>消融实验</strong>：如表4所示，移除任何核心组件都会导致性能下降。</p>
+<ul>
+<li><strong>无动态-静态层跳过</strong>：平均成功长度降至1.87，因为信息层可能被跳过。</li>
+<li><strong>无先验跳过预测</strong>：平均成功长度降至2.42，延迟增至20.1ms，因为无法保证关键动作有足够计算资源。</li>
+<li><strong>无后验跳过验证</strong>：平均成功长度降至2.79，关键动作的初始预测可能出错。</li>
+<li><strong>无两阶段知识蒸馏</strong>：尽管精度与基线持平（2.82），但延迟高达74.0ms，因为训练不充分导致跳过率低。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了<strong>动态-静态层跳过</strong>框架，通过区分并保留信息层、动态跳过多余层，在保证精度的同时实现了显著的VLA模型加速；2）设计了<strong>先验-后验跳过指导</strong>机制，利用动作轨迹连续性作为重要性代理，智能地决定跳过时机，确保了关键动作的可靠性；3）提出了<strong>跳过感知的两阶段知识蒸馏</strong>方法，以极低的训练成本（仅需训练轻量级控制器和适配器）实现了高效模型的收敛。</p>
+<p>论文提到的局限性包括：方法依赖于动作连续性作为重要性指标，这可能不适用于所有类型的机器人任务；此外，当前方法主要针对LLM主干进行加速。</p>
+<p>这项工作为高效VLA模型部署提供了新思路。其核心启示在于，利用任务本身的特性（如动作重要性差异）来指导动态计算资源分配，是平衡模型性能与推理效率的有效途径。动态-静态层的划分思想、基于任务语义的跳过决策机制，以及低成本的适配器训练策略，对未来设计轻量级、实时化的具身智能模型具有重要的借鉴意义。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作模型在机器人操作中计算成本高、实时性差的核心问题，提出DySL-VLA框架。该框架采用动态静态层跳过技术，将模型层分为信息层和增量层，利用先验后验跳过指导机制决定跳过时机，并通过跳过感知的两阶段知识蒸馏算法高效训练。实验表明，在Calvin数据集上，DySL-VLA相比Deer-VLA成功长度提升2.1%，可训练参数减少85.7倍，相比RoboFlamingo基线在相同精度下速度提升3.75倍。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.22896" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

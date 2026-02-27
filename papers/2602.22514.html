@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SignVLA: A Gloss-Free Vision-Language-Action Framework for Real-Time Sign Language-Guided Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>SignVLA: A Gloss-Free Vision-Language-Action Framework for Real-Time Sign Language-Guided Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.22514" target="_blank" rel="noreferrer">2602.22514</a></span>
+        <span>作者: Zezhi Tang Team</span>
+        <span>日期: 2026-02-26</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型已成为机器人自主领域变革性的范式，使智能体能够在非结构化环境中执行复杂推理和具身决策。然而，现有VLA研究本质上是“听力中心主义”的，默认人类指令仅通过文本或语音提供，这限制了全球听力或言语障碍人群对机器人系统的可访问性。将手语集成到VLA框架中面临根本性挑战：大型语言模型的离散令牌处理与手语连续、流畅的动态之间存在模态不匹配。传统方法依赖“注释”作为中间监督，但这种方法造成了信息瓶颈，剥离了语法细节和空间基础，且大规模注释数据集的构建成本高昂、难以扩展。此外，可靠的真实世界机器人执行需要在不确定性下实现稳健且数据高效的控制。</p>
+<p>本文针对以上痛点，提出了首个手语驱动的VLA框架，旨在实现直观、包容的人机交互。本文的核心思路是摒弃对注释的依赖，采用免注释范式，通过一个分层处理流程，将实时手指拼写手势直接映射为语义指令，并交由VLA策略执行，从而为机器人控制建立一个稳健、低延迟且可扩展的通信通道。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>SignVLA框架的整体目标是将连续的手势流映射到连续的机器人控制。其流程包含三个核心模块：用于手指拼写的字母级感知模块、用于稳定和优化字符流的语言缓冲机制，以及将合成的指令落地为可执行动作的VLA策略。</p>
+<p><img src="https://arxiv.org/html/2602.22514v1/2602.22514v1/meida/adjust_bottle.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：SignVLA策略在三个不同任务中的定性演示。序列展示了机器人成功执行指令：(a) 针对特定颜色物体（调整红色瓶子），(b) 与局部目标区域交互， (c) 基本几何形状放置。</p>
+</blockquote>
+<p>**1. 手语感知模块 (Sign-to-Word)**：该模块将实时视频流转换为文本指令。首先，使用MediaPipe Hands框架实时提取3D手部关键点，作为稳定的几何先验。为了提升模型鲁棒性，对原始手势数据应用了随机旋转、缩放、水平翻转等几何变换，以及亮度、对比度调整等光度抖动进行数据增强。在特征建模上，系统采用了混合视觉表示：一方面，CNN编码器处理原始RGB帧以学习手部姿态和方向的高维嵌入；另一方面，提取的3D手部标志点被归一化处理。这两类特征被融合，并由一个轻量级分类器进行逐帧预测，最终通过基于softmax置信度的阈值过滤来抑制瞬时错误。</p>
+<p><strong>2. 语言缓冲与指令合成</strong>：为了将逐帧预测转化为稳定的单词和完整指令，系统采用了滑动窗口机制。只有当某个字符在连续多帧中保持为窗口内的众数时，才会被接受，这有效缓解了标签闪烁问题。一个专用的“空格”手势用于指示单词结束。当检测到该手势时，累积的字符序列S会通过Levenshtein距离与任务特定词典D进行匹配，以纠正拼写错误，得到最终单词W。合成的单词被追加到指令缓冲区，并转换为标准化的自然语言指令I，发送给VLA模型。</p>
+<p><strong>3. VLA策略与任务执行</strong>：VLA策略接收合成的指令I和机器人的RGB观测Ot。它通过跨注意力机制进行多模态融合，将语言描述符与场景中的视觉实体对齐，形成接地的任务表示。基于此表示，策略预测包括末端执行器运动和夹爪状态在内的控制命令。执行过程是闭环的，根据视觉反馈不断更新动作，直到完成指定指令。本框架采用了GR00T N1基础模型作为VLA决策引擎。其“系统2”使用NVIDIA Eagle-2 VLM进行语义落地，频率为10Hz；“系统1”则使用通过动作流匹配目标优化的扩散变换器进行低级运动合成，控制频率高达120Hz，并通过动作分块（视野H=16）来保持时间连贯性、抑制执行抖动。</p>
+<p><strong>创新点</strong>：与现有方法相比，SignVLA的主要创新在于：1) <strong>免注释范式</strong>：直接映射手势到语义指令，避免了注释带来的信息损失和标注成本。2) <strong>模块化、可扩展的接口设计</strong>：将手语感知与VLA策略解耦，允许集成更先进的手语模型（如词级、句级），同时避免灾难性遗忘。3) <strong>针对机器人交互的稳健性设计</strong>：通过几何归一化、时序平滑和词典精炼，确保在实时、动态的具身环境中指令的稳定可靠。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在Franka Emika Panda 7自由度协作机械臂平台上进行，使用搭载在机器人法兰上的Intel RealSense RGB-D相机提供自我中心视角。所有计算在配备NVIDIA RTX系列GPU的工作站上完成。</p>
+<p><strong>手语感知基准测试</strong>：在标准ASL手指拼写基准（CSL数据集）上评估感知模块性能。与多种基线方法对比，包括CNN+LSTM、ResNet+LSTM、3D CNN、3D ResNet34、ResNet (2+1)D以及基于骨架+LSTM的方法。评估指标为Top-1准确率，分别在100类和500类场景下进行。</p>
+<p><img src="https://via.placeholder.com/600x200?text=TABLE+I+Performance+comparison+on+isolated+sign+language+recognition" alt="实验结果表I"></p>
+<blockquote>
+<p><strong>表I</strong>：孤立手语识别性能对比。报告了CSL数据集上不同模型家族的Top-1准确率。结果显示，混合时空方法如ResNet (2+1)D卷积在两大类规模上都取得了最高性能（100类：98.68%，500类：94.85%），表明解耦时空建模能实现更高效的特征学习和更好的泛化能力。</p>
+</blockquote>
+<p><strong>初步VLA评估</strong>：在受控评估设置下进行初步实验，以验证手语衍生语义表示在机器人决策中的有效性。比较了文本指令、原始手语指令以及经过时序平滑和词典校正后的手语指令条件下的策略性能。</p>
+<p><img src="https://via.placeholder.com/600x150?text=TABLE+III+Preliminary+evaluation+of+sign-conditioned+VLA+control" alt="实验结果表III"></p>
+<blockquote>
+<p><strong>表III</strong>：手语条件VLA控制的初步评估。结果显示，经过时序平滑和词典校正后，手语控制的任务成功率（84.7%）已接近文本控制（86.5%），且稳定性达到“高”水平，证明了所提方法在具身控制中的有效性。</p>
+</blockquote>
+<p><strong>消融与分析</strong>：实验强调了时序平滑和词典校正对提升系统稳健性的关键作用。原始手语指令的成功率为79.3%，稳定性为“中”；加入后处理机制后，成功率提升至84.7%，稳定性达到“高”。这表明对手势流进行时序一致性处理和词汇纠错，对于将连续手势可靠地转换为离散指令至关重要。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了首个将手语作为原生指令模态的VLA框架，实现了机器人通过手势直接理解并执行任务。2) 开发了一个集成了几何归一化、时序平滑和基于Levenshtein距离的词典精炼的稳健手语感知流程，实现了准确稳定的实时字母级识别。3) 设计了一个模块化接口，桥接了连续手势流和离散令牌计算，确保了可扩展性并减轻了多模态具身系统中的灾难性遗忘。</p>
+<p>论文自身提到的局限性在于，当前系统主要聚焦于实时、字母级的手指拼写接口，以实现稳健性和低延迟。这虽然提供了可靠、可解释的通信通道，但语义丰富度有限。</p>
+<p>对未来研究的启示包括：1) <strong>向连续手语理解扩展</strong>：可以探索集成基于Transformer的免注释手语翻译模型（如Signformer），以实现词级和句级语义理解，使交互更自然。2) <strong>利用大规模社区数据集</strong>：未来训练可以利用ASL Citizen等社区驱动数据集进行大规模训练，提升模型的泛化能力和词汇量。3) <strong>模块化设计的优势</strong>：本文的模块化架构允许未来用更先进的句子级手语翻译组件替换当前的字母级感知模块，而无需修改下游VLA策略，这为系统升级和功能扩展提供了清晰的路径。</p>
+<p><img src="https://arxiv.org/html/2602.22514v1/2602.22514v1/meida/Signformer.jpg" alt="未来框架扩展"></p>
+<blockquote>
+<p><strong>图2</strong>：使用基于Transformer的免注释手语模型扩展本框架的潜在未来方案示意图。编码器从连续手语视频中提取时空特征，解码器生成可直接由VLA策略接地的自然语言指令。</p>
+</blockquote>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文提出SignVLA框架，解决传统手语-机器人交互依赖gloss注释导致信息损失和高成本的问题。采用gloss-free范式，直接映射视觉手势到语义指令，通过几何归一化、时间平滑和词汇精炼处理连续手势流，实现实时字母级指拼交互。实验证明，该系统在多样场景中能有效将手语指令转化为精确机器人动作，提升了交互的自然性和可扩展性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.22514" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
