@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Provably Safe Generative Sampling with Constricting Barrier Functions - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Provably Safe Generative Sampling with Constricting Barrier Functions</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.21429" target="_blank" rel="noreferrer">2602.21429</a></span>
+        <span>作者: Fabio Pasqualetti Team</span>
+        <span>日期: 2026-02-24</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>基于流的生成模型，如扩散模型和流匹配模型，在学习复杂数据分布方面取得了显著成功。然而，在安全关键领域部署这些模型存在一个关键缺陷：缺乏生成样本满足硬约束的形式化保证。现有方法主要分为两类：软引导技术和基于投影的硬约束方法。软引导技术（如分类器引导、奖励加权引导）仅作为概率激励，偏向于期望区域，但无法提供可行的形式化保证。基于投影的方法虽然能通过将完成样本投影到安全流形来保证安全性，但通常计算开销大，并可能引入较大的分布偏移。</p>
+<p>本文针对为预训练生成模型提供可证明的安全采样保证这一具体痛点，提出了一种新的安全过滤框架。其核心见解是与生成过程合作而非覆盖它。本文提出使用收缩安全管（constricting safety tube）和控制屏障函数（CBF）来合成反馈控制输入，在采样过程中逐步收紧约束，从而在保证100%约束满足的同时，最小化对原始模型学习到的分布的扰动。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的框架作为一个在线“护盾”，适用于任何预训练的基于流的生成模型，无需重新训练或修改架构。其核心思想是将采样过程视为一个动力系统，并通过添加控制输入来引导样本始终位于一个时变的安全管内。</p>
+<p><img src="https://arxiv.org/html/2602.21429v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：使用收缩安全管进行约束生成采样。基于流的采样过程将噪声样本<code>x(T)</code>转换为数据<code>x(0)</code>。无约束采样可能产生违反约束的不安全样本（落在红色叉区域）。本文方法通过CBF引导的采样，用反馈控制输入<code>u</code>增强生成动力学，使样本在整个采样过程中始终保持在收缩安全管<code>𝒞~(t)</code>（绿色区域）内，从而保证样本安全并最小化对学习到的采样过程的扰动。</p>
+</blockquote>
+<p>整体框架基于修改后的随机微分方程（SDE）：<br><code>dx = [f_θ(x, t) + u(x, ξ, t)] dt + g(t) dw</code><br>其中<code>f_θ</code>是生成模型学习到的无约束漂移项，<code>g(t)</code>是噪声调度，<code>u</code>是需要合成的反馈控制输入，它依赖于当前状态<code>x</code>和已实现的噪声<code>ξ</code>。目标是设计<code>u</code>，使得采样轨迹<code>x(t)</code>始终位于一个收缩的安全管<code>𝒞~(t)</code>内，并最终保证<code>x(0)</code>属于目标安全集<code>𝒞</code>。</p>
+<p>该方法的核心模块是<strong>收缩安全管</strong>和<strong>基于CBF的最小范数控制合成</strong>。</p>
+<ol>
+<li><strong>收缩安全管</strong>：定义为<code>𝒞~(t) = {x | h~(x, t) ≥ 0}</code>，其中收缩屏障函数<code>h~(x, t) = h(x) + ε(x(T), t)</code>。<code>h(x)</code>定义了最终的安全集<code>𝒞</code>（<code>h(x) ≥ 0</code>）。松弛项<code>ε(x(T), t)</code>是关键设计，它满足三个条件：初始可行性（<code>ε(T) ≥ max(0, -h(x(T)))</code>，确保噪声样本在管内）、目标集恢复（<code>ε(0)=0</code>，确保最终安全管收缩至<code>𝒞</code>）和单调收缩（<code>∂ε/∂t ≥ 0</code>，由于时间<code>t</code>从<code>T</code>减小到<code>0</code>，这意味着<code>ε</code>随时间减小，安全管逐步收紧）。论文提供了线性、指数和多项式三种<code>ε</code>的设计方案。</li>
+<li><strong>控制合成与安全性证明</strong>：为确保轨迹始终在安全管<code>𝒞~(t)</code>内（即反向不变性），控制输入<code>u</code>需满足基于CBF的条件（定理4.1）：<br><code>∇_x h~ · (f_θ + u + gξ) + ∂h~/∂t ≤ γ(h~)</code><br>其中<code>γ</code>是一个类<code>𝒦</code>函数。为最小化对原始模型分布的干扰，控制<code>u</code>通过求解一个凸二次规划（QP）来合成，该QP最小化控制能量（<code>u</code>的L2范数），同时满足上述CBF约束。该QP具有闭式解：当CBF条件自动满足时，<code>u*=0</code>；否则，<code>u*</code>沿<code>-∇_x h~</code>方向施加最小必要的修正。</li>
+</ol>
+<p>与现有方法相比，本文的创新点体现在：1) <strong>可证明的安全性</strong>：对任何有界闭安全集<code>𝒞</code>，该机制能保证最终样本<code>x(0) ∈ 𝒞</code>，且无需假设安全集是凸的。2) <strong>与生成过程协同</strong>：收缩安全管的设计模仿了基于流采样的“由粗到细”结构，将约束执行集中在噪声水平高、干预对分布影响小（控制能量“便宜”）的早期阶段，从而让模型在语义结构和细节上保留最大自主权。3) <strong>模块化引导</strong>：该框架可作为即插即用的安全过滤器，应用于任何预训练的基于流生成模型，无需重新训练。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在三个不同领域验证了方法的有效性：非线性物理系统模拟、约束图像生成和安全关键的机器人规划。使用的基准/数据集包括：用于图像生成的LSUN-Bedrooms和FFHQ，用于机器人规划的Push-T任务模拟环境。对比的基线方法包括：无约束采样、基于投影的方法（Projection）、以及两种基于CBF的固定时间收敛方法（Prescribed-time CBF）。</p>
+<p><img src="https://arxiv.org/html/2602.21429v1/x2.png" alt="非线性物理模拟结果"></p>
+<blockquote>
+<p><strong>图2</strong>：双摆系统约束采样。左图展示了安全集（绿色）和不同方法生成的轨迹。本文方法（CBF-QP）的轨迹（蓝色）始终保持在安全管内并满足约束，而无约束采样（红色）和固定时间CBF方法（紫色）的轨迹违反了约束。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.21429v1/x3.png" alt="图像生成定性对比"></p>
+<blockquote>
+<p><strong>图3</strong>：约束图像生成（外绘）定性结果。第一行：参考图像和约束掩码（红色区域需保持不变）。下面几行展示了不同方法的结果。基于投影的方法（第二行）在约束边界处产生伪影。本文方法（CBF-QP，第三、四行）在完美满足像素约束的同时，生成了语义连贯且自然的图像内容。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.21429v1/x4.png" alt="机器人规划结果"></p>
+<blockquote>
+<p><strong>图4</strong>：Push-T任务的安全关键规划。左图展示了任务设置和障碍物（红色）。右图对比了不同方法采样到的末端执行器轨迹。无约束采样（灰色）和基于投影的方法（橙色）的轨迹与障碍物发生碰撞。本文方法（CBF-QP，蓝色）的所有轨迹均成功避障，满足了安全约束。</p>
+</blockquote>
+<p>关键实验结果总结如下：</p>
+<ol>
+<li><strong>约束满足率</strong>：在所有三个实验中，本文提出的CBF-QP方法均实现了<strong>100%的约束满足率</strong>。例如在图像生成中，指定区域的像素值被精确保持；在机器人规划中，所有轨迹均避开了障碍物。</li>
+<li><strong>分布保真度</strong>：在图像生成实验中，通过FID和LPIPS指标衡量，本文方法在满足硬约束的同时，生成的图像质量与无约束模型相当，且显著优于简单的投影后处理（Projection）方法。例如在卧室图像外绘任务中，CBF-QP的FID为7.21，优于Projection的9.85，接近无约束模型的6.90。</li>
+<li><strong>与现有CBF方法对比</strong>：在双摆和机器人规划任务中，对比的两种固定时间CBF方法（Prescribed-time CBF）虽然也能保证最终安全，但其采用的高增益反馈会导致轨迹在早期发生剧烈转向，破坏生成过程，产生不自然或不高效的轨迹（如图2紫色轨迹），而本文方法的轨迹更平滑、更自然。</li>
+</ol>
+<p>消融实验研究了不同收缩方案<code>ε(t)</code>的影响：</p>
+<ul>
+<li><strong>线性收缩</strong>：在整个采样过程中均匀施加控制。</li>
+<li><strong>指数收缩（λ&gt;1）</strong>：将大部分松弛放在早期，允许模型在初期自由探索，后期快速收紧约束。</li>
+<li><strong>多项式收缩（p&gt;1）</strong>：初期松弛较小，约束更早介入。<br>实验表明，<strong>指数收缩</strong>在大多数任务中取得了最佳平衡，在保证安全的同时对模型保真度的干扰最小。这验证了“在噪声水平高时（早期）进行干预成本更低”的核心设计思想。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：</p>
+<ol>
+<li><strong>提出了一个可证明安全的生成采样框架</strong>：通过收缩安全管和CBF，为任何预训练的基于流生成模型提供了形式化的硬约束保证，且不要求安全集为凸集。</li>
+<li><strong>实现了与生成过程的协同</strong>：通过设计时变的安全管，使约束执行与生成模型的“由粗到细”结构对齐，将主要干预集中在分布意义上“便宜”的早期高噪声阶段，从而最大程度保留了模型的生成能力。</li>
+<li><strong>提供了模块化且高效的实现</strong>：该方法通过求解一个具有闭式解的小型QP在线合成控制，无需修改模型架构或重新训练，计算开销低。</li>
+</ol>
+<p>论文自身提到的局限性主要在于其假设控制器能同时观测状态和噪声的实现<code>ξ(t)</code>，这在实际物理系统中可能不成立。此外，虽然高斯噪声的极端实现理论上可能需要很大的控制能量，但实验表明这种情况在实践中很少发生。</p>
+<p>这项工作对后续研究的启示在于：为生成模型的安全部署提供了一个坚实的控制理论框架。未来工作可以探索将安全保证扩展到仅有状态反馈的场景（无噪声观测），研究如何将方法应用于更复杂的约束（如涉及文本或逻辑的约束），以及进一步理论分析不同收缩函数对最终分布偏移的定量影响。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对流式生成模型（如扩散模型）在安全关键领域部署时缺乏硬约束形式化保证的核心问题，提出一种可证明安全的安全过滤框架。该方法基于收缩安全管，利用控制屏障函数（CBFs）进行表征，并通过凸二次规划（QP）在每个采样步骤合成反馈控制输入，以最小化对原始模型分布的偏移。该框架无需重新训练或修改模型结构。实验表明，在约束图像生成、物理一致轨迹采样和安全机器人操作策略中，实现了100%的约束满足率，同时保持了语义保真度。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.21429" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

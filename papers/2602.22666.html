@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ArtPro: Self-Supervised Articulated Object Reconstruction with Adaptive Integration of Mobility Proposals - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ArtPro: Self-Supervised Articulated Object Reconstruction with Adaptive Integration of Mobility Proposals</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.22666" target="_blank" rel="noreferrer">2602.22666</a></span>
+        <span>作者: Changhe Tu Team</span>
+        <span>日期: 2026-02-26</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>关节物体（如柜子、笔记本电脑、剪刀）的高保真数字孪生重建是机器人操作和交互仿真的关键。现有方法主要分为两类：前馈重建方法和基于优化的方法。前馈方法利用扩散模型或视觉语言模型的数据驱动先验，直接从图像或文本预测关节结构，推理速度快，但通常依赖粗糙的几何抽象，难以重建实例特定的细节，泛化能力有限。另一类基于优化的方法（如基于NeRF或3D高斯溅射的方法）直接针对特定实例进行优化，不依赖预训练模型，能实现更高的保真度，但其一个关键弱点是<strong>对可动部件初始分割的极端敏感</strong>。如图1所示，基于启发式聚类的不完美初始分割仍可能产生较小的渲染损失，导致优化陷入错误的运动结构（局部极小值），这对具有多个相邻部件的复杂物体尤为不利，严重限制了其实用性。</p>
+<p>本文针对基于优化的方法对初始分割高度敏感这一具体痛点，提出了一个“提出-验证-合并”的新视角。核心思路是放弃脆弱的“一次性猜测分割”范式，转而采用更鲁棒的策略：首先通过过分割生成多个运动提议，然后在优化过程中动态地分析和合并这些提议，从而将部件分割从一个固定的起点重构为一个在优化中持续精炼的动态过程。</p>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x1.png" alt="问题说明"></p>
+<blockquote>
+<p><strong>图1</strong>：现有方法（如ArtGS）对初始部件分割高度敏感，导致不准确的运动和几何。本文方法ArtPro利用先验引导的运动初始化，并在优化过程中自适应地合并运动提议，实现了对复杂多部件关节物体的鲁棒重建。</p>
+</blockquote>
+<h2 id="方法详解">方法详解</h2>
+<p>ArtPro是一个基于3D高斯溅射的自监督框架，旨在从两个运动状态的多视图RGBD图像中重建关节物体。其整体流程是一个“提出-验证-合并”的管道。</p>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x2.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ArtPro方法整体框架。输入是两个运动状态的多视图RGBD图像。流程始于通过过分割和混合变量搜索进行部件-运动提议初始化。随后通过自监督优化（使用可变换的3D高斯）来细化提议及其运动参数。优化过程中集成了运动剪枝和提议合并操作，以校准运动并将提议合并为连贯的可动部件。最后，后处理细化稳定重建的外观、几何和运动参数。</p>
+</blockquote>
+<p><strong>整体流程</strong>：输入是关节物体在两个状态（t=0和t=1）下的多视图RGBD图像。输出是分割的部件（用3D高斯表示）及其运动参数（平移或旋转）。核心表示在3D高斯的基础上，为每个高斯定义了部件感知的概率场，包括属于静态部分的概率$P_s(x_i)$和属于第$m$个可动部分的概率$P_m(x_i)$，从而根据条件概率将高斯分配给不同部件。运动参数根据关节类型（平移或旋转）定义，用于对高斯进行刚性变换。</p>
+<p><strong>核心模块1：运动提议初始化</strong>。为了鲁棒地重建复杂多部件物体，策略是使用<strong>过分割的运动提议进行初始化</strong>，然后在优化过程中逐步合并。首先，从输入深度图构建点云，并通过最近邻距离阈值识别出可动点集。随后，利用预训练分割模型[29]的点级特征，围绕最远点采样得到的种子点生成$n$个过分割部件，并对重叠超过80%的部件进行合并，得到$M$个可动部件提议。对于每个提议，通过求解一个混合变量优化问题来初始化其运动参数：从部件的定向包围盒（OBB）的三个主轴中选择一个作为候选关节轴，并联合优化离散的轴选择$\hat{a}$、旋转角度$\phi$和平移量$d$，以最小化变换后部件与目标点云之间的单向倒角距离。最终，运动参数被初始化为中间状态（角度和位移减半），以稳定后续优化。</p>
+<p><strong>核心模块2：自适应提议集成优化</strong>。这是一个循环优化过程，旨在逐步合并初始提议，最终确定连贯的可动部件。包含三个关键组件：</p>
+<ol>
+<li><strong>高斯-提议关联</strong>：使用高斯混合模型（GMM）为每个高斯基元分配属于各个提议的概率，实现概率关联。</li>
+<li><strong>高斯基元优化</strong>：迭代优化高斯基元参数及其关联的提议运动参数。通过将高斯从起始状态变换到结束状态并进行可微渲染，构建包含RGBD图像损失$\mathcal{L}<em>I$、单向倒角距离损失$\mathcal{L}</em>{cd}$、部件对比损失$\mathcal{L}<em>{pc}$、局部平滑损失$\mathcal{L}</em>{ls}$和正则化项$\mathcal{L}_{reg}$在内的多目标损失函数（公式7），以优化分割和运动。</li>
+<li><strong>运动剪枝策略</strong>：每100次迭代，通过计算提议对沿其运动轨迹的重叠体积来校准关节轴。如果结束状态的重叠体积大于起始状态（$\Delta v_{i,j} &gt; \tau_v$），则检测到碰撞。对于平移关节，将平移向量$t_m$投影到与碰撞轴$a_{col}$正交的平面上以消除沿该轴的分量；对于旋转关节，若旋转角接近零，则通过将旋转轴与最近的OBB边对齐并减半旋转角来抑制。在4K次迭代后，对关节类型施加硬约束。</li>
+<li><strong>提议集成操作</strong>：每5K次迭代，识别并合并空间相邻且运动一致的提议对。空间相邻性通过在高斯中心上进行k近邻搜索（k=8）确定。运动一致性通过评估在替换运动参数前后，渲染深度图与真实深度图之间的L1误差变化来判断。若变化小于阈值$\tau_{merge}=10^{-3}$，则合并两个提议。合并后，使用合并后高斯的并集更新OBB和部件概率场，运动参数更新为被合并提议的运动。</li>
+</ol>
+<p><strong>核心模块3：后处理细化</strong>。在自适应优化循环结束后，再次进行高斯基元优化以获取精确重建。此时目标函数（公式10）包含两个状态（t=0和t=1）的RGBD损失，并引入碰撞损失$\mathcal{L}_{col}$以避免可动部件与静态部件之间的碰撞。</p>
+<p><strong>创新点</strong>：与现有方法相比，ArtPro的创新主要体现在：1）<strong>过分割初始化</strong>：生成多个带运动假设的部件提议，而非依赖单一分割。2）<strong>动态合并</strong>：在优化过程中基于运动一致性动态合并提议，而非固定分割。3）<strong>碰撞感知的运动剪枝</strong>：主动检测并校准导致部件碰撞的错误运动参数，防止优化陷入局部极小。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>数据集与基准</strong>：在现有工作[25, 33]收集的关节物体数据集上评估，包括双部件物体和多部件物体。此外，从PartNet-Mobility数据集[49]中选取了8个具有3-11个部件的多部件物体，这些物体部件多、运动结构多样、位置接近，对重建其精确关节结构构成挑战。对比的基线方法包括DTA[45]和ArtGS[33]。</p>
+<p><strong>评估指标</strong>：遵循ArtGS[33]的评估协议，包括网格重建指标（对整个物体、静态部件、可动部件分别计算倒角距离CD-w、CD-s、CD-m）和关节估计指标（关节轴角度误差Axis Ang.、旋转关节轴位置误差Axis Pos.、部件运动误差Part Motion）。</p>
+<p><strong>关键实验结果</strong>：<br>在自建的多部件数据集上（表1），ArtPro在几乎所有指标上均显著优于DTA和ArtGS。例如，在“All”列的综合结果中，ArtPro的Axis Ang.误差为0.07°，而ArtGS为8.70°（含预测错误标记F），DTA为22.42°；在CD-m（可动部件倒角距离）上，ArtPro为3.86，远低于ArtGS的345.31和DTA的38.17（含错误标记）。这证明了ArtPro在处理复杂多部件物体时的优越性。</p>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x3.png" alt="双部件物体结果"></p>
+<blockquote>
+<p><strong>图3</strong>：ArtGS与本文方法在双部件物体上的部件初始化和重建结果对比。尽管本文方法未合并两个不相邻的可动部件（第二行），但仍获得了准确的运动和几何重建。</p>
+</blockquote>
+<p>在ArtGS-Multi数据集[33]上（表2），ArtPro同样在大多数指标上领先，特别是在CD-m和CD-w上表现更优，表明其重建的几何质量更高。</p>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x4.png" alt="多状态重建"></p>
+<blockquote>
+<p><strong>图4</strong>：重建的关节物体在不同运动状态（t=0, 0.5, 1）下的渲染结果及其部件-运动结构。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x5.png" alt="优化过程"></p>
+<blockquote>
+<p><strong>图5</strong>：自适应提议集成优化过程中的中间结果。展示了每个周期在提议合并操作前的优化后高斯（及其中心点）和估计的运动。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x6.png" alt="真实数据结果"></p>
+<blockquote>
+<p><strong>图6</strong>：在真实世界扫描数据上的重建结果。第一行是输入图像，第二行是重建的网格和新视角下的渲染。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x7.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图7</strong>：消融研究结果。(a) 完整方法。(b) 无运动剪枝：导致错误的运动估计和部件合并。(c) 无提议集成：由于过分割导致部件破碎。(d) 使用单一运动假设初始化：陷入局部最优。</p>
+</blockquote>
+<p><strong>消融实验</strong>（图7）验证了各核心组件的贡献：</p>
+<ol>
+<li><strong>移除运动剪枝</strong>：导致错误的运动估计和不正确的部件合并。</li>
+<li><strong>移除提议集成</strong>：部件保持过分割状态，无法形成连贯的可动部件。</li>
+<li><strong>使用单一运动假设初始化</strong>（而非混合变量搜索）：优化陷入局部最优，产生不准确的重建。<br>完整方法整合了所有组件，实现了鲁棒且准确的重建。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.22666v1/2602.22666v1/x8.png" alt="失败案例"></p>
+<blockquote>
+<p><strong>图8</strong>：失败案例分析。对于具有复杂内部结构（如抽屉内部隔间）或高度非刚性部件（如软管）的物体，方法可能无法完全恢复其结构或运动。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：</p>
+<ol>
+<li><strong>提出了自适应提议集成的鲁棒自监督框架</strong>：将部件分割从固定初始化重构为在优化中动态合并提议的过程，有效降低了对初始分割的敏感性。</li>
+<li><strong>设计了先验引导的运动提议初始化方法</strong>：结合几何特征和运动先验生成过分割提议，并通过混合变量搜索初始化运动参数，为优化提供了良好的起点。</li>
+<li><strong>引入了碰撞感知的运动剪枝策略</strong>：在优化过程中主动监测并校准导致部件碰撞的运动参数，防止优化陷入局部极小，确保了运动估计的稳定性。</li>
+</ol>
+<p><strong>局限性</strong>：方法依赖于物体两个运动状态的输入。对于具有高度非刚性变形或复杂内部结构（如图8所示的抽屉内部）的物体，方法可能无法完全恢复其结构或运动。</p>
+<p><strong>对后续研究的启示</strong>：ArtPro的成功表明，在关节物体重建中，将部件识别与运动估计作为一个动态、迭代的优化过程是可行的。这种“提出-验证-合并”的范式可以推广到其他需要联合优化结构和参数的任务中。此外，如何将数据驱动的先验更有效地融入此类优化框架，以处理更广泛的物体类别和运动类型，是一个值得探索的方向。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对自监督铰接物体重建中，现有方法对初始部件分割高度敏感、易陷入局部最小值的问题，提出了ArtPro框架。其核心是**自适应集成移动性提议**：首先基于几何特征与运动先验进行过分割初始化，生成部件提议与运动假设；随后在优化中**动态合并**空间邻居间运动一致的提议，并引入**碰撞感知运动剪枝**以防止错误运动估计。实验表明，该方法在合成与真实物体上实现了对复杂多部件物体的**稳健重建**，在准确性与稳定性上显著优于现有方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.22666" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

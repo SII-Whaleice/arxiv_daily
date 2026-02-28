@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Constructive Vector Fields for Path Following in Fully-Actuated Systems on Matrix Lie Groups - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Constructive Vector Fields for Path Following in Fully-Actuated Systems on Matrix Lie Groups</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.21450" target="_blank" rel="noreferrer">2602.21450</a></span>
+        <span>作者: Luciano C. A. Pimenta Team</span>
+        <span>日期: 2026-02-25</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人导航与控制领域，引导向量场（Guidance Vector Fields）已被广泛应用于路径规划、轨迹跟踪与控制的一体化框架中。现有主流方法主要分为两类：一类是在欧几里得空间（如ℝⁿ）中设计向量场，例如Rezende等人（2022）的工作，其依赖于曲线的参数化表示；另一类是将问题推广到更一般的黎曼流形（如球面𝕊ⁿ、环面𝕋ⁿ、旋转群SO(n)），例如Yao等人（2023）的工作，其通过定义多个函数的零水平集交集来隐式定义目标曲线。然而，这些方法存在关键局限性：欧几里得空间的方法无法直接应用于具有非平凡几何结构的李群（如SO(3)、SE(3)）；而黎曼流形方法虽然更通用，但其控制输入定义在流形所嵌入的更高维欧几里得空间中，导致控制输入是冗余的。例如，对于SO(3)上的系统，Yao等人的方法需要9维输入（对应旋转矩阵的9个元素），而实际上描述刚体角速度仅需3维。</p>
+<p>本文针对李群（特别是矩阵李群）上全驱动系统的路径跟踪问题，提出了一个新颖的向量场策略。其核心痛点是：如何在李群上设计一个非冗余（即控制输入维度等于李代数维度）的控制律，使得系统状态能收敛并跟踪一条参数化定义的曲线。本文的核心思路是：将欧几里得空间中的向量场构造方法推广到连通的矩阵李群上，通过引入适用于李群微积分的L算子和Ξ算子，并利用李群的性质（如左不变性），构建一个具有收敛分量和跟踪分量的向量场，从而实现对参数化曲线的跟踪。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文方法旨在为定义在连通矩阵李群G上的系统（状态为𝐇∈G）设计一个向量场Ψ: G → ℝᵐ（其中m为李代数维度），使得当控制输入𝝃 = Ψ(𝐇)时，系统轨迹能收敛到目标曲线𝒞并沿其行进。目标曲线由参数化函数𝐇_d(s): ℝ → G给出。</p>
+<p><img src="https://arxiv.org/html/2602.21450v1/plotly_vf2.pdf" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：向量场构造示意图。对于当前状态𝐡（在欧几里得空间中示意）和目标曲线𝒞，向量场Ψ由法向分量ξ_N（负责使状态收敛至曲线）和切向分量ξ_T（负责使状态沿曲线行进）组合而成。</p>
+</blockquote>
+<p><strong>整体框架与系统模型</strong>：考虑具有一阶动力学的全驱动系统，其模型为：<br>𝐇̇(t) = 𝒮(𝝃(t)) 𝐇(t)，<br>其中𝐇 ∈ G 是状态，𝝃 ∈ ℝᵐ 是控制输入（称为广义twist），𝒮: ℝᵐ → 𝔤 是一个将向量映射到李代数𝔤的线性同构算子（取决于所选基）。该模型假设系统能完全控制其广义速度，并确保状态始终保持在李群G上。对于SE(3)群，𝐇代表位姿，𝝃则对应世界坐标系下的线速度和角速度（twist）。</p>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><strong>距离函数</strong>：定义函数 D(𝐇) = min_{s∈ℝ} d(𝐇, 𝐇_d(s))，用于度量状态𝐇到目标曲线𝒞的距离。其中d: G×G → ℝ₊ 是一个满足特定性质的距离函数（定义III.2），例如对于指数李群（如SE(n)），可采用基于对数映射的距离：d(𝐇₁, 𝐇₂) = ||log(𝐇₁⁻¹𝐇₂)||_F。该距离函数需满足正则性、无局部极小值（除曲线外）等关键性质。</li>
+<li><strong>微分算子</strong>：为在李群上进行微分，引入了两个算子：<ul>
+<li><strong>Ξ算子</strong>（定义II.5）：对于可微函数𝐆: ℝ → G，Ξ<a href="%CF%83">𝐆</a> ∈ ℝᵐ 提取了该函数在参数σ处的“李群速度向量”，满足 d𝐆/dσ = 𝒮(Ξ<a href="%CF%83">𝐆</a>) 𝐆(σ)。</li>
+<li><strong>L算子</strong>（定义II.6）：类比于梯度，对于可微函数 f: G → ℝ，L<a href="%F0%9D%90%86">f</a> ∈ ℝ¹ˣᵐ 是一个行向量，满足沿方向𝜻 ∈ ℝᵐ的方向导数公式：lim_{ε→0} (f(exp(𝒮(𝜻)ε)𝐆) - f(𝐆))/ε = L<a href="%F0%9D%90%86">f</a>𝜻。</li>
+</ul>
+</li>
+<li><strong>向量场构造</strong>：向量场Ψ(𝐇)由法向分量ξ_N(𝐇)和切向分量ξ_T(𝐇)加权组合而成：<br>Ψ(𝐇) = k_N(𝐇) ξ_N(𝐇) + k_T(𝐇) ξ_T(𝐇)。<ul>
+<li><strong>法向分量 ξ_N</strong>：负责驱使状态收敛到曲线。其构造需满足距离函数的时间导数满足 Ḋ = -ξ_Nᵀ 𝝃（特征F1）。通过应用链式法则（引理II.8）对距离函数D(𝐇) = d(𝐇, 𝐇_d(s*(𝐇)))求导，可以推导出ξ_N的表达式。这涉及到对距离函数d(·,·)关于其两个变量分别应用L算子（L_𝐕[d]和L_𝐖[d]）。</li>
+<li><strong>切向分量 ξ_T</strong>：负责驱使状态沿曲线行进。定义为目标曲线在最近点处的“速度”：ξ_T(𝐇) = Ξ<a href="s*(%F0%9D%90%87)">𝐇_d</a>，其中s*(𝐇)是使距离最小化的参数。</li>
+<li><strong>增益 k_N 与 k_T</strong>：通常选择k_N(𝐇) &gt; 0以保证收敛，k_T(𝐇)可设计为常数或与距离相关的函数以确保跟踪速度。</li>
+</ul>
+</li>
+<li><strong>关键性质与证明</strong>：本文证明了所构造的向量场继承了欧几里得情形下的三个关键特征（F1-F3），并利用李群的性质（如左不变性）确保了这些特征。特别地，证明了法向与切向分量在所选距离函数下是正交的（特征F2），且距离函数在曲线外无局部极小值（特征F3）。此外，论文还证明了系统轨迹要么收敛到目标曲线𝒞，要么收敛到一个测度为零的奇异集𝒫，并且奇异点可以在有限时间内逃逸（定理III.17）。</li>
+</ol>
+<p><strong>与现有方法的创新点</strong>：</p>
+<ol>
+<li><strong>推广到李群</strong>：将参数化曲线向量场方法从欧几里得空间推广到连通的矩阵李群。</li>
+<li><strong>非冗余控制输入</strong>：控制输入𝝃的维度等于李代数维度m，而非嵌入空间的维度n（例如，SO(3)为3而非9，SE(3)为6而非16），更贴近实际物理量（如角速度、twist）。</li>
+<li><strong>使用参数化曲线</strong>：与需要定义多个零水平集函数来隐式定义曲线的方法相比，直接使用参数化曲线更便捷，避免了曲线切向量可能为零的问题。</li>
+<li><strong>理论保证</strong>：提供了严格的收敛性分析，并证明了奇异点的有限时间可逃逸性，这是一种比“几乎全局收敛”更强的保证。</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>平台与实现</strong>：论文提供了在SE(3)群上实现该向量场算法的Python代码。对于SE(3)，距离函数采用d(𝐇₁, 𝐇₂) = ||log(𝐇₁⁻¹𝐇₂)||_F，并给出了计算其L算子（即梯度）的有效算法。</li>
+<li><strong>对比方法</strong>：主要与Yao等人（2023）在黎曼流形上的向量场方法进行对比，重点比较控制输入的维度。</li>
+<li><strong>实验场景</strong>：<ol>
+<li><strong>数值仿真</strong>：在SE(3)上跟踪一条螺旋路径，验证算法的收敛性。</li>
+<li><strong>实物实验</strong>：使用Franka机械臂，控制其末端执行器（位姿∈SE(3)）跟踪空间中一个“8”字形路径。控制指令为末端执行器的线速度和角速度（即SE(3)的twist）。</li>
+</ol>
+</li>
+</ul>
+<p><strong>关键实验结果</strong>：</p>
+<ul>
+<li><strong>非冗余控制</strong>：在SE(3)上，本文方法产生的控制输入是6维的twist（3维线速度+3维角速度），而对比方法（Yao等，2023）需要16维的输入（对应4x4齐次矩阵的所有元素），这验证了本文方法在控制效率上的优势。</li>
+<li><strong>路径跟踪性能</strong>：实物实验中，机械臂末端能够准确地收敛并平滑地跟踪给定的“8”字形空间路径，证明了方法的有效性。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2602.21450v1/exp_distance.pdf" alt="距离函数与向量场示例"></p>
+<blockquote>
+<p><strong>图9/10/11</strong>：（组合图）展示了在SO(3)上，针对不同目标曲线所计算出的距离函数D(𝐇)的等值面（或水平集）以及相应的向量场。图中清晰显示了向量场如何引导状态指向曲线，并且距离函数在曲线外没有局部极小值点，保证了全局收敛性（除奇异集外）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.21450v1/theorem_proof_escape.pdf" alt="定理证明示意图"></p>
+<blockquote>
+<p><strong>图4/5</strong>：（组合图）用于辅助说明定理III.17的证明，展示了状态轨迹如何从奇异集𝒫的邻域内逃逸。这为“有限时间逃逸”特性提供了几何直观解释。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.21450v1/figures/experiment_animation_1.png" alt="机械臂实验截图"></p>
+<blockquote>
+<p><strong>图6/7/8</strong>：（组合图）Franka机械臂实物实验的截图序列。展示了机械臂末端执行器从不同初始位姿出发，成功跟踪空间“8”字形路径的过程。</p>
+</blockquote>
+<p><strong>消融实验分析</strong>：<br>论文通过理论性质（特征F3）和数值示例间接验证了各组件的作用。距离函数无局部极小值的性质（由所选距离函数d保证）是确保全局收敛（除奇异点外）的关键。若该性质不满足，系统可能陷入局部极小点而无法到达目标曲线。法向与切向分量的正交性（特征F2）则是李雅普诺夫稳定性证明中的关键，确保了收敛行为的正确性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>理论框架的扩展</strong>：成功地将基于参数化曲线的引导向量场策略从欧几里得空间推广到连通的矩阵李群，为李群上的路径跟踪控制提供了一个系统性的设计框架。</li>
+<li><strong>非冗余控制律</strong>：通过充分利用李群的代数结构，所设计的控制输入维度与李代数维度一致（即系统的自由度），避免了在嵌入空间中设计冗余控制量，使得控制指令更直接对应物理量（如机械twist），工程实用性更强。</li>
+<li><strong>完整的理论保证与高效实现</strong>：不仅形式化地证明了向量场所需的三个关键特征（F1-F3）以及系统的收敛性与奇异点可逃逸性，还针对在机器人学中至关重要的SE(3)群，给出了计算距离函数及其微分（L算子）的高效算法，并进行了实物实验验证。</li>
+</ol>
+<p><strong>局限性</strong>：<br>论文明确指出，所提出的向量场构造适用于任何连通矩阵李群，但其依赖的距离函数d(·,·)的显式形式仅针对<strong>指数李群</strong>（如SE(n)）给出。对于非指数李群，需要用户自行定义满足性质III.2的合适距离函数。</p>
+<p><strong>后续研究启示</strong>：</p>
+<ol>
+<li><strong>应用场景</strong>：该方法非常适合于需要同时控制位置和姿态的完全驱动系统，例如全向无人机（如图1所示的Voliro无人机）、具有冗余自由度的机械臂末端执行器等，为其在复杂空间路径（如避障、钻孔作业）下的跟踪控制提供了解决方案。</li>
+<li><strong>理论扩展</strong>：未来的工作可以考虑将方法扩展到具有二阶动力学或欠驱动的系统，或者结合障碍物避免功能。</li>
+<li><strong>距离函数设计</strong>：对于更广泛的非指数李群，如何系统地构造满足要求的距离函数是一个值得探索的理论问题。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文提出一种新颖向量场策略，用于解决完全驱动系统在连通矩阵李群上的路径跟随问题，确保系统收敛到并沿定义曲线遍历。方法引入L算子（类梯度）和Ξ算子（提取李群速度向量），利用左不变性、链式性和局部线性性等李群性质保证向量场行为正确，并推广至SE(3)等群，实现非冗余控制输入。实验通过机器人操纵器验证了方法的有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.21450" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
