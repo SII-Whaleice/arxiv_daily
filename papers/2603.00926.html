@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DAM-VLA: A Dynamic Action Model-Based Vision-Language-Action Framework for Robot Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DAM-VLA: A Dynamic Action Model-Based Vision-Language-Action Framework for Robot Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.00926" target="_blank" rel="noreferrer">2603.00926</a></span>
+        <span>作者: Daehyun Ji Team</span>
+        <span>日期: 2026-03-01</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前机器人操作领域，基于预训练视觉语言模型（VLM）的视觉-语言-动作（VLA）框架（如RT-2、OpenVLA）通过将连续动作离散化，展现出强大的多任务学习和泛化能力。然而，这些方法在动态复杂环境中面临关键局限性：一方面，融入思维链（CoT）推理的方法（如RT-H、ECoT）虽提升了泛化性，但引入了大量额外推理标记，显著增加了推理时间；另一方面，基于扩散模型的VLA方法（如π0、CogACT）通常在VLM后附加独立的扩散头，要么仅以VLM提取的特征为条件，要么将去噪时间步和噪声动作联合嵌入，限制了更丰富的多模态线索整合，难以兼顾通用任务适应性与复杂操作所需的专门精度。</p>
+<p>本文针对动态环境（如仓库、家庭）中机器人需在粗大运动（arm movement）与精细夹爪操作（gripper manipulation）间无缝切换的核心痛点，提出了一个新视角：识别并利用这两类动作在路径约束、视觉注意力和数据集表征上的根本差异。核心思路是，利用VLM的推理能力动态区分动作类型，并通过一个集成的动态动作模型，将高级VLM认知与低层视觉特征融合，路由到专门为手臂或夹爪控制优化的扩散模型，从而实现通用适应性与任务特定精度的统一。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DAM-VLA的整体目标是在给定语言指令𝒍和时刻t的视觉观察𝒐𝑡时，预测一个未来的动作序列[𝒂𝑡, …, 𝒂𝑡+𝑁]，其中动作𝒂𝑡 = [δ𝒙, δ𝜽, 𝑠^𝑔𝑟𝑖𝑝]对应7自由度夹爪的平移、旋转和开合状态。</p>
+<p><img src="https://arxiv.org/html/2603.00926v1/2603.00926v1/x2.png" alt="方法架构"></p>
+<blockquote>
+<p><strong>图2</strong>：DAM-VLA架构概览。给定RGB图像观察和任务描述，模型预测时序动作序列。流程包含三个关键组件：1) 视觉语言模型，将观察编码为视觉、类别和寄存器令牌，并与语言令牌整合，产生认知和推理潜在表示；2) 动作路由模块，生成权重并输入动态动作模型；3) 动态动作模型，通过结合来自视觉模型的低层类别/寄存器令牌和来自VLM的高层认知潜在表示，动态执行不同的动作模型以预测动作序列。</p>
+</blockquote>
+<p>框架包含三个核心模块：</p>
+<ol>
+<li><p><strong>视觉语言模型</strong>：采用DINOv2和SigLIP作为视觉编码器，将图像𝒐𝑡处理为视觉令牌𝒇^𝑣𝑖𝑠、一个类别令牌𝒇^𝑐𝑙𝑠和一个寄存器令牌𝒇^𝑟𝑒𝑔。语言指令𝒍被标记化为语言令牌𝒇^𝑙𝑎𝑛。这些令牌与一个可学习的推理令牌拼接后，输入以LLaMA-2为骨干的大语言模型。模型采用因果注意力机制，最终从LLM的第二层和最后一层隐藏特征分别提取推理潜在表示𝒇^𝑟𝑒𝑎和认知潜在表示𝒇^𝑐𝑜𝑔。𝒇^𝑟𝑒𝑎用于后续动作路由，𝒇^𝑐𝑜𝑔用于动作预测。</p>
+</li>
+<li><p><strong>动作路由机制与动态动作模型</strong>：</p>
+<ul>
+<li><strong>动作路由</strong>：利用VLM的推理能力，将𝒇^𝑟𝑒𝑎输入一个全连接层和归一化层，预测一个权重𝑤（值在0到1之间），用于判断当前状态属于手臂运动（𝑤 &lt; 0.5）还是夹爪操作（𝑤 ≥ 0.5）。该权重通过交叉熵损失𝐿_𝑐𝑙𝑎𝑠𝑠进行监督，其标签𝑤̂ 根据机器人夹爪状态变化（开/闭）定义。</li>
+<li><strong>动态动作模型</strong>：包含两个独立的扩散动作模型，分别针对手臂运动和夹爪操作。两者均以高层认知潜在表示𝒇^𝑐𝑜𝑔为条件。此外，考虑到两类动作的视觉注意力焦点不同（手臂需全局注意力，夹爪需局部注意力），手臂模型额外以全局的类别令牌𝒇^𝑐𝑙𝑠为条件，而夹爪模型以局部的寄存器令牌𝒇^𝑟𝑒𝑔为条件。两个模型使用基于DiT块的扩散变换器，其损失函数𝐿_𝑚𝑜𝑣𝑒和𝐿_𝑚𝑎𝑛𝑖分别用马氏距离计算，并由对应的标签权重𝒘̂ ^𝑚𝑜𝑣𝑒和𝒘̂ ^𝑚𝑎𝑛𝑖加权。总损失𝐿是运动损失、操作损失和分类损失的加权和（权重分别为1.0, 1.0, 0.0001）。</li>
+</ul>
+</li>
+<li><p><strong>双尺度动作加权机制</strong>：为了在训练中更鲁棒地区分手臂运动与夹爪操作，并强调关键操作阶段，本文提出了轨迹级和动作块级的两尺度加权。</p>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.00926v1/2603.00926v1/x3.png" alt="双尺度加权机制"></p>
+<blockquote>
+<p><strong>图3</strong>：双尺度动作加权机制示意图。轨迹权重通过非对称高斯分布突出关键操作阶段。在每个预测块内，动作块权重应用指数衰减以优先考虑即时时间精度。最终权重整合两个尺度以指导模型监督。</p>
+</blockquote>
+<pre><code>*   **轨迹级权重（𝒘^𝑡）**：基于夹爪状态变化，将整个任务轨迹划分为手臂运动和夹爪操作阶段。为每个夹爪操作过程𝑘定义一个非对称高斯分布{𝒩(𝑢, 𝜎_𝑙^2), 𝒩(𝑢, 𝜎_𝑟^2)}来生成权重𝒘_𝑘^𝑡，其中均值𝑢对应状态切换的时间中点。为了在状态切换前给予模型更高精度要求和监督关注，为前导边分配更大方差（𝜎_𝑙=6），为后随边分配较小方差（𝜎_𝑟=2）。所有操作相关权重的归一化和即为𝒘^𝑡。
+*   **动作块级权重（𝒘^𝑎）**：考虑到预测置信度随时间距离增加而衰减，对动作块内的第𝑗个动作应用指数衰减权重：𝒘_𝑗^𝑎 = 𝛾^𝑗，其中衰减因子𝛾=0.8。
+*   **多尺度集成**：最终用于监督的权重计算为𝒘^𝑚𝑜𝑣𝑒 = (1 − 𝒘^𝑡) ⊙ 𝒘^𝑎 和 𝒘^𝑚𝑎𝑛𝑖 = 𝒘^𝑡 ⊙ 𝒘^𝑎。同时，轨迹权重也用于生成路由模块的监督标签𝑤̂。
+</code></pre>
+<p><strong>创新点</strong>：与现有VLA方法相比，DAM-VLA的创新具体体现在：1) 引入了<strong>VLM引导的动作路由机制</strong>，动态选择专用动作模型；2) 提出了<strong>动态动作模型</strong>，融合高层VLM认知与不同粒度的低层视觉特征（全局类别令牌 vs. 局部寄存器令牌）；3) 设计了<strong>双尺度动作加权机制</strong>，从全局轨迹和局部动作块层面自适应调整监督重点，协调两个动作模型的学习。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在SIMPLER仿真环境（支持Google和WidowX两种机器人本体）和FurnitureBench仿真环境（“One-Leg”组装任务）中进行评估，并进行了真实世界（Franka机器人抓放杯子）实验。使用大规模Open X-Embodiment数据集（主要子集Fractal和BridgeDataV2）进行预训练，并在特定任务数据上微调。对比的基线方法包括RT-1、RT-2-X、Octo、OpenVLA、CogACT、π0*、RoboVLM、SpatialVLA、ECoT等。评估指标为任务成功率。</p>
+<p><strong>关键实验结果</strong>：<br>在SIMPLER的Google机器人评估中（表I，II），DAM-VLA在视觉匹配（VM）和变体聚合（VA）设置下，平均成功率分别达到83%和81%，均领先于其他VLA方法。特别是在需要任务特定操作的“打开抽屉并放置苹果”（ODPA）任务中，VA设置下取得了84%的成功率，显著优于其他方法（CogACT为40%），表明其在动态变化环境中的鲁棒性。</p>
+<p>在SIMPLER的WidowX机器人评估中（表III），DAM-VLA在VM设置下的平均成功率达到71%，大幅超越其他方法。在“将勺子放在毛巾上”（SoT）和“将胡萝卜放在盘子上”（CoP）任务中表现突出。</p>
+<p><img src="https://arxiv.org/html/2603.00926v1/2603.00926v1/x4.png" alt="家具组装任务流程"></p>
+<blockquote>
+<p><strong>图4</strong>：FurnitureBench环境中“One-Leg”组装任务的全过程。该任务步骤长且涉及接触丰富的操作。</p>
+</blockquote>
+<p>在FurnitureBench的接触式、长视野“One-Leg”家具组装任务中（表IV），DAM-VLA在“抓取桌面”、“放置桌面到角落”、“拾取桌腿”三个步骤均达到100%成功率，在关键的接触式操作“拧紧桌腿”步骤也取得了最高成功率，整体表现优于OpenVLA和CogACT。</p>
+<p><img src="https://arxiv.org/html/2603.00926v1/2603.00926v1/x5.png" alt="真实世界操作"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界拾取-放置任务的定性结果。DAM-VLA成功完成了从初始状态到抓取杯子，最终放入碗中的一系列操作。</p>
+</blockquote>
+<p><strong>消融实验</strong>：论文通过消融研究分析了各组件贡献。移除动作路由机制（即固定权重）或双尺度加权机制会导致性能显著下降，尤其是在接触式操作和长视野任务中。实验证实，动态路由和针对性的加权监督对于协调手臂与夹爪模型、实现高精度操作至关重要。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>提出了DAM-VLA框架</strong>：首个集成了VLM推理与专用扩散动作模型，并具备动态动作路由能力的VLA框架，有效协调了粗大运动与精细操作。</li>
+<li><strong>设计了双尺度动作加权机制</strong>：通过轨迹级和动作块级的自适应权重，增强了模型对关键操作阶段和时序预测不确定性的处理能力，提升了训练鲁棒性。</li>
+<li><strong>进行了全面实验验证</strong>：在模拟和真实世界的多种基准测试中，DAM-VLA在标准拾取-放置、长视野以及接触式任务上均取得了最先进的成功率，证明了其卓越的泛化性和任务特定精度。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，尽管DAM-VLA性能优异，但其框架包含多个组件（VLM、路由模块、双扩散头），可能带来较高的计算成本。在资源受限的平台上进行部署时，需要进一步的优化。</p>
+<p><strong>启示</strong>：DAM-VLA的工作表明，将机器人动作视为同质序列的通用VLA方法存在局限。未来的VLA模型设计应更细致地考虑动作的异质性（如空间范围、注意力需求、数据分布），并通过智能路由和针对性建模来利用这种异质性。同时，结合高级语义推理（VLM）与低级感知特征，并设计更精细的监督信号（如双尺度加权），是提升复杂操作任务性能的有效途径。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>这篇论文旨在解决机器人操作中，现有视觉-语言-动作（VLA）框架难以在动态环境中兼顾任务通用性与操作精确性的核心问题。为此，作者提出了DAM-VLA框架，其关键技术包括：1）**动作路由机制**，依据任务线索动态选择机械臂移动或夹爪操作模型；2）**动态动作模型**，融合高级VLM认知与低级视觉特征以预测动作；3）**双尺度动作加权机制**，协调不同动作模型。实验表明，该框架在模拟与真实场景中均优于现有VLA方法，成功实现了从简单抓放到复杂长时序、高接触任务的稳健泛化。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.00926" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Beyond State-Wise Mirror Descent: Offline Policy Optimization with Parameteric Policies - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Beyond State-Wise Mirror Descent: Offline Policy Optimization with Parameteric Policies</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2602.23811" target="_blank" rel="noreferrer">2602.23811</a></span>
+        <span>作者: Yuheng Zhang Team</span>
+        <span>日期: 2026-02-27</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>离线强化学习（RL）旨在从历史数据中学习策略，是连接理论与实际应用的关键范式。在一般函数逼近的设定下，已有理论工作（如Xie等人，2021）通过悲观主义原则为离线RL奠定了统计基础。然而，现有计算上可行的算法（通常是预言机高效的），例如PSPI，仅适用于有限且较小的动作空间。更重要的是，这些算法依赖于状态独立的镜像下降（state-wise mirror descent），要求策略（actor）必须从价值函数（critic）中隐式导出，无法容纳实践中普遍存在的独立策略参数化（例如，与价值网络分离的策略网络）。这导致了理论与实践的脱节，也揭示了理论本身的空白：当仅追求统计保证而忽略计算可行性时，连续动作空间上的独立策略参数化不是问题，但当我们同时追求计算效率时，困难就出现了。</p>
+<p>本文旨在填补这一空白，系统性地研究策略优化方法的变体及其统计/计算性质。核心思路是：通过将镜像下降与自然策略梯度（NPG）联系起来，分析离线RL中参数化策略优化的核心困难——上下文耦合，并提出基于最小二乘回归和分布鲁棒优化的两种高效演员更新规则，从而将理论保证扩展到大规模或连续动作空间的参数化策略类。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>论文的整体框架遵循一个演员-批评家（Actor-Critic）模板（算法2）。在每一轮迭代k中：1）<strong>批评家</strong>：通过一个满足假设2的悲观预言机，基于当前策略π_k计算一个悲观的价值函数估计f_k；2）<strong>演员</strong>：基于f_k，通过某种更新规则v_k来更新策略参数θ_k，即θ_{k+1} = θ_k + η v_k。最终输出是迭代过程中所有策略的均匀混合。本文的核心贡献在于为参数化策略类Π_θ设计并分析高效且具有理论保证的演员更新规则v_k。</p>
+<p><img src="https://arxiv.org/html/2602.23811v1/2602.23811v1/x1.png" alt="算法模板"></p>
+<blockquote>
+<p><strong>图1</strong>：参数化策略优化的演员-批评家算法模板。算法迭代运行K轮，每轮中批评家通过预言机𝒪提供悲观价值估计f_k，演员则通过参数更新向量v_k来更新策略。最终的输出策略是π_1, ..., π_K的均匀混合。</p>
+</blockquote>
+<p>与现有方法（如PSPI）相比，本文的创新点在于处理<strong>上下文耦合</strong>这一核心挑战。PSPI的状态独立镜像下降（公式1）在每个状态独立更新动作分布，这要求策略是价值函数类的softmax诱导，无法应用于独立的参数化策略类。一个自然的扩展是<strong>上下文镜像下降</strong>（公式4），即通过共享参数θ耦合所有状态的更新，并在可访问的数据分布d^D下进行聚合优化。然而，论文通过命题2证明，即使拥有无限数据，这种方法也可能导致恒定的每步遗憾，原因在于优化目标（在d^D下）与遗憾评估目标（在d^{π_cp}下）之间的分布不匹配，且遗憾被积函数f_k(s, π_cp) - f_k(s, π_k)可正可负，导致误差无法在覆盖条件下传递。</p>
+<p>为解决此问题，论文基于自然策略梯度（NPG）和兼容函数逼近（CFA）的思想，提出了一个关键的<strong>遗憾分解引理（引理3）</strong>。对于任意的参数更新序列{v_k}，在策略平滑性假设下，总遗憾可被上界为两项之和：一项是收敛速率为O(1/√K)的优化误差，另一项是K轮中<strong>兼容函数逼近误差err_k</strong>的平均值。其中，err_k = 𝔼_{(s,a)∼d^{π_cp}}[A_k(s, a) - v_k^⊤ ∇_θ log π_k(a|s)]，衡量了在比较策略分布d^{π_cp}下，策略梯度特征∇_θ log π_k对优势函数A_k的线性逼近能力。因此，控制遗憾的关键转化为设计能够控制err_k的更新规则v_k。</p>
+<p>基于此分解，论文提出了两种具体的演员更新构造方法：</p>
+<ol>
+<li><strong>最小二乘策略更新</strong>：将∇_θ log π_k(a|s)视为特征，A_k(s,a)视为回归目标，在离线数据分布d^D上求解最小二乘问题来得到v_k。其解具有闭式形式（公式7），涉及计算经验协方差矩阵的逆。该方法与自然策略梯度密切相关。</li>
+<li><strong>分布鲁棒策略更新</strong>：通过重要性加权，构造一个在d^D上、针对最坏情况偏移的分布鲁棒优化目标来求解v_k。该方法可以更稳健地处理演员-批评家不兼容的情况。一个有趣的发现是，当离线数据分布d^D恰好等于比较策略的分布d^{π_cp}时，DRPU方法会退化为行为克隆，从而在离线RL和模仿学习之间建立了统一视角。</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p>本文是一篇理论分析论文，主要贡献在于理论框架的建立、困难问题的揭示以及新算法的理论保证，因此并未包含在模拟环境或标准基准数据集上的传统数值实验。其实验部分体现为理论结果的推导与比较。</p>
+<p>论文对比的基线方法主要是原始的PSPI算法及其理论保证。关键的理论实验结果总结如下：</p>
+<ul>
+<li><strong>定理1</strong>：将PSPI的镜像下降框架扩展到一般（包括连续）动作空间，证明了其遗憾上界为Reg_K/K ≤ V_max √[D_KL(π_cp∥π_1) / (2K)]，其中KL散度项在连续动作空间（如高斯策略）下仍然有限，而不像原分析那样依赖于log|A|。</li>
+<li><strong>命题2</strong>：构造了一个反例，证明上下文镜像下降方法即使在无限数据下，也可能产生恒定的每步遗憾（≥ 1/2），从而说明了该方法在参数化策略类下的失败。</li>
+<li><strong>定理4（LSPU的有限样本保证）</strong>：在适当的假设下，证明了LSPU方法产生的策略序列，其平均遗憾上界为O(√[β D_KL / K] + ε_CFA + ε_stat)，其中ε_CFA度量了策略类对优势函数的固有逼近误差，ε_stat是统计误差项，随样本量N增大而减小。</li>
+<li><strong>定理5（DRPU的有限样本保证）</strong>：证明了DRPU方法产生的策略序列，其平均遗憾上界为O(√[β D_KL / K] + √[C ε_CFA] + ε_stat‘)，其中C是数据覆盖系数。这表明DRPU对演员-批评家不兼容性（ε_CFA）更具鲁棒性，尤其当数据覆盖良好时。</li>
+</ul>
+<p>消融实验体现在对不同组件和假设的理论分析中。例如，论文分析了：</p>
+<ol>
+<li><strong>策略参数化的影响</strong>：对比状态独立更新（PSPI）与参数化更新（上下文镜像下降、LSPU、DRPU），揭示了上下文耦合的挑战。</li>
+<li><strong>更新规则的影响</strong>：对比了基于最小二乘的更新（LSPU）和基于分布鲁棒优化的更新（DRPU），后者通过重要性加权提供了对不兼容性的额外鲁棒性。</li>
+<li><strong>数据分布的影响</strong>：分析了离线数据分布d^D与目标分布d^{π_cp}之间的不匹配如何影响不同更新规则的理论误差项。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：</p>
+<ol>
+<li><strong>理论扩展</strong>：将离线策略优化的理论保证从有限动作空间、隐式策略类，系统地扩展到了连续动作空间和独立的参数化策略类，弥合了理论与实践的差距。</li>
+<li><strong>问题揭示与原理构建</strong>：识别了参数化策略优化中的核心困难——上下文耦合，并基于兼容函数逼近的遗憾分解，为设计有效的演员更新提供了统一的指导原则。</li>
+<li><strong>算法与保证</strong>：提出了两种具有有限样本理论保证的、计算高效的演员更新规则（LSPU和DRPU），并揭示了DRPU在特定条件下与行为克隆的统一性，连接了离线RL与模仿学习。</li>
+</ol>
+<p>论文自身提到的局限性主要包括：</p>
+<ul>
+<li><strong>对悲观批评家预言机的依赖</strong>：整个分析建立在存在一个能提供满足假设2的悲观价值估计的预言机之上。虽然这种预言机可以在标准假设下实现，但如何将其与所提的演员更新进行端到端的、计算高效的实际算法结合，仍需进一步探索。</li>
+<li><strong>策略类的平滑性假设</strong>：理论分析依赖于策略对数概率的Lipschitz和光滑性假设（假设5），这虽然适用于许多常见策略类，但仍是一个理论上的限制。</li>
+</ul>
+<p>对后续研究的启示：</p>
+<ul>
+<li>本文建立的遗憾分解框架（引理3）为分析更广泛的策略优化算法（如带约束的更新、信任域方法）提供了工具。</li>
+<li>所揭示的上下文耦合问题表明，在离线设定下直接聚合状态层面的目标可能导致失败，这提醒算法设计者需要谨慎处理分布偏移问题。</li>
+<li>LSPU和DRPU为设计实用的、基于梯度的离线演员-批评家算法提供了理论蓝图。特别是DRPU与行为克隆的联系，为融合离线RL与模仿学习提供了新的理论视角。未来的工作可以探索如何将这些更新规则与实际的深度RL算法相结合，并进行实证验证。</li>
+</ul>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本论文解决了离线强化学习中现有理论算法（如PSPI）的两个关键局限：仅适用于有限小动作空间，且其状态级镜像下降更新导致策略无法拥有独立的参数化形式。为此，研究将镜像下降扩展到参数化策略类，核心是处理“上下文耦合”难题，通过将镜像下降与自然策略梯度相联系，提出了新的理论分析与算法见解。一个核心理论结论是，该方法揭示了离线强化学习与模仿学习之间令人惊讶的统一性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2602.23811" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

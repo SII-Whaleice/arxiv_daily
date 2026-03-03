@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ROSER: Few-Shot Robotic Sequence Retrieval for Scalable Robot Learning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ROSER: Few-Shot Robotic Sequence Retrieval for Scalable Robot Learning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01474" target="_blank" rel="noreferrer">2603.01474</a></span>
+        <span>作者: Cristian Meo Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人学习领域的一个关键瓶颈是任务标注、分段训练数据的稀缺，尽管存在大量以长时连续交互日志形式记录的大规模机器人数据集。现有数据集包含大量多样化行为，但其结构与需要干净分割、任务特定轨迹的现代学习框架不兼容。这种结构性不匹配导致了数据利用危机。</p>
+<p>当前主流方法存在关键局限性：经典的轨迹对齐方法（如动态时间规整DTW）缺乏语义理解；基于嵌入的方法对执行变化敏感；而语言或视觉引导的方法难以处理细粒度的运动学结构。近期关于轨迹表示的工作强调学习捕获时空和任务级语义的紧凑嵌入，但这些方法通常需要任务特定的微调或密集监督。</p>
+<p>本文针对从大规模未标记日志中高效提取可重用任务片段的痛点，提出了将数据整理重新定义为<strong>少样本检索问题</strong>的新视角。核心思路是引入ROSER，一个轻量级的少样本检索框架，它学习时间窗口上的任务无关度量空间，仅需3-5个演示样本即可实现准确检索，无需任何任务特定训练。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ROSER的整体框架基于原型网络，旨在学习一个任务无关的嵌入空间，使得相同操作的短时序序列聚集在一起，而不同的行为则被分开。该框架通过学习到的嵌入，仅使用每个任务的少量参考样本即可实现可扩展的检索。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="检索框架"></p>
+<blockquote>
+<p><strong>图1</strong>：检索框架。时间序列编码器 $f_{\theta}$ 利用标记数据集 $\mathcal{S}$ 创建一个度量空间，其中相似任务被分组在一起形成原型，不同任务则相互分离。未标记轨迹 $\mathcal{U}$ 的嵌入通过学习的度量 $Dist(.)$ 与原型进行比较，以找到最接近的匹配并创建检索集 $\mathcal{R}$。</p>
+</blockquote>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><p><strong>问题形式化</strong>：给定一个标记的机器人任务数据集 $\mathcal{S} = { (\mathbf{X}<em>i, y_i) }$，目标是学习一个嵌入函数 $f</em>{\theta}: \mathbb{R}^{L \times F} \rightarrow \mathbb{R}^{d_{emb}}$，将原始机器人时间序列片段映射到一个共享度量空间。在测试时，给定一个由小型支持集 $\mathcal{S}^{(t)}$（$K_{\text{shot}}$ 个示例）指定的目标任务 $t$，目标是从大型未标记离线数据集 $\mathcal{U} = { \mathbf{X}_j }$ 中检索所有匹配的子序列。</p>
+</li>
+<li><p><strong>时间序列编码器</strong>：采用原型网络架构，但编码器 $f_{\theta}$ 必须处理机器人任务固有的变长序列。论文选择使用<strong>1D卷积神经网络</strong>作为序列编码器，而非Transformer或大语言模型。这一选择基于两个关键归纳偏置：</p>
+<ul>
+<li><strong>局部性</strong>：机器人控制信号受物理定律支配，时间 $t$ 的状态与其直接邻居最相关，卷积核显式利用了这种局部结构。</li>
+<li><strong>时间平移等变性</strong>：特定操作（如“抓取”）的语义不随其在滑动窗口中出现的时间而改变。CNN在数学上对此类平移具有等变性。<br>此外，在支持集样本极少的情况下，高参数模型容易出现过拟合和流形塌缩，而受限的卷积架构能强制生成更平滑的潜在流形，从而更鲁棒地泛化到新任务。</li>
+</ul>
+</li>
+<li><p><strong>原型构建</strong>：对于任务 $t$ 及其支持集 $\mathcal{S}^{(t)}$，其原型 $\mathbf{c}^{(t)}$ 定义为支持示例嵌入的均值：$\mathbf{c}^{(t)} = \frac{1}{K_{\text{shot}}} \sum_{\mathbf{x} \in \mathcal{S}^{(t)}} f_{\theta}(\mathbf{x})$。该原型代表了嵌入空间中任务的质心，作为情景优化的代表性模板。</p>
+</li>
+<li><p><strong>情景训练范式</strong>：采用情景训练以实现少样本泛化。在每个训练迭代中，从任务集 $\mathcal{T}$ 中随机选择 $N_{\text{way}}$ 个任务构建一个“情景”。对于每个选定任务 $t$，采样 $K_{\text{shot}}$ 个支持示例形成 $\mathcal{S}^{(t)}$，以及 $N_q$ 个查询示例形成 $\mathcal{Q}^{(t)}$。训练目标是最大化每个查询示例 $\mathbf{x} \in \mathcal{Q}^{(t)}$ 属于其真实任务 $t$ 的概率（通过潜在流形中距离的softmax计算）。损失函数 $\mathcal{L}$ 定义为所有采样任务中所有查询样本的平均负对数似然。该优化目标迫使编码器 $f_{\theta}$ 将相同任务类型的嵌入紧密地聚集在各自的原型周围，同时最大化不同任务类型之间的类间距离。</p>
+</li>
+<li><p><strong>检索流程</strong>：训练完成后，编码器 $f_{\theta}$ 被部署用于在未分割的离线序列上进行检索。首先根据支持集计算任务特定原型 $\mathbf{c}^{(t)}$。随后，在未标记数据集 $\mathcal{U}$ 的序列上执行滑动窗口搜索。提取时间窗口 $\mathbf{w}<em>t$（窗口大小 $W$ 和步长 $s$ 取决于序列长度），每个窗口通过训练好的编码器映射到度量空间，并计算其与原型之间的平方欧氏距离 $d_t = || f</em>{\theta}(\mathbf{w}_t) - \mathbf{c}^{(t)} ||^2$。为处理滑动窗口产生的高密度重叠候选，采用<strong>非极大值抑制</strong>后处理阶段，根据对齐距离对检测到的窗口进行排序，并过滤掉重叠超过阈值 $\tau$ 的窗口，以确保检索到的是不同的物理操作而非同一事件的冗余时间片段。最终，剩余的候选窗口按距离 $d_t$ 升序排列，保留前 $k$ 个非重叠窗口作为最终的检索任务候选。</p>
+</li>
+</ol>
+<p><strong>创新点</strong>：</p>
+<ul>
+<li><strong>任务形式化</strong>：首次形式化了仅使用本体感知时间序列信号的少样本机器人序列检索问题。</li>
+<li><strong>架构选择</strong>：针对机器人时间序列的特性（局部性、平移等变性）和数据稀缺性，论证并采用了轻量级1D CNN作为编码器，而非更复杂但需要大量数据训练的模型。</li>
+<li><strong>训练范式</strong>：采用情景训练和原型学习，使模型能够从少量样本中学习任务无关的度量空间，实现快速任务适应，无需任务特定微调。</li>
+</ul>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>数据集</strong>：在三个大规模数据集上进行评估：机器人操作数据集LIBERO和DROID，以及自动驾驶数据集nuScenes。</li>
+<li><strong>基线方法</strong>：与代表性序列和基于模体的检索方法进行比较，包括STUMPY、Dtaidistance (DTW)、Shapelets；三个基于LLM的嵌入模型（Qwen3、Gemma3、LLama-Nemotron）；以及一个时间序列基础模型MOMENT。</li>
+<li><strong>评估指标</strong>：使用一组互补的无监督代理指标评估检索质量，包括衡量全局统计对齐的分布相似性度量（Wasserstein Distance (WD), DTW Nearest Neighbor (DTW NN), Spectral Wasserstein Distance (Spectral WD)），以及衡量检索片段紧凑性和特征空间分布的高层行为一致性度量（Temporal Correlation, Density, Diversity）。</li>
+</ul>
+<p><strong>关键实验结果</strong>：<br>论文在三个数据集上进行了全面的基准测试，结果总结在表1-3中。</p>
+<p><img src="https://arxiv.org/html/2603.01474v1/2603.01474v1/x16.png" alt="LIBERO定性结果"></p>
+<blockquote>
+<p><strong>图17</strong>：在LIBERO任务“打开底层抽屉”上的定性检索结果。ROSER检索到的轨迹保留了更长的“伸手-避障”结构，而强基线方法（如STUMPY和Dtaidistance）经常偏移到视觉相似但语义不同的“拾取-放置”行为。</p>
+</blockquote>
+<p>表1-3的结果显示了一个一致的模式：直接处理时间序列结构的方法在分布和时序标准上均优于大语言模型嵌入。具体而言，ROSER在LIBERO、nuScenes和DROID三个数据集上取得了最佳或次佳的综合性能。例如，在LIBERO上，ROSER的Wasserstein距离（WD）最低（0.086），DTW NN距离（6.57）和谱WD（0.0019）也表现优异，同时保持了较高的时序相关性（0.72）和密度（0.69）。在nuScenes上，ROSER的WD（0.27）和DTW NN（12.84）显著优于其他方法。在DROID上，ROSER同样在WD（0.16）和密度（0.96）上领先。</p>
+<p><strong>消融实验与分析</strong>：</p>
+<ol>
+<li><strong>少样本数量有效性</strong>：通过改变参考示例数量 $K$ 进行消融实验。如表4所示，模型表现出很高的数据效率，即使目标集减少到3或5个示例，仍能保持有竞争力的检索性能。最佳性能在 $K=10$ 时达到，但 $K=5$ 或 $7$ 时性能下降很小，表明 $5$ 到 $7$ 个样本是平衡最小人工标注努力与高检索准确性的“最佳点”。</li>
+<li><strong>质量-延迟权衡</strong>：表5报告了各方法的平均每次匹配检索时间。基于LLM的嵌入速度慢了数个数量级，使得详尽的滑动窗口检索在大规模上不切实际。经典的时间序列匹配方法（Dtaidistance, STUMPY）更快，但在候选集很大时仍会产生不可忽视的每次匹配成本。相比之下，ROSER在实现最强检索质量的同时，保持了极低的延迟（在LIBERO上为亚毫秒级每次匹配），展示了其高效性。</li>
+<li><strong>失败模式分析</strong>：经典匹配方法（如STUMPY和DTW）对于高度刻板化的片段是可靠的，但在同一语义操作允许多种有效运动学实现（速度曲线、时序或关节空间绕行）的任务上效果会下降。在这些情况下，ROSER更有可能检索到与任务定义动力学相匹配的行为一致片段，而非表面的逐点相似性。图2展示了在nuScenes“常规停车”任务中，ROSER检索到的片段其加速度分布与参考分布更接近。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.01474v1/2603.01474v1/x2.png" alt="特征分布可视化"></p>
+<blockquote>
+<p><strong>图2</strong>：nuScenes基准测试中“常规停车”任务的特征级分布可视化。ROSER检索到的“常规停车”片段的加速度分布与参考分布紧密对齐，而STUMPY和Dtaidistance倾向于混入仅具有部分低级相似性的非停车片段。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>问题形式化与框架提出</strong>：首次形式化了仅使用本体感知时间序列的少样本机器人序列检索任务，并提出了ROSER，一个轻量级框架，仅需3-5个示例即可实现准确检索。</li>
+<li><strong>建立评估基准</strong>：建立了跨三个大规模数据集（LIBERO, DROID, nuScenes）的全面评估协议，并与经典方法、学习嵌入和基础模型基线进行了基准比较。</li>
+<li><strong>实证验证</strong>：通过实验证明ROSER在准确性和效率上 consistently 优于所有基线方法，实现了亚毫秒级的每次匹配推理速度，同时保持了优越的分布对齐，为大规模解锁未充分利用的机器人数据提供了实用解决方案。</li>
+</ol>
+<p><strong>局限性</strong>：<br>论文自身提到的局限性包括：ROSER的性能依赖于元训练数据 $\mathcal{S}$ 的分布，如果目标任务与训练任务差异极大，性能可能下降；检索窗口大小 $W$ 需要根据支持示例的平均长度进行设置，对于长度变化极大的任务可能不是最优的。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>扩展模态</strong>：当前工作仅使用本体感知时间序列。未来的工作可以探索整合视觉、语言或其他传感器模态，以实现更丰富、更具语义的检索。</li>
+<li><strong>在线与增量检索</strong>：当前框架专注于离线数据集的批量检索。将其扩展到在线或增量设置，使机器人能够在交互过程中实时发现和利用相关行为模式，是一个有前景的方向。</li>
+<li><strong>与下游学习集成</strong>：检索到的片段可以直接用于加速模仿学习、强化学习或世界模型训练。研究如何将ROSER无缝集成到这些下游学习管道中，以形成从原始数据到策略学习的完整闭环，具有重要价值。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人学习中大规模连续日志数据难以直接利用的核心问题，提出了一种轻量级少样本检索框架ROSER。该框架将数据整理重新定义为少样本检索任务，其关键技术是学习任务无关的度量空间，仅需3-5个参考演示，即可从无标签的长序列中准确提取任务中心片段，无需任何任务特定训练。实验在LIBERO、DROID和nuScenes等多个数据集上进行验证，结果表明ROSER在检索准确性和效率上均优于现有基线方法，实现了亚毫秒级的单次匹配推理速度。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01474" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

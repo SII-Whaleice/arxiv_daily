@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RMBench: Memory-Dependent Robotic Manipulation Benchmark with Insights into Policy Design - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>RMBench: Memory-Dependent Robotic Manipulation Benchmark with Insights into Policy Design</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01229" target="_blank" rel="noreferrer">2603.01229</a></span>
+        <span>作者: Ping Luo Team</span>
+        <span>日期: 2026-03-01</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>近年来，机器人操作策略取得了快速进展，但现有方法大多对记忆能力考虑有限。主流策略，如Pi0.6和RDT2，主要针对短视界和细粒度操作任务设计，通常依赖固定长度的近期观测窗口，隐含假设决策过程是近似马尔可夫的。然而，现实世界中许多操作任务本质上是非马尔可夫的，需要策略对历史观测进行推理并长期保持任务相关信息，例如记住先前放置物体的位置或在多次尝试失败后记住密码。尽管已有一些记忆感知策略被提出，如MemoryVLA、MemER等，但系统性地评估记忆依赖操作的研究仍然不足，且架构设计选择与记忆性能之间的关系尚不明确。现有基准测试，如MemoryBench、MIKASA和LIBERO-Long，在任务设计、可复现性或对记忆的显式需求方面存在局限。针对这一空白，本文提出了任务记忆复杂度（Task Memory Complexity, TMC）这一原则性指标来量化任务对记忆的需求，并在此基础上构建了RMBench基准测试。核心思路是通过一个系统化的基准来评估策略的记忆能力，并设计一个模块化的记忆策略Mem-0，通过可控的消融实验来揭示有效记忆机制的设计原理。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出了两个核心贡献：用于评估的RMBench基准和用于分析的Mem-0策略。</p>
+<p><strong>RMBench基准</strong>建立在RoboTwin 2.0仿真平台上。其核心是<strong>任务记忆复杂度</strong>，用于度量最优决策所需保留的最少过去任务相关观测的数量。一个任务被标记为M(m)，其中m是满足条件的最小整数：存在一个最优策略π*，其在时刻t的动作仅依赖于一个最多编码了m个过去任务相关观测的记忆状态ℳ_t^(m)。M(0)表示无需记忆的任务，当前观测足以决定最优动作；M(1)需要保留一个过去观测来消除当前状态的歧义；M(n)则需要保留n个过去观测。基于此，RMBench设计了9个双臂操作任务，分为两类：5个M(1)任务（如观察后拾取、重排积木、放回积木、交换积木、交换T形物体）和4个M(n)任务（如积木排序尝试、按下按钮、覆盖积木、电池尝试）。这些任务要求策略在不同阶段动态关注相关信息，或通过试错积累历史信息。</p>
+<p><img src="https://arxiv.org/html/2603.01229v1/2603.01229v1/x1.png" alt="RMBench Tasks"></p>
+<blockquote>
+<p><strong>图1</strong>：RMBench的九个记忆依赖任务及其关键执行步骤图示。</p>
+</blockquote>
+<p><strong>Mem-0策略</strong>是一个模块化的记忆导向策略，采用双系统架构，包含一个<strong>规划模块</strong>和一个<strong>执行模块</strong>，两者通过一个<strong>子任务结束分类器</strong>连接，以实现闭环规划与执行。</p>
+<p><img src="https://arxiv.org/html/2603.01229v1/2603.01229v1/x2.png" alt="Mem-0 Pipeline"></p>
+<blockquote>
+<p><strong>图2</strong>：Mem-0流程。包含规划模块和执行模块，通过子任务结束分类器连接。规划模块根据任务指令、观测和关键帧记忆生成高级子任务；执行模块使用当前观测、子任务以及融合的锚点与滑动记忆，通过扩散策略产生低级动作。</p>
+</blockquote>
+<p><strong>规划模块</strong>负责基于记忆进行子任务级推理。在规划步骤t，模型接收初始观测o_0、全局任务指令g以及<strong>关键记忆窗口</strong>ℳ_{t-1}（存储了所有已完成子任务的文本描述s_i及其结束时的视觉观测o_i^end），并预测下一个子任务s_t = 𝒱<em>plan(o_0, g, ℳ</em>{t-1})。该设计使模型能够显式地对已执行的子任务及其视觉结果进行推理，支持超越单帧观测的、记忆依赖的子任务推断。规划仅在子任务结束时触发，大幅减少了长视界任务中的规划调用次数。</p>
+<p><strong>执行模块</strong>负责执行当前子任务，采用基于扩散的策略。首先，一个视觉语言模型𝒱_exec将当前RGB观测o_t和子任务指令s_t编码为图像和文本令牌。图像令牌潜在表示𝐳_t^img通过交叉注意力机制与两个记忆缓冲区融合：1) <strong>锚点记忆𝒜</strong>：在子任务开始时存储的初始图像潜在表示，在整个子任务中固定不变，用于保留任务关键信息；2) <strong>滑动记忆窗口𝒮_t</strong>：保留最近K个时间步的图像潜在表示，用于捕捉短期运动趋势。融合后的表示与文本令牌拼接形成条件向量𝐜_t。一个扩散Transformer (DiT) 根据条件向量𝐜_t和当前状态𝐱_t，对带噪声的动作序列进行去噪，预测未来H=30步的动作，并执行其中前Δ步。</p>
+<p><strong>子任务结束分类器</strong>是一个轻量级MLP，以条件向量𝐜_t为输入，输出二元信号判断子任务是否结束。为提高鲁棒性，仅当连续L=8个时间步都预测为结束时，才判定子任务完成，并触发新一轮规划。</p>
+<p>与现有方法相比，Mem-0的创新点在于：1) 提出了一个统一的、模块化的双系统架构，将长时记忆（关键记忆窗口）与短时/任务期记忆（锚点记忆、滑动记忆）分离并有机结合；2) 通过子任务结束分类器实现了规划与执行的高效闭环交互，减少了不必要的规划调用；3) 其模块化设计便于进行可控的消融研究，以分析不同记忆组件的作用。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在RMBench的9个任务上进行，使用了RoboTwin 2.0仿真平台。所有策略均使用50个合成演示进行训练，并在100个测试回合中进行评估。</p>
+<p>对比的基线方法包括：非预训练方法DP和ACT，以及预训练方法Pi0.5和X-VLA。Mem-0在M(1)类任务中不进行子任务分解，主要评估其执行模块能力；在M(n)类任务中启用子任务分解，评估整体性能。</p>
+<p><img src="https://arxiv.org/html/2603.01229v1/2603.01229v1/x3.png" alt="Baseline Typical Error"></p>
+<blockquote>
+<p><strong>图3</strong>：基线典型错误可视化。由于基线仅从当前观测预测下一个动作，因此在需要持续记忆的非马尔可夫任务上表现不可靠。</p>
+</blockquote>
+<p>关键实验结果总结如下表所示：<br><strong>表1：RMBench基准测试结果。</strong> Mem-0在大多数任务上取得了最佳性能。在M(1)任务上，平均成功率达52.8%，相比次优基线（14.4%）提升了38.4%。在M(n)任务上，平均成功率达28.5%，相比次优基线（7.3%）提升了21.2%。总体平均成功率为42.0%，相比次优基线（10.4%）提升了31.6%。实验表明，现有基线策略在记忆依赖任务上普遍表现不佳，因为它们基于马尔可夫假设设计。Mem-0通过显式集成记忆机制，性能得到显著提升。然而，Mem-0在需要强语义理解的任务（如Observe and Pick Up）和需要极高放置精度的细粒度操作任务（如Swap T）上优势有限，在Press Button任务上则因难以可靠检测按压完成而失败。</p>
+<p><img src="https://arxiv.org/html/2603.01229v1/2603.01229v1/x4.png" alt="Ablation Studies"></p>
+<blockquote>
+<p><strong>表2</strong>：Mem-0的消融实验结果。展示了移除锚点记忆、滑动记忆、关键记忆窗口以及使用真实值分类器（GT Classifier）替代学习分类器后的性能变化。</p>
+</blockquote>
+<p><strong>消融实验</strong>揭示了各模块的贡献：</p>
+<ol>
+<li>**移除锚点记忆 (w/o Anchor)**：在M(1)任务上导致性能大幅下降（平均从52.8%降至26.8%），表明识别并长期保留任务关键信息对于可靠完成任务至关重要。</li>
+<li>**移除滑动记忆 (w/o Sliding)**：在多数任务上性能下降，导致策略行为不稳定（如重复按压按钮）。但在Swap T任务上性能反而提升，分析认为是由于训练数据运动模式固定，移除滑动记忆减少了初始方向敏感性的干扰。</li>
+<li>**移除关键记忆窗口 (w/o Key)**：在M(n)任务上性能急剧下降（平均从28.5%降至4.8%），证明规划模块中保留已完成子任务的历史对于解决多步骤、试错型任务不可或缺。</li>
+<li>**使用真实值分类器 (GT Classifier)**：在M(n)任务上性能大幅提升（平均从28.5%升至45.3%），凸显了当前学习型子任务结束分类器是性能瓶颈，其不可靠性限制了规划模块的效力。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献有三点：1) 提出了<strong>任务记忆复杂度（TMC）</strong> 这一原则性指标，并构建了<strong>RMBench</strong>基准测试，为系统评估机器人操作策略的记忆能力提供了平台；2) 设计了一个模块化的、记忆导向的机器人操作策略<strong>Mem-0</strong>，采用双系统架构与显式记忆组件；3) 通过广泛的实验与消融研究，量化了不同记忆模块（关键记忆、锚点记忆、滑动记忆）对性能的影响，为未来记忆感知策略的设计提供了实证见解。</p>
+<p>论文自身提到的局限性包括：1) Mem-0在需要强语义理解或极高精度的任务上表现不佳；2) 学习型的子任务结束分类器可能不可靠，是系统性能的瓶颈；3) 在Press Button等任务上完全失败，揭示了当前方法在检测微小动作完成方面的挑战。</p>
+<p>本文对后续研究的启示在于：1) <strong>记忆机制的必要性</strong>：显式的、结构化的记忆设计对于解决非马尔可夫操作任务至关重要。2) <strong>模块化分析的价值</strong>：通过可控的消融实验可以清晰揭示不同记忆组件的功能与贡献。3) <strong>关键挑战</strong>：未来的研究需要关注开发更鲁棒的子任务终止检测机制，并探索如何将大规模预训练模型获得的语义理解能力与专门设计的记忆架构更有效地结合，以同时应对语义、精度和长时记忆的挑战。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人操作策略在内存能力方面考虑不足、难以处理需要长期记忆和推理的任务问题，提出RMBench基准和Mem-0策略。RMBench包含9个内存复杂度不同的模拟任务，用于系统评估策略内存性能；Mem-0是模块化策略，具有显式内存组件以支持消融研究。通过广泛实验，识别了现有策略的内存限制，并提供了架构设计选择影响内存性能的经验见解。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01229" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

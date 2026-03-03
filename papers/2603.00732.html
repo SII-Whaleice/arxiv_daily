@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>UniHM: Unified Dexterous Hand Manipulation with Vision Language Model - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>UniHM: Unified Dexterous Hand Manipulation with Vision Language Model</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.00732" target="_blank" rel="noreferrer">2603.00732</a></span>
+        <span>作者: Jingya Wang Team</span>
+        <span>日期: 2026-02-28</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>灵巧手操作规划是机器人操作和具身智能的核心挑战。现有方法主要依赖于物体中心线索或精确的手-物交互序列，缺乏开放词汇指令提供的丰富、组合式引导。近期，虽然出现了利用视觉语言模型进行语义可控抓取的方法（如SemGrasp, AffordDexGrasp），但它们大多聚焦于生成<strong>静态抓取姿态</strong>，忽略了时间结构，因此无法产生平滑、丰富的<strong>动态操作序列</strong>。本文针对现有方法在<strong>开放词汇语言引导的动态灵巧手操作序列生成</strong>方面的不足，提出UniHM框架。其核心思路是：通过一个统一的手部灵巧标记器将异构手部形态映射到共享码本，并利用视觉语言模型结合物理引导的动态优化，直接从图像和开放词汇指令生成物理可行的动态操作序列。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>UniHM的整体流程包含三个阶段：1）自动数据标注；2）语言引导的序列生成；3）物理感知的解码与优化。输入为RGB-D图像和开放词汇语言指令，输出为可执行的多指灵巧手关节轨迹。</p>
+<p><img src="https://arxiv.org/html/2603.00732v1/2603.00732v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：UniHM框架总览。该框架仅使用闭集的人类-物体交互数据进行训练，以遵循目标轨迹并执行物理可行的交互，并能泛化到真实世界任务中。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.00732v1/2603.00732v1/x2.png" alt="Pipeline"></p>
+<blockquote>
+<p><strong>图2</strong>：UniHM完整流程。通过三个阶段将开放词汇指令和RGB-D输入转换为可执行的灵巧手轨迹：(1) 形态无关的运动标记化；(2) 融合文本、感知和标记历史的语言引导生成；(3) 基于物理感知的、带有平滑性/接触先验的解码，以实现可行、稳定的执行。</p>
+</blockquote>
+<p><strong>核心模块一：统一手部灵巧标记器</strong><br>该模块旨在为不同形态的灵巧手（如Shadow手、Allegro手等）建立一个共享的离散动作空间。其核心是一个共享的VQ-VAE码本 $\mathcal{Z}$。对于每种手部形态 $h$，设有专属的编码器 $E_h$ 和解码器 $D_h$。编码器将手部姿态序列块 $\mathbf{x}^{(h)}$ 映射为连续向量 $\mathbf{z}<em>e^{(h)}$，随后通过向量量化操作 $Q(\cdot)$ 找到码本 $\mathcal{Z}$ 中最近的码向量 $\mathbf{e}<em>c$ 作为量化表示 $\mathbf{z}<em>q^{(h)}$。解码器 $D_h$ 则将该量化表示重建为对应手部形态的序列。通过这种方式，不同手部的运动被编码到同一个离散索引空间，实现了跨手部的动作表示统一与直接迁移（$\hat{\mathbf{x}}^{(j)} = D_j(\mathbf{e}</em>{Q(E_i(\mathbf{x}^{(i)}))})$）。训练时采用分阶段可扩展策略：先训练一个参考手部（如MANO）的编码解码器与码本；集成新手部时，首先通过知识蒸馏损失 $\mathcal{L}</em>{\text{distill}} = |E</em>{\text{new}}(\mathbf{x}<em>{\text{new}}) - E</em>{\text{ref}}(\mathbf{x}<em>{\text{ref}})|<em>2^2$ 对齐新编码器的潜在空间，再结合重建损失 $\mathcal{L}</em>{\text{rec}}$ 和码本损失 $\mathcal{L}</em>{\text{vq}}$ 进行微调。</p>
+<p><strong>核心模块二：基于VLM的灵巧手操作生成</strong><br>由于动态灵巧手数据稀缺，直接训练大型多模态模型效率低下。因此，UniHM采用解耦架构，分离场景感知与交互序列生成。首先，一个CLIPort风格的视觉模块根据RGB-D图像和语言指令解码出目标物体位姿轨迹 $\mathcal{T}<em>{\text{tar}}$。同时，利用Point-SAM分割出目标物体的点云 $\mathcal{P}</em>{\text{obj}}$。生成时，将初始手部姿态的编码 $E_j(Qpos_0)$、目标轨迹 $\mathcal{T}<em>{\text{tar}}$、物体点云 $\mathcal{P}</em>{\text{obj}}$ 以及文本标记 $\mathcal{T}$ 拼接，输入到基于Qwen3-0.6B的视觉语言模型中，生成VQ-VAE潜在空间中的标记序列，最终由目标手部的解码器 $D_h$ 解码为关节位置序列 $\hat{Q}_{pos}$。训练时采用<strong>渐进式掩码策略</strong>：初期输入真实手部姿态，随着训练进行，随机掩码部分姿态并用可学习标记替代，迫使模型学会根据上下文（目标轨迹、物体、指令）自回归地预测完整动作序列。</p>
+<p><strong>核心模块三：物理引导的动态轨迹优化</strong><br>为弥补生成轨迹 $\mathcal{Q}<em>{\text{gen}}$ 与物体点云 $\mathcal{P}</em>{\text{obj}}$ 在目标轨迹 $\mathcal{T}<em>{\text{tar}}(t)$ 下的物理差距，该模块进行逐帧的基于能量的优化。总能量函数 $\mathcal{E}</em>{\text{total}}$ 包含三项：</p>
+<ol>
+<li>**接触能量 $\mathcal{E}_{\text{contact}}$**：确保指尖与物体表面接触。通过正向运动学计算指尖位置 $s_i(q_t)$，变换到物体坐标系后，计算其到物体点云表面的有符号点-面距离 $d_i(q_t)$，并施加一个非对称的平滑惩罚函数 $f(d)$（外部为二次惩罚，内部为指数惩罚），鼓励指尖停留在物体表面。</li>
+<li>**生成先验 $\mathcal{E}_{\text{gen}}$**：惩罚优化姿态 $q_t$ 与生成姿态 $q_t^{\text{gen}}$ 的偏差，保留生成模型的语义意图。</li>
+<li>**时间先验 $\mathcal{E}<em>{\text{time}}$**：通过惩罚关节速度与加速度的变化，保证运动平滑性。<br>通过高斯-牛顿法求解该优化问题，得到物理上更可行、平滑的最终操作序列 $\mathcal{Q}</em>{\text{opt}}$。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.00732v1/2603.00732v1/x3.png" alt="物理优化"></p>
+<blockquote>
+<p><strong>图3</strong>：物理引导的动态优化模块。在目标物体轨迹 $\mathcal{T}_{\text{tar}}(t)$ 下，通过融合接触能量、生成先验和时间先验，对生成的手部轨迹进行优化，以提升物理可行性和平滑性。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在DexYCB和OakInk两个广泛使用的人-物交互数据集上进行评估，采用80/20的数据划分（80%训练/验证，20%作为未见过的测试集）。实验平台为NVIDIA A100 GPU。</p>
+<p><strong>对比方法</strong>：与多个先进的运动生成方法对比，包括TM2T、MDM、FlowMDM以及专门处理运动与语言的MotionGPT3。</p>
+<p><strong>关键实验结果</strong>：<br>在DexYCB数据集上（表1），UniHM在“Seen”和“Unseen”设置下的多个关键指标上均达到最佳。例如，在“Seen”设置下，其MPJPE（平均关节位置误差）为61.40mm，远优于MotionGPT3的74.80mm；FPL（指尖位置误差）为12.15mm，也显著优于MotionGPT3的19.32mm。在“Unseen”设置下同样保持领先，证明了其强大的泛化能力。</p>
+<p>在OakInk数据集上（表2），UniHM同样全面领先。在“Seen”设置下，其MPJPE为52.73mm，FPL为19.86mm，均优于其他对比方法。</p>
+<p><img src="https://arxiv.org/html/2603.00732v1/2603.00732v1/fig/alpha_k.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图4</strong>：消融实验分析。(a) 展示了不同组件（基础VLM、统一标记器、物理优化）对性能的贡献，三者结合效果最佳。(b) 展示了物理优化中接触能量函数参数 $\alpha$ 和 $k$ 的影响。</p>
+</blockquote>
+<p><strong>消融实验</strong>：<br>图4(a)的消融实验表明，完整的UniHM框架（包含基础VLM、统一标记器和物理优化）性能最佳。移除物理优化（Ours w/o Opt.）导致FPL等指标显著下降；移除统一标记器（Ours w/o Tokenizer）则损害了跨手部泛化能力。这验证了各个核心组件的必要性。</p>
+<p><img src="https://arxiv.org/html/2603.00732v1/2603.00732v1/x4.png" alt="真实实验"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界跨本体泛化实验。UniHM生成的指令引导操作序列（左列）能够成功迁移到不同的实体机器人灵巧手（右列三行）上执行，展示了其强大的跨本体泛化能力。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>首个语言引导的统一动态灵巧手操作框架</strong>：提出了UniHM，首次实现了从开放词汇语言指令和图像输入，直接生成动态、多步的灵巧手操作序列，超越了现有静态抓取生成方法。</li>
+<li><strong>形态无关的统一动作表示</strong>：设计了统一手部灵巧标记器，通过共享VQ-VAE码本将异构手部形态映射到同一离散动作空间，实现了跨不同灵巧手的动作技能直接迁移与复用。</li>
+<li><strong>数据高效与物理可行的训练范式</strong>：框架仅需人类交互视频数据，无需昂贵的遥操作数据；并通过物理引导的动态优化模块，显式地保证生成序列的接触合理性与运动平滑性，提升了物理可行性。</li>
+</ol>
+<p><strong>局限性与启示</strong>：<br>论文虽未明确阐述局限性，但方法本身暗示了一些方向：1）框架依赖于准确的物体分割（Point-SAM）和目标轨迹预测（CLIPort），上游模块的误差会传播至下游；2）物理优化模块是后处理步骤，增加了计算开销。这对后续研究的启示在于：如何实现更端到端的、隐式保证物理可行性的生成模型，以及如何进一步提升对复杂长时程指令的理解和规划能力。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文解决传统灵巧手操作规划方法依赖物体中心线索或预设序列、缺乏开放语言指令指导的问题。提出了UniHM框架，其核心技术包括：1) 统一灵巧手分词器，将不同手型映射到共享码本以提升泛化能力；2) 仅用人类交互数据训练的视觉语言动作模型，根据开放指令生成操作序列；3) 物理引导的动态优化模块，确保序列平滑且物理可行。实验表明，该方法在多个数据集上取得了最先进的结果，对已见和未见物体及轨迹均展现出强泛化能力与高物理可行性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.00732" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

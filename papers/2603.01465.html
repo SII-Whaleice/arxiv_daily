@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Non-Markovian Long-Horizon Robot Manipulation via Keyframe Chaining - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Non-Markovian Long-Horizon Robot Manipulation via Keyframe Chaining</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01465" target="_blank" rel="noreferrer">2603.01465</a></span>
+        <span>作者: Heng Tao Shen Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前最先进的视觉-语言-动作模型在机器人控制方面展现出强大能力，但其主要依赖于当前帧或短时密集观测窗口的“密集观测”范式。这种范式隐含地假设了马尔可夫性质，即在长视野任务中，仅凭当前观测足以推断最优动作。然而，许多复杂的操作任务具有非马尔可夫特性，最优动作依赖于特定的过去状态而非当前观测，例如在烹饪中判断盐是否已添加。此时，当前观测无法反映真实环境状态，导致“状态混叠”。现有方法通过扩展上下文窗口、潜在压缩或分层规划来融入历史信息，但面临着二次注意力计算复杂度、空间信息丢失或推理速度慢的局限。本文针对非马尔可夫长视野依赖这一具体痛点，提出了一种新的稀疏语义历史视角。核心思路是设计一个轻量级的关键帧选择模块，将连续观测提炼为稀疏的语义关键帧序列，并将其作为条件注入VLA策略中，从而以可忽略的计算开销实现对全局任务拓扑的推理。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架旨在实现从冗余密集观测到稀疏语义历史输入的范式转换。系统由两个协同模块构成：关键帧选择模块和关键帧链式策略。KSM作为时域滤波器，从视觉流中检测并保留代表语义阶段转换的关键帧，形成离散序列。随后，策略以这些检索到的关键帧和当前观测为条件，生成平滑的机器人动作。</p>
+<p><img src="https://arxiv.org/html/2603.01465v1/2603.01465v1/x1.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：Keyframe-Chaining VLA框架概览。左侧为关键帧选择模块，采用两阶段设计；右上角为贪婪时域平滑机制；右下角为VLA模块，将稀疏语义历史与当前观测结合，通过流匹配生成动作。</p>
+</blockquote>
+<p>核心模块是关键帧选择模块，其采用两阶段的任务调制架构，目标是将长视野任务建模为严格有序的语义阶段序列，并将关键帧定义为标记每个阶段完成的规范状态。</p>
+<p><strong>阶段一：统一多任务度量学习</strong>。使用ResNet-18作为视觉编码器，通过三元组边界损失进行优化，以学习一个判别性的特征空间。负样本采用平衡采样策略，包含三类：同一片段内锚点附近的<strong>时域邻近帧</strong>、同一任务内<strong>不同阶段的负样本</strong>以及<strong>跨任务负样本</strong>。这种三模态负采样迫使潜在空间同时尊重时间序列、阶段身份和任务边界。</p>
+<p><strong>阶段二：任务调制查询匹配</strong>。推理时冻结训练好的编码器，使用一个轻量级查询网络实时检测语义关键帧。首先，通过自注意力聚合一个滑动窗口内的视觉特征。接着，通过一个生成器将任务身份嵌入映射为仿射参数，并利用FiLM层调制共享的阶段概念嵌入，生成动态的<strong>逻辑查询</strong>。该查询通过交叉注意力从聚合的视觉特征中检索相关线索，并计算匹配分数。当分数超过预设阈值时，系统判定里程碑完成，将当前完整观测存入历史缓冲区，并更新阶段指针。</p>
+<p>为确保检测鲁棒性，设计了<strong>贪婪时域平滑</strong>机制。当某帧分数超过阈值，它被暂存为候选关键帧，并启动一个时域验证窗口。若窗口内出现分数更高的帧，则更新候选；仅当窗口内所有后续帧分数均低于阈值，该候选才被最终确认为关键帧。</p>
+<p>与现有方法相比，创新点在于：1) <strong>从固定采样到事件驱动检索</strong>：摒弃了固定步长的密集或稀疏采样，转而主动识别并链接语义关键帧。2) <strong>任务感知的查询生成</strong>：通过FiLM实现查询的任务特定调制，使关键帧检测能适应不同任务语义。3) <strong>解耦的轻量级设计</strong>：KSM独立于主干策略，通过结构化输入进行集成，避免了修改主干架构的计算负担。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在基于ManiSkill模拟器构建的<strong>长视野语义推理基准套件</strong>上进行，该套件包含四个专门设计的非马尔可夫任务，以弥补现有基准的“马尔可夫偏差”。</p>
+<p><img src="https://arxiv.org/html/2603.01465v1/2603.01465v1/x2.png" alt="非马尔可夫任务概览"></p>
+<blockquote>
+<p><strong>图3</strong>：四个自定义的非马尔可夫ManiSkill任务概览。红色边框表示用于训练的真实关键帧。</p>
+</blockquote>
+<p>对比的基线方法包括：Diffusion Policy、π₀以及通用VLA模型GR00T-N1.5。对GR00T-N1.5在三种记忆机制下进行了系统评估：无历史、短期密集历史以及长期固定步长采样历史。</p>
+<p>关键定量结果如表1所示。Keyframe-Chaining VLA取得了<strong>92.0%<strong>的平均成功率，显著超越了最佳基线方法（固定步长采样，在间隔I=40时达到57.0%）。具体到各任务，本文方法在</strong>身份追踪</strong>和<strong>计数与延迟</strong>任务上均达到了100%的成功率，在<strong>时空排序</strong>和<strong>空间重构</strong>任务上也分别达到98%和70%。</p>
+<p><img src="https://arxiv.org/html/2603.01465v1/2603.01465v1/x3.png" alt="定量结果对比"></p>
+<blockquote>
+<p><strong>表1</strong>：在非马尔可夫任务上的成功率定量对比。Keyframe-Chaining VLA取得了稳健且优异的性能。</p>
+</blockquote>
+<p>该图表明，依赖短期密集观测窗口的基线在所有任务上平均成功率低于30%，证明了仅堆叠邻近观测不足以进行长视野推理。而采用固定步长采样的方法则暴露出<strong>时域视野与分辨率之间的根本权衡</strong>：粗采样（如I=40）能捕捉空间重构任务的初始状态（成功率60%），但完全错过了计数任务中的快速闪光信号（成功率0%）；细采样（如I=20）能解决计数任务（成功率74%），却无法覆盖空间重构所需的完整历史（成功率18%）。没有一种固定采样率能通用于所有具有不同时域动态的任务。</p>
+<p><img src="https://arxiv.org/html/2603.01465v1/2603.01465v1/x4.png" alt="KSM消融实验"></p>
+<blockquote>
+<p><strong>图4</strong>：关键帧选择模块的消融研究。评估了不同负采样策略和查询调制机制对关键帧检测平均精度的影响。</p>
+</blockquote>
+<p>消融实验验证了KSM各组件的重要性。如图所示，在负采样策略中，完整的<strong>三模态负采样</strong>（结合时域邻近、阶段内和跨任务负样本）取得了最高的平均精度（94.5%），移除任何一类都会导致性能下降，尤其是移除跨任务负样本时精度降至88.2%。在查询生成方面，使用<strong>任务调制FiLM</strong>的方法（94.5%）显著优于使用<strong>静态任务嵌入</strong>（89.1%）或<strong>无任务条件</strong>的查询（85.7%），证明了动态任务条件查询的必要性。</p>
+<p><img src="https://arxiv.org/html/2603.01465v1/2603.01465v1/x5.png" alt="真实世界部署结果"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界长视野操作任务的定性结果。Keyframe-Chaining VLA能够成功完成需要记忆过去状态的任务，而仅依赖当前观测的基线则失败。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了<strong>Keyframe-Chaining VLA框架</strong>，通过稀疏语义历史解决非马尔可夫状态混叠问题，避免了长上下文注意力的计算瓶颈。2) 设计了<strong>任务调制关键帧选择模块</strong>，利用基于FiLM的查询生成在统一度量空间中提取语义关键帧。3) 建立并开源了一个专为<strong>长视野语义推理</strong>设计的ManiSkill基准套件，填补了现有基准的空白。</p>
+<p>论文提到的局限性包括：KSM需要针对特定任务进行训练，其泛化能力有待进一步探索；当前框架依赖于离散的阶段划分，对于更连续或层级化的任务结构可能需要扩展。</p>
+<p>本研究对后续工作的启示在于：证明了在长视野推理中，<strong>上下文信息的语义相关性比单纯的数量或密度更重要</strong>。这启发未来研究可以探索更灵活动态的记忆机制，例如结合基于注意力的检索与基于事件的触发。此外，如何使关键帧选择模块具备更强的零样本或小样本跨任务泛化能力，是一个有价值的方向。最后，将稀疏语义历史与规划、推理模块更深度地结合，可能进一步提升复杂长视野任务的执行能力。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对现有视觉-语言-动作模型在长时域任务中因依赖即时观察而难以捕捉Non-Markovian依赖的问题，提出了关键帧链式VLA框架。该方法通过自动关键帧选择器学习判别嵌入以识别状态转换，并设计进度感知查询动态检索相关历史帧，将稀疏关键帧作为视觉令牌集成，显式建模长时域时间上下文。在ManiSkill模拟器的四个Non-Markovian操作任务上的实验表明，该方法实现了优越性能，显著优于基线模型，有效解决了长时域依赖的机器人操作挑战。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01465" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

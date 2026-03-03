@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ACDC: Adaptive Curriculum Planning with Dynamic Contrastive Control for Goal-Conditioned Reinforcement Learning in Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ACDC: Adaptive Curriculum Planning with Dynamic Contrastive Control for Goal-Conditioned Reinforcement Learning in Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.02104" target="_blank" rel="noreferrer">2603.02104</a></span>
+        <span>作者: Hengyan Liu Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人操作领域，目标条件强化学习（GCRL）提供了一种基于学习的规划方法，使智能体能够在同一环境中实现多个目标。后见经验回放（HER）通过将失败轨迹重新标记为替代目标的成功经验，显著提高了GCRL的样本效率。现有研究通常结合基于多样性或熵驱动的优先级采样机制来改进经验选择。然而，这些方法普遍缺乏在整个训练过程中显式引导智能体学习焦点的能力，特别是在使学习信号与预期课程保持一致方面。这导致智能体可能在次优或不相关的经验上浪费学习能力，在稀疏奖励环境中尤为严重。</p>
+<p>本文针对现有方法缺乏对学习过程的系统性、自适应引导这一根本局限性，提出了一个新的分层规划范式ACDC。其核心思路是集成自适应课程（AC）规划与动态对比（DC）控制，前者根据智能体成功率动态平衡探索（多样性）与利用（质量）以制定课程计划，后者通过约束对比学习执行该计划，实现与当前课程重点一致的经验选择。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ACDC框架是一个双层协同系统，旨在通过精心设计的学习轨迹引导智能体。</p>
+<p><img src="https://arxiv.org/html/2603.02104v1/2603.02104v1/overview.jpg" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图1</strong>：ACDC框架概述。<strong>规划层</strong>：自适应课程（AC）规划通过结合多样性和质量指标，并经由自适应加权机制生成轨迹优先级分数F(τ)。<strong>控制层</strong>：动态对比（DC）控制利用这些分数，通过排序和配对模块构建正/负样本对，然后采用两阶段对比学习进行经验选择。第一阶段训练编码器网络从构建的样本对中学习轨迹表示，第二阶段通过与智能体-编码器交互计算L2范数分数，以动态指导经验选择。</p>
+</blockquote>
+<p><strong>1. 自适应课程（AC）规划</strong><br>该模块通过动态平衡从探索到利用的过渡来渐进式安排学习任务，构建一个性能感知的课程。其核心是为每个轨迹τ计算一个综合分数F(τ) = \tilde{d}_τ + λ(s_r, t) · \tilde{q}_τ，其中\tilde{d}_τ是归一化的多样性得分，\tilde{q}_τ是归一化的质量得分，λ(s_r, t)是自适应权重。</p>
+<ul>
+<li><strong>多样性得分</strong>：使用行列式点过程（DPP）来度量轨迹在目标空间中的多样性。将轨迹划分为重叠的部分轨迹，计算每个部分轨迹的DPP行列式值，并求和得到总多样性得分d_τ，最后在回放缓冲区ℬ内进行最小-最大归一化得到\tilde{d}_τ。</li>
+<li><strong>质量得分</strong>：衡量轨迹最终达到的目标g_T^{ac}与期望目标g的接近程度，计算公式为\tilde{q}_τ = exp(-(||g_T^{ac} - g||_2)^2 / (2σ^2))，其中σ=0.2。得分在0到1之间，越接近1表示轨迹质量越高。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.02104v1/2603.02104v1/quality_score_illustration.png" alt="质量得分示意图"></p>
+<blockquote>
+<p><strong>图3</strong>：质量得分衡量轨迹最终达到的目标与期望目标的接近程度。该得分使用高斯函数将欧氏距离转换为0到1之间的值，从而平滑地区分成功与不成功的轨迹。</p>
+</blockquote>
+<ul>
+<li><strong>自适应加权机制</strong>：权重λ(s_r, t) = λ_0 · (1 + η(s_r))^t根据当前成功率s_r和训练步数t动态调整。其中η(s_r)是一个基于成功率的自适应增长率：当s_r &lt; θ_low时（挣扎阶段），η(s_r) = η_base · 0.5，鼓励更长时间的探索；当θ_low ≤ s_r ≤ θ_high时（学习阶段），η(s_r) = η_base，提供平衡的探索-利用；当s_r &gt; θ_high时（掌握阶段），η(s_r) = η_base · 2.0，加速转向质量优先的利用。为了防止成功率在阈值附近波动导致模式切换不稳定，算法采用了指数移动平均（EMA）来平滑η(s_r)的更新。</li>
+</ul>
+<p><strong>2. 动态对比（DC）控制</strong><br>该模块在操作层面执行AC的课程计划，通过学习的轨迹表示使智能体能够识别并优先处理与其当前学习阶段最相关的经验。</p>
+<ul>
+<li><strong>动态对比配对</strong>：利用AC模块生成的综合分数F(τ)，将回放缓冲区中分数最高的前τ_p比例轨迹作为正样本集𝒫，分数最低的前τ_n比例轨迹作为负样本集𝒩。</li>
+<li><strong>第一阶段：编码器网络训练</strong>：编码器采用融合设计，整合轨迹动态与课程上下文。它从轨迹中提取五个关键帧的达成目标作为输入，通过LSTM网络提取轨迹特征h_traj，同时将当前课程阶段λ(s_r, t)嵌入为h_λ。两者融合后生成联合编码z_{τ,λ(s_r,t)}。训练采用带有显式范数约束的对比损失：ℒ_total = ℒ_con + αℒ_norm。ℒ_con是一个自锚定的InfoNCE损失，防止正样本间的特征坍塌；ℒ_norm = max(0, μ_𝒩 - μ_𝒫 + m)则强制正样本编码的平均L2范数μ_𝒫至少比负样本的平均范数μ_𝒩高出边界m。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.02104v1/2603.02104v1/representation.png" alt="编码器表示空间"></p>
+<blockquote>
+<p><strong>图5</strong>：训练后的编码器网络建立了一个双层表示架构。正轨迹占据优质区域（绿色），而负轨迹被限制在劣质区域（红色），点的大小表示L2范数的大小。这种结构实现了类别分离和基于范数的重要性排序。</p>
+</blockquote>
+<ul>
+<li><strong>第二阶段：经验选择</strong>：使用训练好的编码器处理回放缓冲区中的所有轨迹，计算其联合编码的L2范数‖z_{τ,λ(s_r,t)}‖<em>2。轨迹被采样的概率与其编码的范数成正比，即P_contrastive(τ) ∝ ‖z</em>{τ,λ(s_r,t)}‖_2。这实现了从AC的高层课程目标到具体经验选择的转化。</li>
+</ul>
+<p><strong>创新点</strong>：与现有方法相比，ACDC的创新在于系统性地将自适应课程规划与对比学习相结合。AC模块不是固定课程，而是根据智能体实时性能（成功率）动态调整探索与利用的平衡；DC模块则利用对比学习，将AC的课程计划编码为轨迹表示空间的几何结构（区域分离与范数大小），从而实现与课程阶段严格对齐的、非启发式的经验选择。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在OpenAI Gym的六个机器人操作任务上评估ACDC，涵盖两个机器人平台：Fetch环境（7自由度机械臂）和Shadow Dexterous Hand环境（24自由度灵巧手）。训练遵循标准HER框架，使用10个并行worker收集经验。</p>
+<p><strong>对比方法</strong>：与多种先进的基于HER的经验回放基线进行对比，包括：原始HER、CHER（课程引导的HER）、DTGSH（基于DPP的多样性采样）、FAHER（基于聚类的焦点感知HER）。</p>
+<p><strong>关键结果</strong>：<br><img src="https://arxiv.org/html/2603.02104v1/2603.02104v1/Benchmark_result.png" alt="基准测试结果"></p>
+<blockquote>
+<p><strong>图8</strong>：在六个任务上的成功率对比曲线。ACDC（红色实线）在所有任务上均一致且显著地优于所有基线方法，在最终成功率和样本效率（达到特定成功率所需的训练周期数）方面都表现出色。</p>
+</blockquote>
+<p>实验结果表明，ACDC在所有六个挑战性操作任务上均一致优于最先进的基线方法。例如，在最终任务成功率上，ACDC相比最佳基线平均提升超过15%。在样本效率方面，ACDC达到相同成功率所需的训练周期数显著减少。</p>
+<p><strong>消融实验分析</strong>：<br><img src="https://arxiv.org/html/2603.02104v1/2603.02104v1/ablation_1.png" alt="AC与DC消融"></p>
+<blockquote>
+<p><strong>图9</strong>：对AC和DC组件进行消融的实验结果。移除任一组件的性能均显著下降，验证了二者协同工作的必要性。仅使用AC（蓝色虚线）或仅使用DC（绿色点线）均无法达到完整ACDC（红色实线）的性能。</p>
+</blockquote>
+<p>消融研究证实了AC和DC两个核心组件的必要性。移除任一组件的性能均显著下降。进一步分析表明：</p>
+<ol>
+<li><strong>AC模块的作用</strong>：自适应权重机制是关键。固定权重（即固定探索-利用平衡）的策略性能不如自适应权重策略。</li>
+<li><strong>DC模块的作用</strong>：范数约束损失ℒ_norm至关重要。没有该约束，编码器无法在表示空间中建立清晰的范数-重要性关联，导致经验选择效果下降。</li>
+<li><strong>阈值敏感性</strong>：论文对成功率阈值θ_low和θ_high进行了敏感性分析（参见论文图12），表明在合理范围内性能稳定，最优阈值因任务复杂度而异（Fetch任务设为0.3和0.65，Hand任务设为0.2和0.5）。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了一个新颖的分层学习范式ACDC，首次系统地将<strong>自适应课程规划</strong>与<strong>动态对比控制</strong>相结合，用于GCRL中的经验选择。</li>
+<li>设计了<strong>自适应课程（AC）规划器</strong>，能根据智能体实时成功率动态调整探索（多样性）与利用（质量）的平衡，实现无需环境模型的课程生成。</li>
+<li>设计了<strong>动态对比（DC）控制器</strong>，通过带有范数约束的对比学习，将课程计划编码到轨迹表示中，实现与课程阶段严格对齐的、非启发式的经验选择。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，尽管在基准任务上表现优异，但该方法在更复杂、高维的任务（如仅使用像素输入的操作）上的泛化能力仍有待进一步验证。此外，自适应权重函数中的超参数（如增长率η_base和阈值θ）可能需要针对新领域进行微调。</p>
+<p><strong>研究启示</strong>：ACDC框架为GCRL中的经验复用提供了新思路。其“规划-控制”分层结构可扩展至其他需要渐进式学习的RL领域。动态对比控制中将抽象课程计划转化为具体表示空间几何结构的思想，为连接高层学习目标与低层策略优化提供了可借鉴的桥梁。未来工作可探索将ACDC应用于多任务学习、元学习，或结合世界模型进行更长期的课程规划。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本论文针对目标条件强化学习在机器人操作任务中，因经验选择策略单一导致性能不佳的问题，提出了ACDC框架。其核心方法包含自适应课程规划，以智能体成功率为依据动态平衡探索与利用；以及动态对比控制，通过范数约束对比学习实现课程引导下的经验选择。实验表明，该方法在多个挑战性任务上，在样本效率和最终成功率上均优于现有先进基线。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.02104" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Scaling Tasks, Not Samples: Mastering Humanoid Control through Multi-Task Model-Based Reinforcement Learning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Scaling Tasks, Not Samples: Mastering Humanoid Control through Multi-Task Model-Based Reinforcement Learning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01452" target="_blank" rel="noreferrer">2603.01452</a></span>
+        <span>作者: Le Xie Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，开发能够掌握多样化技能的通用机器人是具身AI的核心挑战。受大语言模型成功的启发，机器人学近期趋势主要遵循“基础模型”范式，即扩展模型参数量并聚合大规模离线数据集。然而，这种方法在机器人领域存在根本性局限：与被动文本生成不同，具身智能需要与物理环境进行主动交互。仅依赖离线数据限制了智能体纠正错误、适应动态变化以及通过反馈优化行为的能力。因此，扩展在线学习（提升主动交互的效率和效果）与扩展离线数据同等重要。</p>
+<p>现有在线学习方法通常专注于增加单个任务的样本数量。本文提出，有效的在线学习应扩展任务的广度（即“在线任务扩展”），而非仅仅增加每个任务的样本量。这一视角转变揭示了基于模型的强化学习方法的结构性优势。在相似状态下，当不同任务要求相互冲突的动作时，模型无关方法通常会遭受梯度干扰。而MBRL专注于学习底层的状态转移动态，由于物理规律是跨任务不变的，一个共享的世界模型可以聚合多样化的多任务数据来完善其对环境的理解。因此，任务多样性充当了动态模型的正则器：它防止模型过拟合到单个任务的狭窄状态分布，确保学习到的物理规律具有全局泛化性。本文的核心思路是：通过多任务在线学习扩展任务数量，利用MBRL中动态模型跨任务不变的特性，将任务多样性转化为鲁棒的表示学习，从而实现高效的样本利用。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出了EfficientZero-Multitask算法，其整体框架是一个分布式异步训练系统，包含数据收集、经验回放、模型重分析和学习器更新四个主要部分。</p>
+<p><img src="https://arxiv.org/html/2603.01452v1/2603.01452v1/figs/ez-m_overview2.png" alt="方法总览"></p>
+<blockquote>
+<p><strong>图2</strong>：EfficientZero-Multitask 概览。绿色箭头表示模型推理与预测，黑色箭头和标注表示目标值或真实转移。(A) 任务共享模型架构：使用共享模型预测策略、价值和奖励，各组件通过任务嵌入进行条件化。(B) 平衡数据收集：Rollout workers 按照平衡的时间表采样任务，并执行相应的任务策略与环境交互。(C) 多任务展开学习：对每个采样的轨迹片段，模型在潜在空间中按任务索引展开，产生预测的奖励、价值和策略。监督信号来自真实转移和重分析目标。(D) 分布式实现：数据收集将轨迹送入独立的任务回放缓冲区，重分析模块定期用最新模型重新计算基于搜索的目标，学习器消费重分析后的批次更新参数。</p>
+</blockquote>
+<p>EZ-M建立在EfficientZero-v2的成功基础上，并针对多任务在线学习进行了改进。其核心模型组件包括六个子网络：状态编码器 ℋ、动作编码器 𝒰、动态网络 𝒢、奖励预测器 ℛ、价值预测器 𝒱 和策略预测器 𝒫。与Dreamer等系列方法不同，EZ-M不采用重建损失，而是专注于控制目标。一个关键改进是使用独立的奖励预测路径（输入为当前潜在状态和动作嵌入），而非在下一状态预测后连接奖励头，以避免任务间奖励尺度变化的干扰。动作编码器将不同任务的动作投影到统一的动作嵌入空间，以稳定任务共享模型的训练。</p>
+<p>在规划阶段，EZ-M使用Gumbel搜索替代传统的蒙特卡洛树搜索。在根节点，它根据模型先验（策略 p 和通过模型展开估计的动作价值 q̂）计算每个动作的Gumbel分数，然后应用顺序减半法迭代地对动作候选集进行二分筛选，最终产生一个过滤后的动作 A 和一个改进的策略 π。</p>
+<p>策略学习采用监督学习方式，让策略头输出 p 去模仿树搜索产生的改进策略 π。对于高维动作空间任务，简单的最大似然估计损失 ℒ_p = -log p(A) 在实践中表现更稳定。奖励预测采用分类建模，以应对任务间奖励尺度的显著差异，因为分类损失对尺度变化不敏感。价值学习同样采用分类建模，并集成了价值集成以稳定预测、缓解高估。此外，EZ-M引入了混合价值目标，利用多个价值头预测的方差作为权重，在TD目标和基于模型的目标之间进行平衡：v_mix = α v_td + (1-α) v_model，其中权重系数 α 与价值预测方差相关。</p>
+<p>为稳定多步展开学习并缓解想象过程中的表示漂移，EZ-M在潜在状态上施加了时间一致性正则化。该约束最小化动态网络预测的潜在状态与从对应未来观察直接编码得到的潜在状态之间的投影距离（如负余弦相似度）。</p>
+<p>除了基础训练目标（包含奖励、策略、价值预测损失和时间一致性损失），EZ-M还引入了路径一致性正则化。该正则化强制要求沿着想象轨迹，价值预测 v̂(h_k) 与其递归分解 r̂(h_k, u_k) + γ v̂(h_k+1) 保持一致，以减轻多任务设置下因奖励尺度异构而加剧的累积估计误差。</p>
+<p>针对多任务学习的设计包括：1) 可学习的任务嵌入，将其注入到表示、动态和预测模块以实现任务条件化；2) 动作掩码和观察填充，以标准化不同任务（具有不同动作空间大小和观察维度）的输入/输出；3) 独立的经验回放缓冲区，为每个任务维护一个专用缓冲区，以减轻任务间数据不平衡并最小化负迁移。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在HumanoidBench这一具有挑战性的全身控制基准测试上进行，评估了EZ-M在HumanoidBench-Medium和HumanoidBench-Hard两个难度等级上的性能。</p>
+<p>对比的基线方法包括：DreamerV3、TD-MPC2、DrQ-v2、PPO以及专为多任务设计的MAT（Multi-task Actor-Critic）和MQL（Multi-task Q-Learning）。所有方法均在相同的100万步环境交互预算内进行训练。</p>
+<p><img src="https://arxiv.org/html/2603.01452v1/2603.01452v1/figs/task_scaling.png" alt="任务扩展性能"></p>
+<blockquote>
+<p><strong>图5</strong>：任务数量扩展时的性能变化。随着任务数量从1增加到12，模型无关方法（MAT，MQL）的性能下降或停滞，而EZ-M的性能持续提升，验证了任务多样性对MBRL的正向迁移作用。</p>
+</blockquote>
+<p>关键实验结果显示，EZ-M在HumanoidBench-Hard上取得了最先进的性能。在仅使用100万步环境交互的情况下，EZ-M的性能显著超越了所有基线方法。具体而言，在HumanoidBench-Hard的12个任务上，EZ-M的平均归一化得分达到了约0.85，而最强的模型无关基线（TD-MPC2）得分约为0.65，DreamerV3得分约为0.55。这证明了EZ-M卓越的样本效率。</p>
+<p><img src="https://arxiv.org/html/2603.01452v1/2603.01452v1/figs/hard_unnorm_curves.png" alt="Hard难度曲线"></p>
+<blockquote>
+<p><strong>图8</strong>：HumanoidBench-Hard上各任务未归一化的学习曲线。EZ-M（红色实线）在大多数任务上都更快地达到了更高的最终性能，显示了其稳定高效的学习能力。</p>
+</blockquote>
+<p>消融实验分析了EZ-M中各个组件的贡献。移除路径一致性正则化会导致性能显著下降（平均得分下降约15%），尤其是在奖励尺度差异大的任务上。移除时间一致性正则化也会损害性能，表明其对于稳定多步想象至关重要。使用共享的经验回放缓冲区而非独立缓冲区，会导致性能下降，验证了独立缓冲区对于处理任务不平衡的有效性。将Gumbel搜索替换为标准的MCTS会降低计算效率并轻微影响最终性能。</p>
+<p><img src="https://arxiv.org/html/2603.01452v1/2603.01452v1/figs/ablation.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图6</strong>：EZ-M各组件消融研究的性能对比。移除路径一致性、时间一致性或使用共享回放缓冲区均会导致性能下降，证明了这些设计的重要性。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 提出了EfficientZero-Multitask算法，通过新颖的一致性机制（时间一致性与路径一致性）和针对多任务的设计（独立回放缓冲区、任务嵌入等），将MBRL的样本高效性扩展到了多任务在线学习设置。2) 从理论上形式化了MBRL在多任务设置中的结构性优势，证明了由于动态不变性，MBRL的渐进样本效率随任务数量增加而显著优于模型无关方法。3) 在具有挑战性的HumanoidBench上实现了最先进的性能，验证了“在线任务扩展”作为机器人学习可扩展路径的可行性。</p>
+<p>论文自身提到的局限性在于，其成功依赖于一组高质量、多样化的任务设计。如果任务集缺乏多样性或共享的动态结构有限，所提出的优势可能无法完全体现。</p>
+<p>本文工作对后续研究的重要启示在于，为构建通用机器人智能体指明了一条不同于单纯扩大离线数据集或模型参数的新路径：即通过大规模并行在线学习，让多样化的任务协同构建一个统一、泛化的世界模型。这强调了在机器人学习中，任务设计的广度与数据规模同样重要。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人需通过主动交互学习、样本效率低的核心问题，提出应通过扩展任务数量而非单个任务的样本量来提升学习效率。其关键技术为**EfficientZero-Multitask (EZ-M)** 多任务模型强化学习算法，其要点是利用物理动态的任务不变性，通过共享的世界模型聚合多任务经验，以学习鲁棒、任务无关的表征。在HumanoidBench复杂人形控制基准测试中，**EZ-M仅用一百万次环境交互就达到了最先进的性能**，显著超越了其他基线方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01452" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

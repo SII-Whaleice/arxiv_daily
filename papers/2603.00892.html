@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>A Novel Reconfigurable Dexterous Hand Based on Triple-Symmetric Bricard Parallel Mechanism - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>A Novel Reconfigurable Dexterous Hand Based on Triple-Symmetric Bricard Parallel Mechanism</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.00892" target="_blank" rel="noreferrer">2603.00892</a></span>
+        <span>作者: Dan Zhang Team</span>
+        <span>日期: 2026-03-01</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，灵巧机器人手大多采用拟人化布局，通过腱或缆绳驱动串联旋转关节，并常结合弹簧等柔性元件实现欠驱动。然而，传统结构的刚性限制了其适应不同几何形状、尺寸和表面特性物体的能力。采用并联机构（PM）的灵巧手相比串联结构具有更高的刚度和稳定性，在复杂抓取任务中能实现更高精度和灵活性，同时提升负载能力。近年来，有研究开始探索采用可重构机构作为手掌，以扩大工作空间并增强灵巧性，但现有工作多集中于结构设计与控制优化，往往忽视了抓取过程中手掌自身姿态和形状的作用。本文针对现有灵巧手手掌固定、适应性有限的问题，提出设计一种手掌姿态可调的新型灵巧手。其核心思路是：基于拓扑图合成方法，设计一个具有三重对称性的Bricard并联机构作为可重构手掌，并结合欠驱动手指，以平衡灵巧性、稳定性和负载能力。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的灵巧手整体框架基于一个可重构的并联机构手掌和三根欠驱动手指。设计流程首先通过拓扑图合成确定手掌机构构型，随后进行详细的运动学与性能分析，最终制造原型并进行抓取实验验证。</p>
+<p>核心模块包括可重构手掌机构（基于三对称Bricard连杆）和欠驱动手指。手掌机构的设计始于拓扑综合。为了在可重构性、对称性和结构鲁棒性之间取得平衡，研究选择独立环数V=3的构型。从对应的基本连杆组合（表I，构型4）中，通过节点响应法（NRM）进行同构识别，筛选出具有三重空间对称性的拓扑图（CG 4-1）。这种对称性有利于提高负载能力和稳定性。</p>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/x1.png" alt="Transformation and Decomposition of the Graph."></p>
+<blockquote>
+<p><strong>图2</strong>：拓扑图CG 4-1的变换与分解。该图展示了所选拓扑图的不同表现形式，其三重对称的空间拓扑结构是设计基础。</p>
+</blockquote>
+<p>基于此拓扑图，解构后得到三个分支，每个分支包含一个三元连杆。利用这种三重对称性，设计了一个三指对称手。在对称的六杆机构选项中，选择了Bricard机构作为变形手掌，因其空间可展性提供了卓越的手掌灵活性和适应性。</p>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure3.png" alt="Structural design of the triple-symmetric Bricard mechanism"></p>
+<blockquote>
+<p><strong>图4</strong>：三重对称Bricard机构的结构设计。(a) 简单模型，(b) 高精度模型（带定位孔），(c) 最终采纳的结构模型。</p>
+</blockquote>
+<p>该三重对称Bricard机构具有三个对称平面，结合了旋转和平面对称性。其几何参数满足特定条件（公式6），其中相邻关节间夹角ω设置为2π/3以最大化工作空间并避免干涉。机构的运动协调方程由Denavit-Hartenberg闭环条件导出（公式7）。选择β作为输入角，γ为被动角，其关系由公式8描述，确保了运动确定性。</p>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure4.png" alt="Triple-symmetric Bricard mechanism"></p>
+<blockquote>
+<p><strong>图5</strong>：(a) 三重对称Bricard机构示意图，定义了相邻转动副的旋转角β和γ；(b) 当ω=2π/3时，β与γ的对应关系曲线（红色部分为有效区间）。</p>
+</blockquote>
+<p>在运动学分析中，定义了关键几何参数：OmMi = L1，GNi = L2，OmG = L3（Om和G分别为手掌固定端和移动端三角形中心）。L1、L2、L3与连杆长度L及角度β、γ的关系如公式9所示。以前向运动学为例，以L1为输入变量，L3为输出变量，通过约束方程（公式10）和几何关系（公式13）建立了完整的输入-输出映射（公式12），从而确定了机构的可达工作空间。</p>
+<p>性能分析方面，首先基于运动学约束和连杆参数（表II）进行了工作空间分析。通过雅可比矩阵分析（公式16，17）映射了关节速度与末端速度关系，并评估了运动/力传递性能。采用局部传递指数（LTI，公式19，20）作为指标，通过计算输入/输出传递效率ζi和σi，并取最小值κ来评估。分析显示，由于机构的三重对称性，仅需分析两个代表性分支（如M1N2和M1N3）即可。此外，基于标量雅可比J = dL3/dL1，通过刚度传递关系KL3 = KL1 / J²（公式18）分析了系统刚度，结果表明在整个工作空间内刚度为正，确保了稳定的运动行为。</p>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure7.png" alt="(a) Jacobian Comparison (b) Relation between K L3 and L1."></p>
+<blockquote>
+<p><strong>图8</strong>：(a) 雅可比矩阵J随L1的变化关系；(b) 输出刚度KL3随输入L1的变化曲线，显示在全工作空间内为正。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure8.png" alt="The relationship between ζi, σi, κ and L1."></p>
+<blockquote>
+<p><strong>图9</strong>：运动/力传递指标ζi（输入效率）、σi（输出效率）及其最小值κ随L1的变化关系。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>研究基于前述设计制造了原理样机。手掌采用高碳钢制造，所有部件经过喷砂和氧化处理。手指为欠驱动腱驱动机构，由指尖、中指节和基部三段组成，通过轴承支撑的旋转关节连接，并嵌入扭簧提供被动恢复力。手指组件通过机械连接件安装在Bricard手掌上，其运动受Bricard连杆约束。为减少手掌运动时的摩擦，Bricard手掌通过低摩擦线性导轨与基座连接。</p>
+<p>实验部分通过一系列抓取测试来验证灵巧手的性能。测试对象包括不同形状、尺寸和材质的物体，如球体、圆柱体、立方体和不规则物体（如玩偶、胶水瓶、马克笔）。实验展示了该灵巧手能够通过其可重构手掌调整姿态，稳定且有效地抓取各类物体，证明了其提升抓取通用性和操作精度的有效性。</p>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/x3.png" alt="L1 and L2 (b) L1, L2 and L3 with respect to γ."></p>
+<blockquote>
+<p><strong>图7</strong>：(a) L1与L2之间的约束关系曲线（红色部分为有效区间）；(b) L1、L2和L3随γ角的变化趋势。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure9.png" alt="Workspace of the dexterous hand."></p>
+<blockquote>
+<p><strong>图10</strong>：灵巧手的工作空间分析结果，展示了机构的可达位置范围。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.00892v1/2603.00892v1/figure12.png" alt="Grasping experiments with different objects."></p>
+<blockquote>
+<p><strong>图13</strong>：对不同物体进行的抓取实验，展示了灵巧手的适应能力。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了一种基于三重对称Bricard并联机构的新型可重构灵巧手设计，其可变形手掌显著增强了对不同物体的适应性；2）提出了一套从拓扑图合成、结构设计到运动学与性能分析（工作空间、刚度、运动/力传递）的完整系统化设计方法；3）通过原理样机与抓取实验验证了设计的可行性与有效性。</p>
+<p>论文自身提到的局限性包括：手指的欠驱动设计虽然简化了控制，但可能限制了实现精确指尖抓取和复杂操作的能力。此外，未集成触觉或视觉传感器进行闭环控制。</p>
+<p>这项工作对未来研究的启示包括：将可重构手掌与主动控制的多指灵巧手结合，有望实现更复杂的操作任务；在手掌机构中集成传感器以实现自适应抓取；以及进一步优化机构的轻量化设计和驱动方式。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对传统灵巧手因结构刚性难以适应不同形状、尺寸物体的问题，提出一种基于三重对称Bricard并联机构的新型可重构灵巧手。核心方法采用三重对称Bricard linkage作为可重构手掌，通过拓扑与尺寸综合平衡自由度配置，并运用旋量理论进行运动学分析与性能评估。原型实验表明，该手能稳定高效抓取多种物体，验证了其在提升抓取多功能性和操作精度方面的有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.00892" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

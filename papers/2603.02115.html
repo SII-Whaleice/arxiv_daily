@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Robometer: Scaling General-Purpose Robotic Reward Models via Trajectory Comparisons - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Robometer: Scaling General-Purpose Robotic Reward Models via Trajectory Comparisons</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.02115" target="_blank" rel="noreferrer">2603.02115</a></span>
+        <span>作者: Jesse Zhang Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前通用的机器人奖励模型通常通过预测专家演示的绝对任务进度来训练，仅提供局部、帧级别的监督。虽然这对专家演示有效，但该范式难以扩展到包含大量失败和次优轨迹的大规模机器人数据集，因为为这些轨迹分配密集的进度标签是模糊且昂贵的。这导致大量在真实世界机器人学习中普遍存在的次优数据无法被有效利用，限制了模型的扩展性和泛化能力。</p>
+<p>本文针对这一局限性，提出通过引入轨迹间比较的偏好监督作为额外的全局监督信号，以提升模型在不同本体、场景和轨迹质量下的泛化能力。核心思路是，在保留专家数据上帧级进度监督的同时，增加一个轨迹对偏好预测的损失，从而能够利用无标签的失败轨迹，并通过跨轨迹的排序约束学习到更校准的奖励函数。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>Robometer 是一个可扩展的奖励建模框架，其核心是结合了轨迹内进度监督与轨迹间偏好监督的双目标训练。模型基于一个因果掩码的视觉语言模型（Qwen3-VL-4B-Instruct）构建，能够处理单视频（用于奖励推断）或视频对（用于偏好训练）。</p>
+<p><img src="https://arxiv.org/html/2603.02115v1/2603.02115v1/assets/robometer_training_objectives.jpg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：Robometer 方法框架。模型接收语言指令和两个视频轨迹作为输入，通过插入的特殊token预测第一个视频的密集进度/成功标签，并预测哪个视频更好地完成了任务。训练数据通过三种策略构建：基于进度的比较、指令负例和视频回放。</p>
+</blockquote>
+<p><strong>整体流程与架构</strong>：在推理时，模型输入为语言指令和单个视频，输出为该视频每一帧的进度估计和成功概率。在训练时，输入为语言指令和两个视频，额外输出一个偏好判断。为了在不破坏VLM预训练内部表示的情况下提取奖励，论文在输入序列中插入了新的可学习token。对于第一个视频 <code>o^1</code>，在每一帧的token后插入进度token <code>⟨|prog_token|⟩</code>；在两个视频之间插入分隔token <code>⟨|split_token|⟩</code>；在整个序列末尾插入偏好token <code>⟨|pref_token|⟩</code>。因果注意力掩码确保每个 <code>⟨|prog_token|⟩</code> 只关注当前及之前 <code>o^1</code> 的帧，以进行帧级进度推理；而 <code>⟨|pref_token|⟩</code> 则能关注两个完整轨迹以进行相对判断。</p>
+<p><strong>核心训练目标</strong>：总损失函数为 <code>L = L_pref + L_prog + L_succ</code>。</p>
+<ol>
+<li>**偏好预测损失 (L_pref)**：在 <code>⟨|pref_token|⟩</code> 的隐藏状态上接一个MLP分类器，通过二元交叉熵损失预测哪个轨迹更好地完成了指令。这提供了全局的、跨轨迹的监督。</li>
+<li>**进度预测损失 (L_prog)**：在每个 <code>⟨|prog_token|⟩</code> 的隐藏状态上接一个MLP，预测该帧的进度。借鉴C51分布强化学习思想，将连续进度离散化为N个区间，预测一个分类分布，并用交叉熵损失进行训练。对于专家轨迹，第t帧的进度目标定义为 <code>p_t = t/T</code>。</li>
+<li>**成功预测损失 (L_succ)**：在相同的 <code>⟨|prog_token|⟩</code> 特征上，另一个MLP头预测二元成功标签（仅最后一帧为成功），使用平衡的二元交叉熵损失。</li>
+</ol>
+<p><strong>数据构建与增强策略</strong>：为了在缺乏人工标注偏好和失败轨迹进度标签的情况下进行训练，论文从大规模数据集RBM-1M中动态构建训练对，主要采用三种策略：</p>
+<ol>
+<li><strong>基于进度的比较</strong>：采样执行相同指令但结果不同的两个轨迹（如专家 vs. 无标签失败），根据已知进度或专家身份分配偏好标签，使模型能利用无标签失败数据。</li>
+<li><strong>指令负例</strong>：采样执行不同指令的两个轨迹，随机选择一个指令作为条件文本，偏好标签指向符合该指令的轨迹，另一轨迹的进度目标设为0。这迫使奖励与任务指令紧密关联。</li>
+<li><strong>视频回放</strong>：从单个专家轨迹中，通过反转一段视频序列生成“回退”的伪失败轨迹，与原始前进序列构成偏好对。这显式地建模了RL中常见的“倒退”失败模式。</li>
+</ol>
+<p><strong>创新点</strong>：与现有主要依赖绝对进度预测的方法相比，Robometer 的核心创新在于引入了<strong>显式的轨迹比较偏好预测作为辅助目标</strong>。这使得模型能够利用大量无精确进度标签的失败和次优轨迹（通过上述策略生成偏好对），从而学习到更具区分力和泛化能力的奖励表示。此外，构建的<strong>RBM-1M大规模多样化数据集</strong>（包含超过100万轨迹，涵盖21种机器人本体和大量失败数据）是支撑该方法成功的关键。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>数据集与基准</strong>：训练使用自建的 <strong>RBM-1M</strong> 数据集。评估使用两个自定义数据集：<strong>RBM-EVAL-ID</strong>（来自RBM-1M分布内的未见轨迹）和 <strong>RBM-EVAL-OOD</strong>（来自3个学术机构的976条轨迹，包含6种本体，其中3种不在RBM-1M中，保证所有基线的训练数据外分布）。对比的基线方法包括：VLAC-8B、GVL（使用GPT-5-mini）、ReWiND、RoboDopamine-3B、RoboReward-4B/8B。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>奖励对齐与轨迹排序</strong>：如表I所示，在RBM-EVAL-OOD上，Robometer在奖励对齐（VOC Pearson r=0.95）和轨迹排序（Kendall τ_a=0.66）上均显著优于所有基线。即使在仅使用RoboReward数据训练时，Robometer也优于原版RoboReward-4B（0.88 vs. 0.77），证明了其框架的有效性。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.02115v1/2603.02115v1/x1.png" alt="奖励对齐与轨迹排序结果表"></p>
+<blockquote>
+<p><strong>表I</strong>：在RBM-EVAL数据集上的奖励对齐和轨迹排序结果。Robometer在使用RBM-1M数据训练后，在分布外评估集上取得了最佳性能。</p>
+</blockquote>
+<ol start="2">
+<li><strong>任务-视频对齐</strong>：如图3所示，通过计算不同任务指令与视频配对后的奖励混淆矩阵，Robometer产生了最明显的对角线模式，表明其能最准确地将高奖励分配给与指令匹配的正确任务视频，这对于多任务场景至关重要。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.02115v1/2603.02115v1/assets/robometer_confusionmatrix.png" alt="任务-视频对齐混淆矩阵"></p>
+<blockquote>
+<p><strong>图3</strong>：视频-语言奖励混淆矩阵。Robometer的矩阵对角线最重，表明其在未见数据和指令上具有最强的对齐能力。</p>
+</blockquote>
+<ol start="3">
+<li><strong>定性分析</strong>：如图4所示，对于一个包含成功、次优（中途掉落物体）和失败轨迹的任务，Robometer的进度预测能准确反映任务执行质量：在次优轨迹中，进度随着机器人接近目标而稳定上升，但在物体掉落时急剧下降；而RoboReward在失败后仍保持高进度预测。只有Robometer能正确预测成功轨迹的成功标签。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.02115v1/2603.02115v1/assets/qualitative_plots.png" alt="定性分析图"></p>
+<blockquote>
+<p><strong>图4</strong>：对不同质量轨迹的进度预测定性分析。Robometer能敏感地捕捉到次优轨迹中的进度回退，并正确识别成功。</p>
+</blockquote>
+<ol start="4">
+<li><p><strong>下游策略学习</strong>：在真实机器人学习的四种下游应用（在线RL、含噪声数据的离线RL、模仿学习的数据集过滤、零样本失败检测）中，使用Robometer奖励的策略学习成功率比每个类别中的最佳基线高出 <strong>2.4-4.5倍</strong>。</p>
+</li>
+<li><p><strong>消融实验</strong>：论文进行了全面的消融研究，关键结论包括：(a) <strong>偏好损失至关重要</strong>：移除偏好损失（<code>w/o pref</code>）会导致在区分失败/成功轨迹和奖励排序任务上的性能大幅下降（Kendall τ_a 从0.66降至0.47）。(b) <strong>数据增强策略有效</strong>：移除视频回放（<code>w/o rewind</code>）和指令负例（<code>w/o neg</code>）都会损害性能，尤其是指令负例对任务对齐至关重要。(c) <strong>失败数据有益</strong>：在训练中增加真实失败数据能持续提升模型在所有评估指标上的表现。</p>
+</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了 <strong>Robometer</strong>，一个通过结合帧级进度预测和轨迹间偏好比较进行训练的通用机器人奖励模型框架，有效利用了无标签的失败轨迹数据。</li>
+<li>构建并发布了 <strong>RBM-1M</strong>，一个包含超过100万轨迹、涵盖多样机器人本体和大量失败数据的大规模奖励学习数据集。</li>
+<li>通过广泛的实验验证了Robometer在奖励评估和多种下游机器人学习任务（如RL、模仿学习、失败检测）中显著优于现有方法，证明了其优越的泛化性和实用性。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，用于生成偏好标签的启发式规则（如基于进度比较、视频回放）可能并不完美，与人类标注的偏好之间可能存在差距。</p>
+<p><strong>启示</strong>：这项工作表明，<strong>将相对偏好监督与绝对进度监督相结合</strong>，是构建可扩展、高性能通用奖励模型的一个有前景的方向。它启发了后续研究如何更高效地利用大规模、未充分标注的机器人数据（尤其是失败数据），以及如何设计更复杂或更自动化的偏好生成机制来进一步提升奖励模型的质量和可靠性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对现有通用机器人奖励模型依赖专家轨迹的绝对进展监督、难以利用大规模失败/次优数据的问题，提出了Robometer框架。其关键技术是结合帧级进展损失与轨迹比较偏好损失的双目标训练，通过轨迹间偏好排序约束增强模型的泛化能力。为支持训练，构建了包含超百万条轨迹的RBM-1M数据集。实验表明，Robometer学习到的奖励函数比先前方法更具通用性，显著提升了多种下游机器人学习任务的性能。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.02115" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

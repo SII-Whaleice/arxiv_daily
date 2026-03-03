@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Closed-Loop Action Chunks with Dynamic Corrections for Training-Free Diffusion Policy - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Closed-Loop Action Chunks with Dynamic Corrections for Training-Free Diffusion Policy</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01953" target="_blank" rel="noreferrer">2603.01953</a></span>
+        <span>作者: Xuelong Li Team</span>
+        <span>日期: 2026-03-02</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>扩散策略在机器人操作任务中取得了显著成果，其通过推理动作块来捕获非马尔可夫依赖关系，减少序列预测中的累积误差，并生成连贯的长时域动作。然而，在动态环境中实现高效操作不仅需要长期规划，策略还必须能够及时响应快速的环境变化。现有方法存在关键局限性：一是开环动作生成，即在执行前完全生成动作块，缺乏根据最新观测动态调整后续动作的能力；二是不充分的时间建模，推理过程通常依赖于单帧或少量静态观测，未能充分利用连续的时间信息。这导致策略在动态场景中响应延迟或任务失败。</p>
+<p>先前研究主要通过两种途径改进：一是通过缩短预测时域或减少去噪步骤来提高推理频率，但这通常会损害动作生成质量并破坏连续性；二是采用时间集成或双向解码来集成多步推理的动作序列以实现闭环，但这要么受限于历史推理信息，要么因采样多个动作序列而产生巨大计算开销。本文针对动态场景下扩散策略适应性不足的痛点，提出了一种融合长期规划与实时动态校正的闭环动作块策略框架。其核心思路是在不重新训练原始扩散策略的前提下，通过一个轻量级的动态特征模块，将高频环境信息注入动作生成过程，实现每一步的闭环执行与动态响应。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的动态闭环扩散策略框架是一个两阶段方法，整体流程如下图所示。</p>
+<p><img src="https://arxiv.org/html/2603.01953v1/2603.01953v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：DCDP方法总览。左半部分为第一阶段，训练快速动态感知策略和变分自编码器；右半部分为第二阶段，应用免训练的、每步动作校正，校正后的动作由VAE解码器解码。</p>
+</blockquote>
+<p><strong>整体框架</strong>：第一阶段（训练）：使用标注数据，端到端地训练非对称动作编码器和自监督动态特征编码器。重建损失和KL散度被用来引导解码器关注动态特征。第二阶段（推理）：预训练的扩散策略生成完整的动作块以保证长期动作一致性；同时，动态特征模块通过滑动窗口持续提取环境变化信息，并与动作潜在表示联合解码，从而在每一步对动作进行实时校正。该框架是模块化和免训练的，可直接插入现有基于动作块的策略中。</p>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><strong>历史银行与动态特征提取器</strong>：系统维护一个包含最近M个观测的滑动窗口，即历史银行。观测首先通过预训练的ResNet-18骨干网络提取空间特征。为了捕捉帧间动态变化，计算相邻帧特征的差分，并乘以一个可学习参数α，得到差分特征。</li>
+<li><strong>时间注意力与交叉注意力融合</strong>：<ul>
+<li><strong>时间注意力</strong>：对历史银行提取的时空特征应用时间注意力机制，以学习序列历史并捕获长程时间依赖。该机制计算查询、键、值，并通过缩放点积注意力计算时间步之间的相似性得分，最终输出加权和的时序特征。</li>
+<li><strong>交叉注意力融合</strong>：将来自历史银行的时序特征作为查询，将差分特征作为键和值，进行交叉注意力计算。这使得模型能够将时序上下文与动态变化线索对齐，生成融合了历史记忆和动态变化的表示 <strong>F_M</strong>。</li>
+</ul>
+</li>
+<li><strong>自监督动态特征学习</strong>：为了在没有人工标注的情况下学习动态特征，模型采用自监督对比学习。利用历史银行提供的差分特征 <strong>D_{M-1}</strong> 作为监督信号，通过最小化预测动态特征 <strong>F_M</strong> 与目标差分特征之间的KL散度损失，鼓励表征捕获时间动态。</li>
+<li><strong>非对称动作变分自编码器</strong>：<ul>
+<li><strong>编码器</strong>：将动作序列 <strong>A_t</strong> 编码为高斯分布的均值μ和方差σ²，通过重参数化技巧采样得到潜在变量 <strong>z</strong>。</li>
+<li><strong>解码器</strong>：根据潜在变量 <strong>z</strong>、动态特征 <strong>F_M</strong> 以及一个步骤嵌入 <strong>e_s</strong>，重建预测的未来动作。解码器被强制依赖动态特征进行重建，从而学习将动态信息注入动作生成。</li>
+<li><strong>损失函数</strong>：总损失是重建损失（MSE）、KL散度正则化损失和上述差分损失的加权和：ℒ_total = ℒ_recon + λ_KL ℒ_KL + λ_diff ℒ_diff。</li>
+</ul>
+</li>
+<li><strong>第二阶段动态注入与闭环执行</strong>：在推理时，保持一个长度为M的观测滑动窗口，并使用第一阶段训练好的快速动态感知提取器π_f在线计算动态特征 <strong>F_t</strong>。冻结的慢速扩散策略π_s基于当前观测 <strong>o_t</strong> 生成一个长度为H的开环动作块。将该动作块归一化后，用冻结的VAE编码器E编码为潜在向量 <strong>z_t</strong>。在执行该动作块的每一步s（s从0到H-1），都会刷新历史窗口并重新计算动态特征 <strong>F_{t+s}<strong>，然后使用冻结的VAE解码器D，根据 <strong>z_t</strong>、</strong>F_{t+s}</strong> 和步骤嵌入 <strong>e_s</strong> 解码出校正后的动作 **â_{t+s}**。一个动作块执行完毕后，用最新的观测重新规划，采样新的动作块，整个过程无需训练。</li>
+</ol>
+<p><strong>创新点</strong>：与现有方法相比，DCDP的创新点在于：1) <strong>动态特征注入</strong>：通过一个轻量级的动态感知模块，在动作块执行过程中持续注入实时环境动态信息，实现真正的每步闭环校正。2) <strong>免训练设计</strong>：整个校正过程不改变原始扩散策略的参数，仅利用第一阶段预训练的特征提取和VAE模块，实现了即插即用的动态能力增强。3) <strong>非对称编码-解码</strong>：编码器处理完整的开环动作块以保持长期一致性，解码器则结合实时动态特征进行细粒度校正，平衡了规划与响应。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在动态PushT仿真任务上评估DCDP。使用经过人类演示训练的Diffusion Policy作为基础控制策略。推理时批次大小为50，每个初始条件在环境中进行推演，评估任务成功率和推理延迟。仿真以10Hz运行，模型在单次推理中预测未来16个动作，并以开环方式执行前8个。终止条件为最大步数300或物体与目标位置重叠率超过95%。</p>
+<p><strong>基线方法</strong>：1) <strong>原始开环</strong>：每次推理执行整个动作块（H=8）。2) <strong>原始闭环</strong>：每次推理仅执行最新的单个动作（H=1）。3) <strong>时间集成</strong>：在重叠步骤中，将新预测动作与先前预测动作进行平均以产生更平滑的动作块（H=1，λ=0.5）。</p>
+<p><img src="https://arxiv.org/html/2603.01953v1/2603.01953v1/x2.png" alt="静态与动态场景成功率对比"></p>
+<blockquote>
+<p><strong>图3</strong>：在静态和动态PushT场景下的任务成功率对比。在静态场景中，DCDP（99.6%）相比原始开环方法（96.4%）有提升；在动态场景中，DCDP（91.2%）相比原始开环（72.4%）提升了18.8%，显著优于其他基线方法。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：在静态场景中，DCDP取得了99.6%的成功率，优于原始开环（96.4%）和原始闭环（98.8%）方法。在动态场景中，DCDP的成功率达到91.2%，相比原始开环方法（72.4%）提升了18.8%，也显著高于原始闭环（84.6%）和时间集成方法（85.8%）。这证明了DCDP在保持静态性能的同时，大幅提升了动态适应性。</p>
+<p><img src="https://arxiv.org/html/2603.01953v1/2603.01953v1/x3.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图4</strong>：消融实验结果。展示了移除动态特征（w/o DF）、移除时间注意力（w/o TA）、移除交叉注意力（w/o CA）以及使用完整模型（Full）在动态PushT任务上的成功率。完整模型性能最佳，表明各组件均有效。</p>
+</blockquote>
+<p><strong>消融实验</strong>：消融实验验证了各个组件的贡献。移除动态特征（w/o DF）导致性能大幅下降至76.4%。移除时间注意力（w/o TA）或交叉注意力（w/o CA）分别使成功率降至85.6%和86.8%。完整模型（Full）取得91.2%的最高成功率，表明动态特征提取、时间建模和特征融合模块都是有效的。</p>
+<p><img src="https://arxiv.org/html/2603.01953v1/2603.01953v1/x4.png" alt="不同动态难度下的性能"></p>
+<blockquote>
+<p><strong>图5</strong>：在不同目标移动速度（动态难度）下的成功率。随着速度增加，所有方法性能下降，但DCDP在所有速度设置下均保持最高成功率，展现了更好的鲁棒性。</p>
+</blockquote>
+<p><strong>泛化与鲁棒性</strong>：在目标以不同速度移动的动态场景中测试，随着速度增加，所有方法性能下降，但DCDP在各个速度下均保持最高成功率，表明其更好的鲁棒性。</p>
+<p><img src="https://arxiv.org/html/2603.01953v1/2603.01953v1/x5.png" alt="推理延迟分析"></p>
+<blockquote>
+<p><strong>图6</strong>：不同方法的单步推理延迟对比。DCDP的延迟（21.0ms）仅比原始开环方法（20.0ms）增加约5%，远低于需要高频重规划的原始闭环方法（124.5ms），实现了低开销的闭环控制。</p>
+</blockquote>
+<p><strong>计算开销</strong>：DCDP的单步推理延迟为21.0毫秒，仅比原始开环方法（20.0毫秒）增加约5%的计算开销，并且远低于需要高频重规划的原始闭环方法（124.5毫秒）。这证明了其轻量级特性，能够支持高频闭环控制和实时部署。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：1) <strong>动态闭环框架</strong>：提出了一种融合长时域规划与实时校正的框架，在保持扩散策略动作一致性的同时，实现了对环境变化的快速响应。2) <strong>动态特征提取与动作校正</strong>：设计了轻量级的时间注意力模块来学习环境动态，并通过交叉注意力将其与潜在动作融合，使策略能够灵活适应扰动和移动目标。3) <strong>免训练与模块化设计</strong>：无需重新训练扩散策略即可增强动态适应性；模块化设计支持与各种动作块策略即插即用地集成，以平衡长期规划与实时控制。</p>
+<p><strong>局限性</strong>：论文中提到的局限性在于，目前的工作主要在PushT任务上进行了验证，未来需要在更多样化和复杂的动态操作任务上进行测试以证明其通用性。</p>
+<p><strong>对后续研究的启示</strong>：DCDP展示了一种有效且高效的途径，将开环生成模型与闭环实时校正相结合。其免训练、模块化的设计范式为增强现有离线训练策略在动态环境中的适应性提供了新思路。未来研究可以探索将类似的动态特征注入机制应用于其他类型的生成模型或策略架构，以及将其扩展到多模态感知输入和更复杂的长期任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对扩散策略在动态环境中响应延迟、适应性不足的问题，提出无需重新训练的DCDP框架。其核心技术是结合闭环动作块生成与动态实时校正，通过自监督动态特征编码器、交叉注意力融合及非对称编解码器，在执行前注入环境动态信息。实验表明，在动态PushT任务中，该方法的适应性提升19%，仅需增加5%的计算开销。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01953" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
