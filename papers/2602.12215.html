@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>LDA-1B: Scaling Latent Dynamics Action Model via Universal Embodied Data Ingestion - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Robotics (cs.RO)</span>
+      <h1>LDA-1B: Scaling Latent Dynamics Action Model via Universal Embodied Data Ingestion</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="https://arxiv.org/abs/2602.12215" target="_blank" rel="noreferrer">2602.12215</a></span>
+        <span>作者: Lyu, Jiangran, Liu, Kai, Zhang, Xuheng, Liao, Haoran, Feng, Yusen, Zhu, Wenxuan, Shen, Tingrui, Chen, Jiayi, Zhang, Jiazhao, Dong, Yifei, Cui, Wenbo, Qi, Senmao, Wang, Shuo, Zheng, Yixin, Yan, Mi, Shi, Xuesong, Li, Haoran, Zhao, Dongbin, Liu, Ming-Yu, Zhang, Zhizheng, Yi, Li, Wang, Yizhou, Wang, He</span>
+        <span>日期: 2026/02/12</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前机器人基础模型主要依赖于大规模行为克隆范式，其通过模仿专家动作进行训练，但这种方法从根本上限制了其对高质量演示数据的依赖，丢弃了大量包含丰富物理交互动态知识的异构具身数据。统一世界模型（Unified World Model, UWM）的构想提供了一种替代方案，它可以在单一模型中联合优化动态模型、策略和视频生成，从而有望利用专家数据之外的数据。然而，现有的UWM实现距离扩展到基础模型级别仍有很大差距。主要局限性在于：数据使用方式粗放，将异构数据同等对待，未根据其质量或监督信号区分其作用；社区缺乏格式统一、动作表示对齐、可直接使用的大规模数据集；此外，现有UWM在像素空间表示未来状态，将动态学习与冗余的外观建模纠缠在一起，使得大规模训练效率低下，难以学习与交互相关的动态。</p>
+<p>本文针对如何有效利用大规模、混合质量的异构具身数据这一核心痛点，提出了“通用具身数据摄入”的新视角。其核心思路是通过区分数据质量的角色来联合学习动态、策略和视觉预测，并使用结构化的DINO潜在空间来避免冗余的像素级外观建模，从而构建一个可扩展至10亿参数的机器人基础模型LDA-1B。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>LDA-1B的整体框架是一个基于扩散模型的统一世界模型，它联合去噪动作块和预测未来视觉潜在特征。模型接收当前观测图像和语言指令作为条件，通过一个多模态扩散变换器（MM-DiT）同时处理噪声化的动作序列和未来视觉特征，并输出对应的去噪结果。</p>
+<p><img src="https://arxiv.org/html/2602.12215v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：LDA架构。LDA在多个协同训练目标（策略学习、前向动态、逆向动态和视觉预测）下，联合去噪动作块和未来视觉潜在特征。模型以VLM令牌、扩散时间步和任务嵌入为条件，采用多模态扩散变换器架构，其中动作和视觉专家模块解耦，并通过共享的自注意力层进行交互。</p>
+</blockquote>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><strong>通用数据摄入与多任务协同训练</strong>：这是方法的核心创新。模型根据数据质量为其分配不同的训练角色：(1) 高质量机器人或人类演示数据用于所有目标（策略、动态、视觉预测）的协同训练；(2) 质量较低（包含次优或噪声动作）的轨迹仅用于动态和视觉预测学习；(3) 无动作标注的大规模人类操作视频仅用于视觉预测目标。这种角色感知的数据使用方式防止了对专家行为的过拟合，并支持可迁移动态和动作表示的可扩展学习。</li>
+<li><strong>任务条件化与寄存器令牌</strong>：为实现单一扩散模型支持差异化目标，模型引入了四个可学习的任务嵌入（对应策略、前向动态、逆向动态、视觉预测）和两个可学习的寄存器令牌（一个用于动作，一个用于视觉状态）。任务嵌入被添加到扩散时间步嵌入中，以条件化去噪过程。寄存器令牌作为特定任务中缺失模态的占位符。例如，在策略训练中，模型接收噪声动作令牌和代表未观测未来状态的视觉寄存器令牌；而在视觉预测中，则使用噪声视觉令牌和动作寄存器令牌。</li>
+<li><strong>预测目标的表示</strong>：<ul>
+<li><strong>视觉表示</strong>：使用预训练的DINO编码器提取的潜在特征，而非基于VAE的像素空间表示。DINO潜在特征编码了高级语义和空间结构，同时抑制了背景噪声和低级视觉变化，有助于学习跨环境和物体配置泛化的场景动态。</li>
+<li><strong>动作表示</strong>：定义了一个基于末端执行器运动的统一手部中心动作空间，包括手腕姿态变化量和手指配置。对于平行夹爪，手指状态用单自由度的夹爪宽度表示；对于多指灵巧手，则使用手腕坐标系下的关键点来描述手指配置。这确保了跨不同具身形态和操作平台的动作建模一致性。</li>
+</ul>
+</li>
+<li><strong>多模态扩散变换器架构</strong>：模型采用MM-DiT在统一的扩散框架内联合去噪动作块和预测未来视觉特征。模型在异质令牌上操作，同时共享一个公共的Transformer骨干网络。条件输入（当前观测、语言指令、扩散时间步、任务规范）通过自适应层归一化注入每个Transformer块。动作和视觉特征通过模态特定的线性层投影为令牌嵌入，并由MM-DiT联合处理。每个MM-DiT块在拼接的动作和视觉令牌上应用多模态自注意力，实现跨模态交互，同时保留模态特定的QKV投影和前馈网络以维持归纳偏置。</li>
+<li><strong>训练目标</strong>：模型采用流匹配目标进行训练，分别计算动作和观测的损失。总损失是两者的和。在训练期间，根据任务规范选择性地激活动作和视觉损失，使得异构数据能在适当的监督下做出贡献。</li>
+</ol>
+<p><strong>与现有方法的创新点</strong>：</p>
+<ul>
+<li><strong>数据利用方式</strong>：明确根据数据质量分配训练目标，实现了对大规模混合质量数据的最大化利用，突破了行为克隆范式对高质量数据的依赖。</li>
+<li><strong>表示学习</strong>：采用DINO语义潜在空间而非像素或VAE潜在空间进行动态预测，解耦了动态学习与外观建模，提升了模型的泛化能力和训练效率。</li>
+<li><strong>模型架构</strong>：设计了支持多任务条件化和异步多模态输入（视觉3Hz，动作10Hz）的MM-DiT，实现了在单一模型内灵活支持策略、动态预测等多种推理模式。</li>
+</ul>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>数据集与实验平台</strong>：研究构建并使用了<strong>EI-30k</strong>大规模具身交互数据集，包含超过3万小时的真实和模拟环境中的人与机器人轨迹。在仿真中，使用<strong>RoboCasa-GR1</strong>厨房基准（24个桌面重排和关节物体操作任务）进行评估。在真实世界中，在<strong>Galbot G1</strong>和<strong>Unitree G1</strong>人形机器人平台上进行测试，末端执行器包括两指夹爪以及Sharpa（22-DoF）和BrainCo（10-DoF）灵巧手。</p>
+<p><strong>对比基线</strong>：主要对比了<strong>GR00T-N1.6</strong>、复现的<strong>GR00T-EI10k</strong>、<strong>UWM</strong>以及<strong>π₀.₅</strong>等机器人基础模型。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>仿真实验（RoboCasa-GR1）</strong>：如表II所示，在1B参数量下，LDA-1B达到了55.4%的成功率，优于在相同高质量数据子集上预训练的GR00T-EI10k（51.3%）。这表明在混合质量数据上联合学习动作和动态能带来额外收益。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.12215v1/x2.png" alt="仿真结果表"></p>
+<blockquote>
+<p><strong>表II</strong>：在RoboCasa-GR1上的结果，以及状态表示（VAE vs DINO）和MM-DiT架构对任务成功率的影响。使用DINO表示和MM-DiT架构的LDA-1B取得了最佳性能。</p>
+</blockquote>
+<ol start="2">
+<li><strong>真实世界夹爪操作</strong>：如图6所示，在8个涵盖拾放、接触丰富、精细和长视野任务的少样本微调评估中，LDA-1B在所有任务类别上均一致优于基线。特别是在需要协调双臂操作、工具使用和顺序物体转移的长视野任务“清理垃圾”中，LDA-1B取得了35%的成功率，而基线方法完全失败（0%）。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.12215v1/x3.png" alt="真实世界夹爪操作结果"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界夹爪操作任务的成功率比较。LDA-1B在所有任务类别上持续优于GR00T-N1.6和π₀.₅。</p>
+</blockquote>
+<ol start="3">
+<li><strong>真实世界灵巧手操作</strong>：如图7所示，在低自由度（如“拔钉子”）和高自由度（如“翻面包”）的灵巧操作任务上，LDA-1B均显著优于基线。例如，在“翻面包”任务中，LDA-1B成功率达到90%，而π₀.₅仅为10%。这证明在大规模人类数据上的预训练为灵巧控制提供了强大的潜在先验。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.12215v1/x4.png" alt="真实世界灵巧手操作结果"></p>
+<blockquote>
+<p><strong>图7</strong>：真实世界灵巧操作任务的成功率比较。LDA-1B（深蓝色）在低自由度和高自由度任务上均持续优于基线，尤其在精细灵巧任务上优势明显。</p>
+</blockquote>
+<ol start="4">
+<li><strong>泛化与鲁棒性</strong>：如表III所示，在物体、背景和位置分布外（OOD）的扰动下，LDA-1B在拾放任务上保持了60.0%的成功率，显著高于基线。这表明通过潜在动态预训练，模型能更有效地关注任务关键的可供性，而非视觉噪声。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.12215v1/x5.png" alt="泛化评估表"></p>
+<blockquote>
+<p><strong>表III</strong>：在视觉和空间扰动下的鲁棒泛化评估。LDA-1B在未见过的物体、背景和OOD位置下保持了60.0%的成功率。</p>
+</blockquote>
+<ol start="5">
+<li><strong>消融实验与扩展分析</strong>：<ul>
+<li><strong>架构与表示消融</strong>：将UWM的VAE潜在表示替换为DINO表示带来了巨大的性能提升（20.0% → 55.4%）。移除MM-DiT架构或将模型尺寸减小到0.5B参数会导致性能分别下降6.5%和4.7%。</li>
+<li><strong>数据效率</strong>：在混合质量微调设置下，LDA-1B通过利用通常对基线方法有害且会被丢弃的30%低质量轨迹，获得了10%的性能提升。</li>
+<li><strong>扩展性</strong>：如图10所示，随着训练数据量增加到30k小时，LDA的动作预测误差持续下降至6.6，而UWM基线则迅速饱和。LDA在不同模型规模（0.1B→1B）下均一致优于UWM。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2602.12215v1/figures/scaling.jpg" alt="扩展分析图"></p>
+<blockquote>
+<p><strong>图10</strong>：LDA的扩展分析。上图：动作预测误差随着30k小时训练数据下降至6.6，表明能有效利用多样数据源。下图：在不同模型规模下，LDA始终优于UWM，而基线则迅速饱和。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2602.12215v1/figures/dino.jpg" alt="潜在动态可视化"></p>
+<blockquote>
+<p><strong>图9</strong>：潜在前向动态可视化。我们的模型生成准确的未来视觉表示（上图），与地面真实情况（下图）在时间步上对齐，捕捉了语义物体结构和运动动态。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了<strong>LDA-1B</strong>，一个通过通用具身数据摄入和统一潜在动态预训练来学习可泛化交互动态的可扩展机器人基础模型。</li>
+<li>构建了<strong>EI-30k</strong>，一个大规模、格式统一、动作表示对齐的具身交互数据集，涵盖了多样化的具身形态、环境和数据质量。</li>
+<li>通过系统的实验证明，LDA-1B在仿真和真实世界环境中，在接触丰富操作、灵巧操作和长视野操作等一系列广泛设定下，实现了卓越的泛化性、鲁棒性和数据效率。</li>
+</ol>
+<p><strong>局限性</strong>：论文自身未明确讨论局限性，但基于方法描述，潜在的局限可能包括：对预训练视觉编码器（DINO, VLM）的依赖；统一的手部中心动作表示可能无法完美覆盖所有机器人形态或任务；模型在极端分布外场景下的泛化能力仍有待进一步验证。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>数据利用范式</strong>：证明了区分数据角色进行联合训练的有效性，为如何整合互联网规模的不同质量具身数据提供了新思路。</li>
+<li><strong>表示学习</strong>：展示了在结构化语义潜在空间（如DINO）中进行动态预测的优势，鼓励后续研究探索更优的、与动态和物理更相关的表示。</li>
+<li><strong>模型架构</strong>：多模态扩散变换器（MM-DiT）和任务条件化设计为构建统一的多功能机器人模型提供了可参考的架构。</li>
+<li><strong>评估基准</strong>：研究在复杂仿真和真实机器人任务上的全面评估，为未来机器人基础模型的评测设定了较高的标准。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文提出机器人基础模型LDA-1B，旨在解决现有统一世界模型因数据使用粗糙、数据集碎片化及像素空间冗余建模而难以扩展的问题。其关键技术包括：在结构化DINO潜在空间中进行预测以避免外观冗余；采用多模态扩散变换器处理异步视觉与动作流，支持10亿参数规模的稳定训练；并构建了统一格式的具身交互数据集EI-30k。实验表明，LDA-1B在接触丰富、灵巧和长视野任务上分别超越之前方法最高达21%、48%和23%，并能利用30%的低质量轨迹进行高效微调，性能额外提升10%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="https://arxiv.org/abs/2602.12215" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
