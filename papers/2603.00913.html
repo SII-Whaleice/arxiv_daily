@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Minimalist Compliance Control - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Minimalist Compliance Control</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.00913" target="_blank" rel="noreferrer">2603.00913</a></span>
+        <span>作者: Shuran Song Team</span>
+        <span>日期: 2026-03-01</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>顺应性控制对于安全的物理交互至关重要，但其广泛应用受到力/力矩传感器等硬件需求的限制。当前主流方法主要包括两类：一是基于模型的导纳或阻抗控制，需要精确的力/力矩传感器或关节力矩控制能力；二是基于强化学习的方法，旨在通过学习策略绕过硬件限制。然而，前者因传感器成本、体积和鲁棒性问题难以普及；后者则存在sim-to-real差距、缺乏安全保证以及增加系统复杂度等关键局限性。</p>
+<p>本文针对“在无专用力传感器的情况下实现可靠顺应性控制”这一具体痛点，提出了一个新颖的视角：利用现代伺服电机或准直驱电机中普遍存在的电机电流或PWM（电压）信号来估计外部作用力/力矩。其核心思路是，通过系统辨识建立电机信号到关节扭矩的映射，再结合雅可比矩阵估计末端外力，并以此驱动一个任务空间的导纳控制器，从而实现无需力传感器、也无需学习的“极简”顺应性控制。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架是一个分层控制系统。高层规划器（如基于视觉-语言模型、模仿学习或模型规划的策略）产生期望的末端位姿、刚度、阻尼和指令力。低层的顺应性控制器以这些指令和估计的外部 wrench 为输入，通过导纳动力学模型更新任务空间的位置参考，再通过逆运动学解算为关节位置指令输出给底层位置控制器。</p>
+<p><img src="https://arxiv.org/html/2603.00913v1/2603.00913v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：Minimalist Compliance Control 整体框架。(A) 无需力传感器或学习，直接利用电机电流或电压信号，通过电机扭矩模型和雅可比矩阵估计外部 wrench，并驱动弹簧-质量-阻尼模型更新任务空间位置参考。(B) 该方法适用于多种构型，从机械臂、灵巧手到人形机器人。(C) 该方法与多种高层策略（如VLM策略、模仿策略、模型策略）即插即用，适用于擦拭、绘画、舀取、手内操作等多种任务。</p>
+</blockquote>
+<p>核心模块包括电机扭矩估计、外部 wrench 估计和导纳控制。</p>
+<p><strong>1. 电机扭矩估计</strong>：对于带电流传感器的电机，直接读取绕组电流 $I_w$。对于无电流传感器的电机，则通过PWM占空比、总线电压 $V_{bus}$、反电动势 $V_{emf}$（由电机速度 $\dot{q}$ 和速度常数 $K_v$ 计算）以及绕组电阻 $R_w$ 来估算 $I_w$。随后，通过扭矩常数 $K_t$ 和效率 $\eta$ 将电流转换为负载扭矩 $\tau_{load} = \eta K_t I_w$。一个关键创新点是引入了方向相关增益以应对传动系统在正向驱动（电机驱动负载）和反向驱动（外力反向驱动电机）时的不对称性，通过功率流符号 $sign(\tau_w \dot{q})$ 判断驱动状态 $d$，并在反向驱动时使用 $\eta^{-1}$ 进行修正。最后，在准静态交互假设下（忽略惯性力和科氏力），通过补偿重力扭矩 $\tau_{grav}$ 来分离出外部扭矩 $\tau_{ext} = -(r \cdot \tau_{load} - \tau_{grav})$，其中 $r$ 为减速比。</p>
+<p><strong>2. 外部 Wrench 估计</strong>：将估计的关节外部扭矩 $\bm{\tau}<em>{ext}$ 映射到任务空间。支持两种模式：一是完全 wrench 恢复，通过求解正则化最小二乘问题 $\hat{\mathbf{f}}</em>{\text{ext}}^{,p}=\arg\min_{\mathbf{f}} \lVert J_p^{\top}\mathbf{f}-\bm{\tau}<em>{\text{ext}} \rVert^{2}+\lambda\lVert\mathbf{f}\rVert^{2}$ 来估计接触力；二是选择性轴对齐估计，仅估计沿接触法线等物理相关方向的分量，公式为 $\hat{\mathbf{f}}</em>{\text{ext}}^{,p}=\frac{(\hat{\bm{u}}^{T}J_p),\bm{\tau}_{\text{ext}}}{(\hat{\bm{u}}^{T}J_p)(\hat{\bm{u}}^{T}J_p)^{T}+\lambda};\hat{\bm{u}}$，这避免了病态雅可比求逆，提升了数值稳定性和抗噪性。</p>
+<p><strong>3. 导纳控制与逆运动学</strong>：将估计的外部 wrench $\hat{\mathbf{f}}<em>{\text{ext}}$ 代入弹簧-质量-阻尼动力学方程（公式1）计算参考加速度，并通过半隐式欧拉法积分更新参考速度和位置（公式11, 12）。最终的任务空间位姿参考 $\mathbf{x}</em>{ref}$ 通过逆运动学求解器映射为关节位置指令。</p>
+<p>与现有方法相比，创新点体现在：1) <strong>硬件极简</strong>：仅依赖电机电流/PWM信号，无需任何力/力矩传感器，甚至无需电流环控制；2) <strong>模型驱动，安全可靠</strong>：基于物理模型显式估计外力，避免了RL方法的黑箱性和sim-to-real差距，能保证力的方向正确性和频域响应特性；3) <strong>通用与兼容</strong>：基于任务空间的导纳控制使其构型无关，并能与各种高层规划器无缝集成。</p>
+<p><img src="https://arxiv.org/html/2603.00913v1/2603.00913v1/x2.png" alt="策略输入输出"></p>
+<blockquote>
+<p><strong>图2</strong>：高层策略的输入输出示意图。展示了Minimalist Compliance Control如何与 (A) 基于VLM的策略、(B) 模仿策略、(C) 模型策略即插即用。所有策略均输出期望位姿 $\mathbf{x}_{des}$、刚度 $\mathbf{K}<em>p$、指令力 $\mathbf{f}</em>{cmd}$ 等参数，由底层顺应性控制器执行。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在四个机器人平台上验证：ARX X5机械臂（准直驱电机）、Unitree G1人形机器人（准直驱电机）、ToddlerBot人形机器人（Dynamixel伺服电机）和LEAP Hand灵巧手（Dynamixel伺服电机）。这些平台均未配备力/力矩传感器。</p>
+<p><strong>外部力估计准确性</strong>：通过在末端安装ATI Mini45六维力传感器作为真值进行对比。如图3所示，在ToddlerBot（伺服电机，减速比&gt;200:1）和ARX机械臂（准直驱电机，减速比≈10:1）上，估计力与测量力基本吻合。平均绝对误差分别为 $0.69 \pm 0.73,N$ 和 $1.05 \pm 1.60,N$。</p>
+<p><img src="https://arxiv.org/html/2603.00913v1/2603.00913v1/x3.png" alt="力估计对比"></p>
+<blockquote>
+<p><strong>图3</strong>：与力传感器读数的对比。虚线（$\hat{f}$）为估计力，实线（$f$）为ATI Mini45传感器的真实测量值。结果表明，即使在减速比高达200:1的伺服电机上，该方法也能实现足够准确的力估计。</p>
+</blockquote>
+<p><strong>顺应性控制性能对比</strong>：以ToddlerBot在白板上画心形轨迹的任务为例，对比了两种RL基线方法（UniFP和FACET）以及本文方法（包含/不包含外部力估计 $\hat{\mathbf{f}}<em>{\text{ext}}$）。如图4和表I所示，本文完整方法在位置跟踪误差（$15.9 \pm 5.1,mm$）、姿态跟踪误差（$0.048 \pm 0.043,rad$）以及反映接触力大小的机器人根部俯仰角（$0.029 \pm 0.012,rad$）上均表现最佳。RL方法（UniFP, FACET）要么跟踪误差大，要么无法施加合适的接触力（FACET的根部俯仰角最小）。消去外部力估计（Ours w/o $\hat{\mathbf{f}}</em>{\text{ext}}$）会导致性能下降，证明了外力反馈对于调节接触力的必要性。</p>
+<p><img src="https://arxiv.org/html/2603.00913v1/2603.00913v1/x4.png" alt="定性对比"></p>
+<blockquote>
+<p><strong>图4</strong>：与基线的定性对比。展示了ToddlerBot使用VLM生成的轨迹画心形时，不同方法的末端3D轨迹和实际执行效果。本文方法能更好地跟踪轨迹并维持适当接触。</p>
+</blockquote>
+<p><strong>表I：与基线的定量对比</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">方法</th>
+<th align="left">位置误差 (mm)</th>
+<th align="left">姿态误差 (rad)</th>
+<th align="left">根部俯仰 (rad)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">UniFP [45]</td>
+<td align="left">57.8 ± 30.2</td>
+<td align="left">0.147 ± 0.119</td>
+<td align="left">0.068 ± 0.020</td>
+</tr>
+<tr>
+<td align="left">FACET [36]</td>
+<td align="left">22.4 ± 11.0</td>
+<td align="left">0.151 ± 0.087</td>
+<td align="left">0.018 ± 0.008</td>
+</tr>
+<tr>
+<td align="left">Ours w/o $\hat{\mathbf{f}}_{\text{ext}}$</td>
+<td align="left">22.5 ± 9.6</td>
+<td align="left">0.082 ± 0.040</td>
+<td align="left">0.060 ± 0.038</td>
+</tr>
+<tr>
+<td align="left"><strong>Ours</strong></td>
+<td align="left"><strong>15.9 ± 5.1</strong></td>
+<td align="left"><strong>0.048 ± 0.043</strong></td>
+<td align="left"><strong>0.029 ± 0.012</strong></td>
+</tr>
+</tbody></table>
+<p><strong>多任务与多规划器集成验证</strong>：在ToddlerBot上集成了三种高层规划器执行不同任务（图5）。基于VLM的策略用于在白板上绘画和擦拭；模仿学习策略用于用锅铲将鸡蛋放到面包上；基于模型（OCHS）的策略用于手内旋转球体。实验表明，本文的顺应性控制器能够与所有规划器无缝协作，通过维持合适的接触力成功完成任务。而纯位置控制的基线则频繁因失去接触、施加力不足或过大而导致任务失败。</p>
+<p><img src="https://arxiv.org/html/2603.00913v1/2603.00913v1/x5.png" alt="ToddlerBot多任务结果"></p>
+<blockquote>
+<p><strong>图5</strong>：ToddlerBot多任务结果。奇数行（Ours）展示了本文方法在不同高层规划器下的成功执行；偶数行（Position Control）展示了纯位置控制基线的典型失败案例，如失去接触、施力不足或过大。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一种极简的顺应性控制框架，仅利用电机电流或PWM信号实现外力估计与导纳控制，无需力传感器或学习，显著降低了硬件门槛和系统复杂度；2) 该方法具有构型无关性，并在多种机器人平台（机械臂、灵巧手、人形机器人）上得到验证；3) 设计为即插即用的底层模块，可兼容基于VLM、模仿学习、模型规划等多种高层策略。</p>
+<p>论文自身提到的局限性主要在于其<strong>准静态交互假设</strong>，即忽略了动力学项（如关节加速度、科氏力）。这在以低频接触为主的任务中是成立的，但对于高度动态的交互可能不适用。</p>
+<p>本文工作对后续研究的启示包括：1) <strong>拓宽适用场景</strong>：探索在更动态任务中放松准静态假设的方法，或结合惯性参数辨识以补偿动力学效应；2) <strong>提升估计精度与鲁棒性</strong>：进一步研究传动摩擦、间隙等非线性因素的建模与补偿，以提升在低质量传动系统上的力估计性能；3) <strong>与学习的结合</strong>：该模型化方法可与数据驱动方法结合，例如用学习来补偿未建模的动态特性或优化控制器参数，兼具可解释性与适应性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文解决机器人顺应控制依赖昂贵力传感器或复杂学习框架的问题。提出极简顺应控制方法，仅利用电机电流/电压信号，通过电机扭矩模型与雅可比矩阵估计外力，并嵌入任务空间导纳控制器。该方法无需力传感、电流控制或学习，具有平台无关性与即插即用特性。在机械臂、灵巧手及双足机器人上的多任务实验表明，该方法能实现安全、鲁棒的顺应交互，兼容视觉语言模型、模仿学习等多种高层策略。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.00913" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>How to Peel with a Knife: Aligning Fine-Grained Manipulation with Human Preference - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>How to Peel with a Knife: Aligning Fine-Grained Manipulation with Human Preference</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.03280" target="_blank" rel="noreferrer">2603.03280</a></span>
+        <span>作者: Jitendra Malik Team</span>
+        <span>日期: 2026-03-03</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前基于学习的机器人操作在接触丰富、力敏感的任务（如食物处理、手术）上仍面临两大瓶颈：一是数据收集困难，这些任务的动态特性复杂，难以大规模获取高质量演示数据；二是任务成功标准“隐含”且主观，例如剥皮的质量（干净度、均匀度）是连续且因人而异的，难以用单一的定量指标衡量和进行奖励工程。现有方法仅部分解决这些问题：基于模型的控制器对建模误差和物体变化敏感；基于学习的方法通常需要大规模数据，成本高昂；评估标准则往往简化为固定的定量指标，与人类对质量的主观判断不一致，限制了实际应用。</p>
+<p>本文针对“用刀剥皮”这一代表性任务，旨在同时解决数据“数量”与任务“质量”定义的难题。核心思路是提出一个两阶段学习框架：首先通过力感知模仿学习获得一个鲁棒的基础策略以实现跨物体泛化；随后利用从人类反馈中学习的奖励模型对策略进行微调，使其行为与人类对任务质量的认知对齐。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架是一个两阶段流程（如图2所示）。第一阶段是<strong>数据收集与策略预训练</strong>：通过遥操作收集高质量演示数据，并训练一个基础的扩散策略。第二阶段是<strong>基于偏好的策略微调</strong>：首先构建一个结合定量与定性指标的混合奖励函数，并训练一个奖励模型来预测该奖励；然后，在冻结基础策略的基础上，训练一个残差策略，利用奖励模型的隐层特征和预测值来指导动作修正，从而提升策略性能。</p>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x1.png" alt="方法总览"></p>
+<blockquote>
+<p><strong>图2</strong>：两阶段学习框架概览。左侧展示了数据收集与基础策略训练流程，包括硬件设置、数据模态处理和扩散策略训练。右侧展示了基于偏好的微调流程，包括混合奖励标注、奖励模型训练以及残差策略学习。</p>
+</blockquote>
+<p><strong>系统与数据收集</strong>：硬件采用Kinova Gen3七自由度机械臂，末端安装ATI力扭矩传感器和两个RealSense D405腕部相机，并设计了专用的刀具夹具（图3）。通过SpaceMouse进行6自由度末端位姿遥操作来收集数据。为了生成平滑的笛卡尔空间运动，实现了一个加权最小二乘逆运动学求解器，动态调整关节运动权重以优先远端关节（肘/腕）。数据以10Hz频率采集，包括关节角度、力扭矩读数和双目RGB-D图像。在线使用SAM2对图像中的刀具和物体进行分割掩码提取。</p>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x2.png" alt="末端执行器夹具"></p>
+<blockquote>
+<p><strong>图3</strong>：末端执行器夹具设计。展示了包含机械臂连接器、力扭矩传感器板、两个相机支架和刀具支架的自定义设计。</p>
+</blockquote>
+<p><strong>策略训练</strong>：策略以视觉和力觉为输入，预测末端执行器的相对位姿变化（本体感知）。视觉输入将RGB图像转为灰度图，并将裁剪后的深度值与分割掩码相乘后拼接；力觉输入归一化至[-1, 1]。使用ResNet-18编码视觉特征，MLP编码力特征，采用扩散策略（Diffusion Policies）进行训练，降噪网络为一个简单的两层MLP。</p>
+<p><strong>基于偏好的奖励设计与微调</strong>：奖励设计结合了定量和定性成分。定量奖励基于局部剥皮厚度，将轨迹以2Hz分段，并为每段标注六种厚度类别之一（图5）。定性奖励基于剥皮的整体视觉外观，为整个轨迹分配一个0-9的偏好分数（图4）。两者加权求和得到每步奖励信号。</p>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x3.png" alt="定性评分可视化"></p>
+<blockquote>
+<p><strong>图4</strong>：定性评分指标的前视可视化。使用0到9的整数分数（越高越好）来捕捉基于剥皮整体视觉外观的主观人类偏好。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x4.png" alt="定量评分可视化"></p>
+<blockquote>
+<p><strong>图5</strong>：定量评分指标的腕部视角可视化。使用六个离散的厚度类别，其中“nominal”表示最理想的厚度。</p>
+</blockquote>
+<p>微调时，首先训练一个奖励模型 $r_{\psi}(z_t, a_t)$，它是一个三层MLP，通过均方误差损失回归从人类标注推导出的归一化奖励 $r_t$，并输出一个隐层表征 $h_t$。随后，训练一个残差策略 $\pi_{\mathrm{res}}$（两层MLP），它以基础策略的潜在特征 $z_t$、基础动作 $a_t^{\mathrm{base}}$ 和奖励模型隐层 $h_t$ 为条件，预测动作修正 $a_t^{\mathrm{res}}$。最终动作为 $a_t^{\mathrm{final}} = a_t^{\mathrm{base}} + a_t^{\mathrm{res}}$。残差策略的损失函数为奖励加权的行为克隆损失，鼓励模仿高质量的动作修正，同时正则化修正幅度以防止过校正。</p>
+<p>与现有方法相比，创新点主要体现在：1) 设计了结合定量（厚度）与定性（整体外观）的混合人类偏好奖励；2) 提出了基于奖励模型隐层表征的残差策略微调方法，而非直接使用标量奖励进行强化学习，提高了稳定性和性能。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在真实世界中使用黄瓜、苹果和土豆进行评估。定义剥皮动作为沿物体主轴的单次划动，成功标准为定性评分大于3。收集了黄瓜（50条）、苹果（150条）、土豆（200条）的演示轨迹进行训练。</p>
+<p><strong>整体性能与泛化</strong>：在训练所见同类果蔬上（不同起始位姿、尺寸、形状的实例），策略取得了100%的成功率。更重要的是，展现了强大的零样本泛化能力：在黄瓜上训练的策略对西葫芦达到50%成功率；苹果策略对梨达到90%；土豆策略对白萝卜达到80%。</p>
+<p><strong>数据收集方法对比</strong>：如表I所示，比较了基于模型的启发式规划器、VR遥操作、基于SpaceMouse的遥操作（本文方法）以及示教学习四种方法。启发式规划器和VR方法成功率仅为20%。示教学习收集数据最快（平均13.8秒/条），原始数据质量高（成功率100%，平均分7.2），但通过启发式调整顺应性参数回放时完全失败（成功率0%）。本文的SpaceMouse遥操作方法在数据质量（成功率100%，平均分8.5）和效率（平均46秒/条）上取得了最佳平衡。</p>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x5.png" alt="启发式规划器"></p>
+<blockquote>
+<p><strong>图6</strong>：基于模型的启发式规划器。展示了规划过程的可视化：使用顶部LiDAR相机获取场景，提取物体的分割点云，在其表面规划密集的轨迹，并根据路径点法线计算期望的刀具位姿轨迹。该方法需要人在环监督调整。</p>
+</blockquote>
+<p><strong>策略学习的关键设计消融</strong>：</p>
+<ol>
+<li><strong>腕部相机</strong>（表II）：使用双相机（“之前”和“之后”视角）策略性能最好（成功率80%）。仅使用“之前”相机（成功率100%）优于仅使用“之后”相机（成功率60%），作者假设是因为“之前”相机能捕捉到刀具与果蔬接触处遮挡更少的视图。</li>
+<li><strong>数据模态</strong>（表III）：同时使用视觉（灰度RGB+D）和力扭矩（F）观测至关重要（成功率80%）。仅使用视觉（成功率60%）或仅用力扭矩（成功率0%）性能下降。将RGB转为灰度图对泛化有帮助，使用原始RGB图像会导致策略完全失败（成功率0%）。</li>
+<li><strong>样本效率</strong>（表IV）：在土豆数据上，性能随演示轨迹数量增加而提升。200条轨迹达到80%成功率，平均分5.9；100条轨迹为60%成功率，平均分4.4；40条轨迹则仅为10%成功率，平均分2.4。</li>
+</ol>
+<p><strong>基于偏好的微调效果</strong>：如表V所示，与仅使用基础策略（Base Only）相比，使用混合奖励（定量+定性）微调后的策略在黄瓜、苹果、土豆上的平均成功率提升了约40%（从57%到94%），平均分从3.8提升到7.1。仅使用定量或定性奖励微调也能带来提升，但混合奖励效果最佳。对比方法IQL-weighted（一种离线RL风格的微调）性能不及本文的监督微调方法。</p>
+<p><img src="https://arxiv.org/html/2603.03280v1/2603.03280v1/x6.png" alt="定性结果对比"></p>
+<blockquote>
+<p><strong>图7</strong>：与基线的定性对比。展示了本文微调后的策略与基线策略的剥皮结果对比。即使都被计为成功，本文策略的剥皮质量（由每张图右上角的分数表示）也显著更高。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一个结合顺应性数据收集、力感知模仿学习和基于偏好微调的两阶段学习框架，有效解决了接触丰富、成功标准主观的精细操作任务的学习难题；2) 设计了一个结合定量与定性指标的混合人类偏好奖励模型，并提出了利用其隐层表征进行残差策略微调的方法，显著提升了策略与人类质量判断的对齐程度；3) 展示了一个高效的数据收集与训练流程，仅需50-200条真实世界轨迹即可学习具有强零样本泛化能力的剥皮策略。</p>
+<p>论文提到的局限性包括：数据收集仍依赖于人类遥操作；偏好标注需要人工参与。这项工作启示后续研究可以探索更自动化的数据收集方式（如通过强化学习自我改进），并将此框架扩展到其他具有连续、主观成功标准的精细操作任务（如雕刻、手术辅助）中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>该论文研究机器人执行如削皮等接触丰富、力敏感精细操作任务的难题，其核心在于任务成功标准是连续且主观的，难以量化评估和设计奖励函数。作者提出了一个两阶段学习框架：首先，通过力感知数据收集与模仿学习，训练一个能泛化到不同物体的稳健初始策略；其次，利用结合了定量指标与人类定性反馈的奖励模型，对策略进行基于偏好的微调，使其行为与人类的质量评判标准对齐。实验表明，仅使用50-200条轨迹，该框架在多种果蔬上的平均成功率超过90%，且通过偏好微调性能提升高达40%，并展现出优秀的零样本泛化能力。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.03280" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

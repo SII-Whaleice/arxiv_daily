@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RL-Based Coverage Path Planning for Deformable Objects on 3D Surfaces - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>RL-Based Coverage Path Planning for Deformable Objects on 3D Surfaces</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.03137" target="_blank" rel="noreferrer">2603.03137</a></span>
+        <span>作者: Feng Wu Team</span>
+        <span>日期: 2026-03-03</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在完全覆盖路径规划问题中，传统算法通常对环境做出刚性假设，将操作空间简化为二维平面或已知的静态三维模型，并在此基础上发展出基于网格分解或单元分解的系统性解决方案。然而，在涉及使用可变形物体（如海绵或软布）对目标表面进行高质量完全覆盖的复杂、非结构化环境中，传统方法面临显著局限。这类任务要求机器人系统不仅能规划表面上的覆盖路径，还需动态适应接触过程中发生的物体形变、拉伸和压缩。当前方法难以准确获取操作过程中的实时接触信息，并在考虑物体形变的同时优化总路径长度和覆盖面积。</p>
+<p>本文针对可变形物体与3D表面交互的覆盖路径规划任务，提出了一种结合仿真、维度缩减和强化学习的新视角。核心思路是：利用仿真器低成本获取接触信息，通过谐波UV映射将3D表面和动作空间降维至2D平面，并使用强化学习智能体在简化的状态和动作空间中学习生成高效的覆盖路径。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的方法整体流程包含三个主要阶段：1）在MuJoCo仿真器中重建目标物体的3D模型并创建擦拭任务环境；2）利用谐波UV映射简化状态表示和动作空间；3）强化学习算法输出高效的覆盖路径。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：方法整体框架概述。首先重建目标物体的3D模型并在MuJoCo中创建环境；接着通过谐波UV映射进行状态和动作空间的降维简化；最后，强化学习算法输出覆盖路径。</p>
+</blockquote>
+<p>核心模块包括UV映射、观察空间构建、动作空间定义、特征提取网络（SGCNN）以及奖励函数设计。</p>
+<p><strong>UV映射</strong>：为了简化问题，将感兴趣的3D网格表面（假设同胚于圆盘）通过参数化映射到二维平面。对于边界顶点，采用弦长参数化将其映射到正方形域<code>[-1, 1]^2</code>或单位圆域。已知边界条件后，对网格进行谐波映射，得到内部顶点的参数坐标以及映射域中对应的三角面片<code>ℱ_uv</code>。参数化表面<code>S(u,v)</code>建立了2D参数域<code>(u,v)</code>与3D表面点<code>(x,y,z)</code>之间的一一对应关系，从而实现了状态和动作空间的降维。</p>
+<p><strong>观察空间</strong>：直接将3D表面离散点集的覆盖状态作为观察会导致状态空间过大。因此，本文将状态表示在2D空间，并采用以智能体为中心的多尺度地图表示。地图包含三层：覆盖地图<code>M_c</code>（二值矩阵，表示3D表面上已接触区域）、边界地图<code>M_b</code>（定义UV系内有效移动范围）和前沿地图<code>M_f</code>（标识已覆盖与未覆盖区域的边界以引导探索）。这些地图经过平移、旋转和缩放，与智能体视角对齐，并离散化为<code>64×64</code>像素的分辨率。</p>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/x1.png" alt="方法流程"></p>
+<blockquote>
+<p><strong>图2</strong>：所提方法流程图。首先通过UV映射将目标擦拭区域映射到UV坐标系。为了更高效地表示状态，构建了以智能体为中心的地图表示（覆盖图、边界图、前沿图）。这些多尺度地图经过SGCNN模块处理，最终通过全连接层输出控制信号。图中展示了缩放因子为2的两个尺度。</p>
+</blockquote>
+<p><strong>动作空间</strong>：智能体在UV坐标系中的输出动作为角速度<code>ω</code>，其值被限制在<code>[-45°, 45°]</code>范围内，线性速度固定为常数。通过公式(5)和(6)，可以将UV坐标系中的速度转换为末端执行器的线速度和角速度。末端执行器姿态中的位置和法向由表面法向量和UV坐标决定，而其绕自身Z轴的旋转角<code>γ_i</code>的变化率等于UV坐标系中的角速度<code>ω</code>，以确保运动方向大致垂直于接触面的长边。</p>
+<p><strong>特征提取与网络</strong>：采用SGCNN作为特征提取器来处理多尺度的2D地图。SGCNN能够高效地学习特征，使RL智能体专注于操作策略学习最相关的信息。策略网络采用SAC算法，actor和critic网络共享权重，并采用自动温度调节。</p>
+<p><strong>奖励函数</strong>：奖励函数设计为<code>reward = r_c + r_ΔTV + r_const</code>。其中，<code>r_c</code>鼓励覆盖新区域（<code>N_new</code>为新覆盖像素数）；<code>r_ΔTV</code>惩罚覆盖地图的总变分<code>V_C</code>的变化，以减少覆盖过程中的残留孔洞和条纹；<code>r_const</code>是一个负的常数奖励项，用于鼓励智能体更高效地探索。</p>
+<p>与现有方法相比，本文的创新点主要体现在：1) 引入谐波UV映射，将复杂的3D表面覆盖问题转化为更易处理的2D平面路径规划问题，显著简化了状态和动作空间；2) 提出了一个专门针对可变形物体表面覆盖任务的、结合仿真、降维和强化学习的完整处理流程；3) 采用以智能体为中心的2D多尺度地图表示和SGCNN特征提取，高效处理接触反馈信息。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：实验在MuJoCo仿真平台中进行。定量分析使用了来自SPONGE数据集的10个碗状物体（Object 1-10），并进一步在更复杂的几何体（如车门、窗户、人体模型）上进行实验。由于MuJoco仅支持凸几何体的碰撞检测，本文通过将复杂网格分解为凸包来模拟具有凹形特征的对象。海绵的尺寸参数设置与Le等人[15]的工作一致。覆盖面积指标通过将2D UV图中覆盖的像素映射回3D表面面积来计算。</p>
+<p><strong>对比方法</strong>：</p>
+<ol>
+<li><strong>SPONGE</strong>[15]：一种两阶段路径规划算法，第一阶段使用预训练的点云接触预测模型采样路径点，第二阶段通过旅行商问题求解器计算最短路径。</li>
+<li><strong>Zigzag</strong>[21]：一种传统表面覆盖算法，将目标区域映射到边长为2的正方形，并在UV坐标系中以等间隔沿锯齿形路径遍历。</li>
+<li><strong>Spiral</strong>：类似地，将物体表面映射到单位圆，并生成从UV坐标系中心出发的螺旋形擦拭路径。</li>
+</ol>
+<p>训练采用SAC算法，学习率为<code>3e-4</code>，批次大小为256，回放缓冲区大小为<code>10^6</code>，折扣因子<code>γ=0.99</code>。</p>
+<p><strong>关键实验结果</strong>：<br>在物体1-10上的实验结果表明，本文方法在总路径长度、覆盖面积和末端执行器Z轴旋转角累积变化上均表现优异。</p>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/resources/figs/2025-09-09130046.png" alt="路径对比"></p>
+<blockquote>
+<p><strong>图4</strong>：不同方法在物体1、3、4上生成的路径对比。(a)本文方法，(b) SPONGE方法，(c) 锯齿形模式，(d) 螺旋形模式。灰色物体为待擦拭物体，红线为规划路径。本文方法生成的路径更为平滑。</p>
+</blockquote>
+<p>根据论文表I数据，在总路径长度上，本文方法（7.54m）优于SPONGE方法（9.57m）近27个百分点，优于锯齿形方法（9.12m）约21个百分点，优于螺旋形方法（7.94m）约5.3个百分点。在覆盖面积上，本文方法（95.5%）优于SPONGE方法（94.2%）1.4个百分点，略低于锯齿形方法（95.6%）0.001个百分点，优于螺旋形方法（87.0%）9.8个百分点。</p>
+<p>根据表II数据，在末端执行器Z轴旋转角<code>γ_i</code>的累积变化量<code>S_|Δγ|</code>评估中，本文方法（133.81）优于SPONGE方法（187.73）达40.3个百分点，意味着本文方法规划的路径姿态变化更平缓，可能更易于执行。</p>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/resources/figs/2025-09-10092602.png" alt="训练收敛"></p>
+<blockquote>
+<p><strong>图5</strong>：智能体在物体3上的收敛行为。纵轴代表每回合所需的环境步数（越低越好），横轴代表总训练步数。智能体在大约<code>10^6</code>步后收敛。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/resources/figs/training_mean_range_all_files_smoothed.png" alt="复杂表面路径"></p>
+<blockquote>
+<p><strong>图6</strong>：在包含孔洞区域的更复杂车门表面上，本文方法生成的路径。智能体生成的路径基本覆盖了车门表面，并避开了内部的孔洞区域。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/resources/figs/2025-09-0411-08-08.png" alt="真实实验设置"></p>
+<blockquote>
+<p><strong>图7</strong>：在真实世界实验中使用的人体上半身模型（黄色）及机械臂末端执行器的路径轨迹（绿色线条）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.03137v1/2603.03137v1/resources/figs/2025-09-0311-29-54.png" alt="真实擦拭实验"></p>
+<blockquote>
+<p><strong>图8</strong>：在人体模型背部进行擦拭任务的定性实验。上图显示擦拭前的背部，粉色泡沫标记需清洁区域；下图显示清洁后的人体模型背部。实验使用Kinova Gen3机械臂执行仿真中训练得到的路径。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：</p>
+<ol>
+<li><strong>简化的状态与动作空间</strong>：引入谐波UV映射，将3D物体表面投影到2D平面，显著简化了强化学习算法的状态和动作空间，提高了计算效率和收敛速度。</li>
+<li><strong>面向表面覆盖任务的高效流程</strong>：提出了一种针对可变形物体表面覆盖任务的创新处理流程，该方法在关键性能指标（如擦拭路径长度和覆盖面积）上相比现有解决方案有显著提升，并通过仿真和真实实验验证了其有效性和可行性。</li>
+</ol>
+<p>论文提到的局限性包括：</p>
+<ol>
+<li>仿真中规划的路径未考虑机械臂自身的关节约束，可能导致路径上的某些位姿无法到达。</li>
+<li>MuJoco中使用的弹簧-质点海绵模型，在计算时间与模型复杂度之间需要权衡，且仿真形变与真实海绵形变难以完全一致。</li>
+<li>在从仿真到真实的迁移中，系统缺乏主动的力反馈，主要依赖可变形物体（海绵）的物理柔顺性来保证安全性和维持接触。</li>
+</ol>
+<p>对后续研究的启示：未来的工作可以探索将机械臂的运动学约束整合到路径规划中，以生成可直接执行的动作序列；随着基于物理的可变形物体仿真器的发展，可以寻求更逼真的仿真模型以缩小仿真与现实差距；此外，集成触觉传感器提供主动力反馈，可能进一步提升在复杂、非结构化表面上操作的鲁棒性和适应性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对在3D表面上使用可变形物体（如海绵或软布）进行覆盖路径规划的挑战，解决了接触丰富任务中因遮挡和触觉感知不足导致的精确操作难题。方法基于强化学习，在模拟器中训练智能体：采用谐波UV映射简化表面状态表示，在2D特征图上处理接触反馈，并利用缩放分组卷积（SGCNN）高效提取特征；智能体在降维动作空间中输出动作以生成覆盖路径。实验表明，该方法在总路径长度和覆盖面积等关键指标上优于先前方法，并通过Kinova Gen3机械臂在躯干模型上的擦拭实验验证了可行性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.03137" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

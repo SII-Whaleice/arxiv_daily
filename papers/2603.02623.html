@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Uni-Skill: Building Self-Evolving Skill Repository for Generalizable Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Uni-Skill: Building Self-Evolving Skill Repository for Generalizable Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.02623" target="_blank" rel="noreferrer">2603.02623</a></span>
+        <span>作者: Xilin Chen Team</span>
+        <span>日期: 2026-03-03</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，利用基础模型增强组合任务泛化能力的技能中心方法已成为主流。这些方法将复杂语言指令分解为预定义技能，并利用大语言模型作为代码规划器。然而，现有方法本质上受限于固定的技能库。如果缺少某个技能（如“叠衣服”）的API，系统则完全无法执行该任务变体。即使通过文本描述扩充技能，现有方法仍严重依赖在部署时手动收集的演示或路径点标注，为每个新技能都需要额外的人工监督。尽管大规模机器人视频本身是技能演示的宝贵来源，但这些无结构、含噪声的数据缺乏与特定技能的必要链接和标注，难以直接用于技能的扩展与补充。</p>
+<p>本文针对技能库固定、扩展依赖人工这一核心痛点，提出了一个新视角：技能不应被视为固定、孤立的API原语，而应视为可扩展、可演化的实体，能够与更广泛的数据源建立结构化关联，从而在部署时实现自动获取。这催生了两个核心能力：技能感知规划和自动技能演化。本文的核心思路是提出一个统一的技能中心框架Uni-Skill，通过技能感知规划自动识别技能缺口并生成新技能描述，同时利用大规模无结构机器人视频自动构建层级化技能知识库SkillFolder，实现新技能的少样本、无人工演示的实现。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>Uni-Skill框架包含两个核心模块：技能感知规划和自动技能演化。前者负责在规划时动态评估并扩展技能描述库，后者负责将扩展出的高层技能描述落地为可执行的动作序列。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：Uni-Skill整体框架。给定基本技能库和任务指令，技能感知规划模块（左侧）判断现有技能是否足够，若不足则生成新的技能描述以扩充技能库，并基于扩充后的技能库生成可执行策略代码。自动技能演化模块（右侧）从大规模无结构视频中自动构建层级化技能库SkillFolder，并为规划模块请求的新技能检索相关演示，实现少样本技能实现。</p>
+</blockquote>
+<p><strong>技能感知规划模块</strong> 旨在将规划过程泛化到预定义技能库之外。给定基本技能库 $L_{\text{base}}$ 和多模态指令对 ${O_t, I_t}$，该模块包含三个核心组件：</p>
+<ol>
+<li>**充分性判别器 $\mathcal{E}$**：评估现有基本技能是否足以执行给定指令，输出指示性反馈 $\mathcal{E}({O_t, I_t}, L_{\text{base}})$。</li>
+<li>**技能生成器 $\mathcal{G}$**：若判别器认为需要额外能力，该组件自主合成新的技能描述 $\mathcal{G}({O_t, I_t}, L_{\text{base}})$ 以补充现有技能库，形成扩展技能集 $L_{\text{ext}}$。</li>
+<li>**规划器 $\mathcal{P}$**：以视觉观测和语言指令为输入，基于自扩充的API库（即 ${L_{\text{base}}, L_{\text{ext}}}$）生成可执行的策略代码 ${\pi_i, p_i}_{i=1}^{N}$，其中 $\pi_i$ 表示第 $i$ 个API调用，$p_i$ 是其参数。<br>这三个组件共享统一的、基于代码的输出格式，并支持多模态输入。本文利用大型视觉语言模型（VLM）作为智能规划器和技能描述生成器，并使用106K个从视频演示衍生的运行时代码样本对其进行训练，使其适应基于代码的机器人操作任务。</li>
+</ol>
+<p><strong>自动技能演化模块</strong> 旨在将规划模块请求的高层技能描述自动落地为低层动作序列，其包含三个按序实现的组件：</p>
+<ol>
+<li><strong>自动技能标注</strong>：针对大规模无结构机器人视频（如DROID数据集），设计了一个基于VLM的流水线来自动分割视频并为每个片段标注对应的技能描述。该流水线包含三个阶段：过程提取（Extractor从关键帧生成简明行动计划）、技能描述（Descriptor基于行动计划，在基本技能集不足时合成新的任务导向技能描述）和时间对齐（Aligner将技能描述与视频中的具体时间区间对齐）。通过此流程，从350小时的演示中提取了超过10,000个以技能为中心的视频片段。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.02623v1/2603.02623v1/x1.png" alt="自动技能标注流程"></p>
+<blockquote>
+<p><strong>图2</strong>：自动技能标注流水线。从过程描述中衍生的技能函数与视频片段对齐，并迭代地用于构建SkillFolder。</p>
+</blockquote>
+<ol start="2">
+<li><strong>层级化技能组织</strong>：受ImageNet利用WordNet构建视觉对象类别的启发，本文采用VerbNet作为结构化技能类别的基础，构建了一个四层技能树SkillFolder，将多样化的技能语义组织成逐步细化的技能分类体系。<ul>
+<li>第一层 $\mathcal{N}_1$：对应不同的VerbNet类别（如 <code>wipe-manner-10.4.1</code>）。</li>
+<li>第二层 $\mathcal{N}_2$：对应同一VerbNet类别下的不同动词实例，捕捉上下文和行为模式的细微差异。</li>
+<li>第三层 $\mathcal{N}_3$（技能描述层）：将动词实例具体化为以对象为中心的交互模板，与具体的技能描述对齐。</li>
+<li>第四层 $\mathcal{N}_4$（叶节点）：包含细粒度的技能片段，每个片段将技能描述实例化为一个具体的、视觉接地的示例。<br>通过自动标注的技能片段来填充和扩展SkillFolder，最终形成了一个包含106个VerbNet类和1659个独特技能描述的结构化、持续增长的知识库。</li>
+</ul>
+</li>
+<li><strong>少样本技能实现</strong>：将“为部署时新定义的技能 $\pi_i$ 获取演示”的问题，转化为从SkillFolder中高效检索示例。如图3(a)所示，请求的技能 $\pi_i$ 首先通过VerbNet解析器确定入口点，然后在每个抽象层级匹配最近的节点。在底层，若多个样本满足技能实现要求，则进一步使用CLIP特征相似度评估每个候选样本与目标部署场景的相关性，并过滤掉存在视野外移动或长时间静止的轨迹。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.02623v1/2603.02623v1/x2.png" alt="技能检索与实现"></p>
+<blockquote>
+<p><strong>图3</strong>：(a) 在部署时从SkillFolder中层级化检索技能示例。(b) 语义约束和动作流作为路径点生成的上下文示例，这些路径点进一步通过旋转模式提升为6自由度位姿。</p>
+</blockquote>
+<p>为了弥合示例场景与目标场景之间的空间布局差异，本文采用了一种约束视觉提示方法。从检索到的技能示例中提取两种机器可解释的参考信息：细粒度空间轨迹和高层语义约束。具体而言，将技能演示的6自由度位姿投影到初始帧的对应相机视图上，生成可视化为绿色路径点的2D轨迹 $\tau_e$。同时，使用现成的VLM从演示中获取接触点和路径点约束 ${\phi_c, \phi_w}$。如图3(b)所示，轨迹参考 ${\tau_e, \mathcal{O}<em>e}$ 和语义约束 ${\phi_c, \phi_w}$ 与目标场景规范 ${\mathcal{O}<em>i, \pi_i, p_i}$ 相结合，通过一个视觉提示模块 $\mathcal{V}$ 生成空间轨迹 ${c, {w_j}</em>{j=1}^{N}}$。3D路径点通过从技能演示中均匀采样的旋转模式附加方向信息，被提升到SE(3)空间。为了保持可迁移的方向模式，在每个路径点构建局部坐标系，将源旋转矩阵 $R</em>{\text{src}}$ 转换为技能特定的方向模式 $R_{\text{skill}}$，再转换到目标场景的全局坐标系中，形成最终可执行的6自由度位姿序列。</p>
+<p>与现有方法相比，Uni-Skill的创新点在于：1) 将技能视为可扩展实体，提出了技能感知规划范式，能动态识别和补充技能缺口；2) 构建了层级化的技能知识库SkillFolder，将无结构视频自动转化为结构化技能示例源，实现了从低效人工标注到高效离线检索的范式转变；3) 通过检索技能示例提供语义约束和轨迹参考，实现了新技能的少样本、无部署时演示的实现。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在仿真和真实世界两种设置下进行，全面评估Uni-Skill在机器人操作任务上的性能。</p>
+<p><strong>基准与数据集</strong>：使用RLBench作为仿真实验平台。选取了8个可由基本技能集解决的任务和10个需要技能扩展的新任务。每个任务评估25个回合，重复三次报告平均成功率和标准差。真实世界实验使用Franka Emika机械臂，设计了涵盖8个不同类别的任务进行评估。</p>
+<p><strong>对比方法</strong>：基线包含两组基于基础模型的技能中心方法：1) <strong>策略代码生成方法</strong>，以Code-as-Policies (CaP) 为代表，使用GPT-3.5和GPT-4o实现以增强视觉推理；2) <strong>视觉提示方法</strong>，以MOKA为代表，使用GPT-4o并遵循其关键点选择策略。为确保公平比较，所有方法共享相同的基本技能集 $L_{\text{base}}$。</p>
+<p><strong>关键实验结果</strong>：<br>在RLBench上，对于基本技能集覆盖的8个任务（如表I所示），Uni-Skill的零样本平均成功率达到 $0.42 \pm 0.01$，优于CaP (GPT-3.5) 的 $0.18 \pm 0.01$ 和CaP (GPT-4o) 的 $0.28 \pm 0.02$。例如，在“Close Jar”任务中，Uni-Skill能正确推断出必须将灰色盖子放置并旋转到特定罐子上，而CaP常误解场景。</p>
+<p><img src="https://arxiv.org/html/2603.02623v1/2603.02623v1/x4.png" alt="仿真实验结果（基本技能）"></p>
+<blockquote>
+<p><strong>图4</strong>：在RLBench上，任务属于预定义技能集时的成功率对比。Uni-Skill在需要视觉基础的任务上表现更优。</p>
+</blockquote>
+<p>对于基本技能集之外的10个新任务（如表II所示），涵盖Revolute、Prismatic、Flip、Unplug、Lift、Pour等技能类别，Uni-Skill的零样本平均成功率达到 $0.41 \pm 0.01$，显著高于CaP的 $0.01 \pm 0.01$ 和MOKA的 $0.10 \pm 0.02$。特别是在Revolute和Prismatic类任务上提升明显。Uni-Skill通过从SkillFolder检索技能中心演示，提供了语义约束和参考指导，生成了更具语义意义和物理可行性的轨迹。</p>
+<p><img src="https://arxiv.org/html/2603.02623v1/2603.02623v1/x5.png" alt="仿真实验结果（新技能）"></p>
+<blockquote>
+<p><strong>图5</strong>：在RLBench上，任务超出预定义技能集时的成功率对比。Uni-Skill在新技能泛化上大幅领先。</p>
+</blockquote>
+<p>在真实世界实验中（如表III所示），Uni-Skill在8个任务上的平均成功率为0.73，远高于CaP (GPT-4o) 的0.00和MOKA的0.39。例如，在“Fold Cloth”、“Close Door”、“Close Drawer”等需要新技能的任务上，Uni-Skill取得了0.70、0.80、0.70的成功率，而基线方法普遍失败或成功率很低。</p>
+<p><img src="https://arxiv.org/html/2603.02623v1/2603.02623v1/x3.png" alt="真实世界实验场景"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界任务评估的场景布置示例。</p>
+</blockquote>
+<p><strong>消融实验分析</strong>：论文通过消融实验验证了各个组件的贡献。结果表明，技能感知规划模块对于处理超出预定义技能的任务至关重要，而SkillFolder的层级化检索和提供的轨迹/语义参考，是实现少样本技能实现、提升在新技能上性能的关键。移除这些组件会导致性能显著下降，尤其是在需要复杂轨迹规划和长视野推理的任务上。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：</p>
+<ol>
+<li><strong>提出了自演化技能库框架Uni-Skill</strong>：通过技能感知规划和自动技能演化，使机器人系统能够动态识别技能缺口、自动生成技能描述，并利用大规模无标注视频实现新技能的少样本实现，突破了固定技能库的限制。</li>
+<li><strong>构建了层级化技能知识库SkillFolder</strong>：受VerbNet启发，构建了一个四层技能分类体系，将无结构机器人视频自动标注并组织成结构化技能示例库，实现了从人工监督到高效离线检索的技能获取范式转变。</li>
+<li><strong>实现了强大的零样本泛化能力</strong>：在仿真和真实世界的多种操作任务上验证了方法的有效性，特别是在需要新技能的长视野、组合任务上，性能显著超过现有的技能中心方法和视觉提示方法。</li>
+</ol>
+<p><strong>论文提到的局限性</strong>：方法的性能依赖于基础VLM的规划与描述能力，以及SkillFolder中检索到的示例质量。对于极其罕见或视觉上独特的技能，检索可能失败或提供不相关的参考。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>技能库的动态性与可扩展性</strong>：未来系统可以将技能库设计为可在线学习、持续演化的组件，而非静态数据库。</li>
+<li><strong>利用无监督与跨领域数据</strong>：本文展示了利用大规模、无标注的跨领域机器人视频构建通用技能知识的潜力，这为减少机器人学习对昂贵人工监督的依赖指明了方向。</li>
+<li><strong>层级化与组合性</strong>：对技能进行层级化、语义化的组织，有助于实现更好的可复用性、组合泛化和更高效的检索，这是构建通用机器人操作能力的重要思路。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人操作中固定技能库限制适应性问题，提出Uni-Skill框架。其核心技术包括：1) 支持技能感知规划和自动请求新技能的**自进化技能框架**；2) 从大规模视频构建、采用分层分类法的**SkillFolder技能库**。实验表明，该方法在仿真与真实场景中实现了先进的零样本泛化能力，性能超越现有基于VLM的技能中心方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.02623" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
