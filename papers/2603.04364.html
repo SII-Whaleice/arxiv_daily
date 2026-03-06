@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dual-Modality Multi-Stage Adversarial Safety Training: Robustifying Multimodal Web Agents Against Cross-Modal Attacks - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Dual-Modality Multi-Stage Adversarial Safety Training: Robustifying Multimodal Web Agents Against Cross-Modal Attacks</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.04364" target="_blank" rel="noreferrer">2603.04364</a></span>
+        <span>作者: Zeyu Zheng Team</span>
+        <span>日期: 2026-03-04</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，基于视觉语言模型（VLM）的多模态网络代理被广泛部署，它们同时处理网页截图和可访问性树（AXTree），以导航和操作网页界面。尽管这种双流架构提升了性能，但也引入了一个未被充分探索的攻击面：攻击者通过向网页DOM注入内容，可以同时、一致地污染代理的两个观察通道（视觉和文本），形成具有欺骗性的叙述。现有安全研究大多孤立地关注文本提示注入或基于图像的对抗攻击，忽略了这种跨模态协调攻击带来的独特威胁。论文通过漏洞分析发现，在MiniWob++基准测试中，包含视觉组件的攻击（图像攻击成功率34.4%，双模态攻击成功率35.7%）远比纯文本注入（成功率24.1%）更有效，暴露了当前以文本为中心的VLM安全训练的严重不足。</p>
+<p>本文针对多模态网络代理在面临跨模态攻击时脆弱性这一具体痛点，提出了一种新的防御视角：通过对抗性共同进化来增强代理的鲁棒性。核心思路是：将代理与攻击者的交互形式化为一个两人零和马尔可夫博弈，并设计一个名为Dual-Modality Multi-Stage Adversarial Safety Training (DMAST)的三阶段训练框架，通过模仿学习、Oracle引导的监督微调和基于自对抗的强化学习，共同训练代理和攻击者策略，使代理学会在对抗性干扰下保持任务专注。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DMAST的整体框架是一个三阶段的训练流程，旨在使代理和攻击者策略共同进化。代理和攻击者实例化自同一个VLM并共享权重，仅通过角色特定的系统提示进行区分，这降低了内存开销并促进了协同进化。训练采用教师-学生范式，使用更大的教师模型（Gemma-3-27B-IT）生成高质量轨迹，而更小的学生模型（Gemma-3-12B-IT）作为目标策略进行迭代训练。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法概述"></p>
+<blockquote>
+<p><strong>图1</strong>：代理-攻击者交互过程概览。在每个时间步，攻击者观察干净的网页状态，并向DOM中注入恶意HTML/CSS，同时污染截图和可访问性树。代理随后基于被修改的观察结果采取行动，环境据此进行状态转移。</p>
+</blockquote>
+<p><strong>核心模块一：HTML注入机制</strong><br>攻击者的行动被建模为生成结构化的HTML/CSS代码，通过JavaScript执行注入到实时网页DOM中。具体行动为 <code>α_t = (target, position, html, css)</code>，包括指定注入点的CSS选择器、位置指令、HTML负载和可选的CSS样式。这种设计确保了跨模态的一致性（截图和AXTree同步被修改）、计算高效性（仅需执行JS）和语义丰富性（可创建带标签的交互式元素）。</p>
+<p><img src="https://arxiv.org/html/2603.04364v1/2603.04364v1/x1.png" alt="HTML注入示例"></p>
+<blockquote>
+<p><strong>图2</strong>：HTML注入机制示意图。攻击者VLM处理干净状态(b)生成结构化行动α_t (a)，该负载被注入DOM以产生恶意状态(c)。</p>
+</blockquote>
+<p><strong>核心模块二：三阶段训练流程</strong></p>
+<ol>
+<li><strong>阶段1：模仿学习</strong>：从教师模型收集干净和对抗性场景下的专家轨迹，分别构成代理轨迹集和攻击者轨迹集。使用KL正则化的监督微调目标对共享的学生模型进行训练，为其提供稳定的行为初始化，避免自对抗强化学习初期的冷启动问题。</li>
+<li><strong>阶段2：Oracle引导的监督微调</strong>：这是提升代理在噪声下任务专注度的关键阶段。首先，收集教师在干净观察下的“黄金轨迹”。然后，对轨迹中的每一步，让教师攻击者生成对抗性扰动，得到被攻击的观察。接着，引入一个拥有特权（能同时看到干净视图和被攻击视图）的Oracle模型，其核心任务是生成一个“零确认”的任务聚焦链式推理。Oracle的推理必须严格基于任务相关元素，完全不提及攻击的存在，从而教会学生模型忽略干扰、坚持原始任务目标。最后，用这些合成数据对模型进行微调。</li>
+<li><strong>阶段3：对抗性强化学习</strong>：在前两阶段的基础上，让代理和攻击者策略在定义的马尔可夫游戏中进行自对抗共同进化。采用Group Relative Policy Optimization (GRPO)算法进行优化，该算法通过比较一组 episode 的回报来计算相对优势，无需训练独立的价值网络。奖励函数设计为：任务成功且数据安全（代理+1，攻击者-1）；任务失败但数据安全（双方-1）；数据泄露（代理-1，攻击者+1）。这激励代理不仅要防御，还要积极完成任务。</li>
+</ol>
+<p>与现有方法相比，DMAST的创新点在于：1) 首次形式化了针对多模态网络代理的跨模态攻击场景；2) 提出了融合模仿学习、Oracle引导的“零确认”去噪训练和自对抗RL的三阶段训练流程；3) 采用共享权重的代理-攻击者设计，实现了高效且真正的策略共同进化。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：使用MiniWob++基准测试进行训练和评估（保留28个任务用于测试），并在更复杂、真实的VisualWebArena基准测试中精选100个任务进行分布外（OOD）评估。所有任务均注入模拟的敏感信息（如密码），通过字符串匹配检测信息泄露。基线方法包括：基础模型、纯提示防御、SPAG（自对抗RL框架）、自动红队测试（ART）和在线监督微调（Online SFT）。评估指标为任务成功率（TSR↑）和攻击成功率（ASR↓）。</p>
+<p><strong>主要结果</strong>：如表2所示，在未见过的MiniWob++任务上，DMAST将攻击成功率从基础模型的18.9%降至10.8%，同时将任务成功率从14.0%显著提升至25.7%，全面优于所有基线方法。在OOD的VisualWebArena任务上，DMAST将攻击成功率从41.2%大幅降至21.4%，并将任务成功率从6.2%提升至10.2%，展现了强大的泛化能力。结合提示防御后，防御效果（ASR）可进一步提升。</p>
+<p><strong>消融研究与阶段贡献</strong>：表3展示了训练阶段逐步增加的累积效果。模仿学习（阶段1）主要降低了ASR。Oracle引导的SFT（阶段2）在提升TSR方面贡献最大（MiniWob++上从18.9%到23.1%），说明其植入的任务聚焦先验对维持功能效用至关重要。对抗性RL（阶段3）进一步共同优化了双方，使ASR和TSR达到最佳平衡。</p>
+<p><img src="https://arxiv.org/html/2603.04364v1/2603.04364v1/x4.png" alt="训练阶段消融结果"></p>
+<blockquote>
+<p><strong>图7</strong>：训练阶段消融实验结果表。展示了在MiniWob++和VisualWebArena上，随着训练阶段增加，攻击成功率（ASR）和任务成功率（TSR）的变化，证实了每个阶段的累积贡献。</p>
+</blockquote>
+<p><strong>共同进化分析</strong>：论文通过检查点在自对抗训练中的相互评估，展示了代理和攻击者能力的真实共同进化。如图8所示，随着训练迭代，最新代理对历史攻击者的防御成功率（TSR）逐渐上升，而最新攻击者对历史代理的攻击成功率（ASR）也在增加，表明双方策略复杂度同步提升。</p>
+<p><img src="https://arxiv.org/html/2603.04364v1/2603.04364v1/x5.png" alt="共同进化评估"></p>
+<blockquote>
+<p><strong>图8</strong>：共同进化动态分析图。矩阵展示了不同训练检查点的代理与攻击者相互对战的结果，对角线显示当前配对的结果，证明了双方策略在训练过程中持续且同步地变得更强。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 通过系统的漏洞分析，揭示了跨模态攻击对多模态网络代理构成严重威胁，尤其是视觉攻击比纯文本攻击更有效；2) 提出了DMAST框架，首次将跨模态对抗安全训练形式化为一个共同进化过程，并通过三阶段训练流程有效提升了代理的鲁棒性和任务完成效率；3) 在多个基准测试上实证表明，DMAST显著优于现有防御方法，并能泛化到复杂的未见环境中。</p>
+<p>论文提到的局限性包括：1) 训练过程计算成本较高，依赖于教师模型生成高质量数据；2) Oracle模型需要特权访问干净视图，在实际部署中可能不可用；3) 评估主要针对诱导信息泄露的攻击，未覆盖所有可能的对抗目标。</p>
+<p>这项研究对后续工作的启示在于：首先，它强调了在安全训练中考虑多模态一致攻击的重要性，未来的防御设计应超越单模态视角。其次，DMAST中“零确认”的Oracle引导策略为训练模型在对抗性噪声下保持任务专注提供了新思路。最后，共享权重的共同进化范式为高效训练鲁棒智能体提供了可扩展的路径，可激励研究者探索更高效的自对抗训练算法以及将此类方法应用于更广泛的具身智能和人机交互安全领域。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对多模态网页代理的双流架构（同时处理截图和可访问性树）面临的安全漏洞：攻击者通过DOM注入可同时污染两个模态，形成一致的欺骗性叙述。为解决此跨模态攻击问题，论文提出了**双模态多阶段对抗安全训练（DMAST）**框架，其核心是将代理-攻击者交互建模为两人零和马尔可夫博弈，并通过三阶段管道协同训练：1) 从强教师模型进行模仿学习；2) 采用零确认策略进行监督微调，使代理在对抗噪声下保持任务聚焦推理；3) 通过群体相对策略优化进行对抗性强化学习自我博弈。实验表明，在分布外任务上，DMAST显著减轻了对抗风险，同时将任务完成效率提升了一倍。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.04364" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
