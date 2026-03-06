@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Critic in the Loop: A Tri-System VLA Framework for Robust Long-Horizon Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Critic in the Loop: A Tri-System VLA Framework for Robust Long-Horizon Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05185" target="_blank" rel="noreferrer">2603.05185</a></span>
+        <span>作者: Shanlin Zhong Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作（VLA）模型在机器人操作领域主要采用基于卡尼曼双系统隐喻的层次化架构：一个缓慢的“系统二”（如大型视觉-语言模型VLMs）负责高层语义规划，提出子任务；一个快速的“系统一”（如VLA策略）负责低层连续动作执行。然而，这种主流方法存在关键局限性：首先，系统间的切换策略通常是僵化的（固定频率或启发式），在平稳执行时浪费计算资源，在遇到干扰时反应迟缓；其次，处理罕见但关键的故障通常需要昂贵、任务特定的数据收集，限制了其在长视界任务上的可扩展性。</p>
+<p>本文针对上述“切换僵化”和“故障处理成本高”的痛点，提出引入一个独立的、轻量级的视觉“评论家”（Critic）作为“系统三”的新视角。该评论家持续监控工作空间状态，动态地在VLA执行模式与VLM重规划模式之间路由控制权，从而实现自适应的、事件驱动的认知切换。本文的核心思路是：通过一个异步的三系统架构，将认知推理与连续控制解耦，由评论家根据实时执行进度和异常检测结果，按需触发高成本的重规划，从而在保证语义深度的同时实现高效、鲁棒的长视界操作。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的三系统VLA框架包含三个核心模块：用于全局推理的“大脑”（System 2/Brain）、用于反应式执行的“小脑”（System 1/Cerebellum）以及用于状态评估的“评论家”（System 3/Critic）。整体流程如下：给定用户指令后，大脑首先生成一个语义子任务；小脑根据当前观察和该子任务生成连续动作块并执行；与此同时，评论家异步地评估当前观察相对于活跃子任务的执行进度，并检测异常（如故障或停滞）。一旦评论家触发预定义条件（子任务完成、检测到事故或执行停滞），系统将中断当前执行，将事件编码为短期记忆上下文，唤醒大脑进行重规划，生成新的子任务，并引导小脑执行新的动作序列。</p>
+<p><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x1.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：提出的三系统VLA架构概览。该系统通过事件驱动调度将认知推理与连续控制解耦。系统二（大脑）使用VLM生成语义子任务，系统一（小脑）将其转化为连续动作。系统三（评论家）异步监控执行、检测异常并整合人类启发的启发式规则。</p>
+</blockquote>
+<p><strong>核心模块技术细节</strong>：</p>
+<ol>
+<li><strong>大脑（系统二）</strong>：基于预训练的视觉-语言模型（如PaliGemma），其输入为全局用户指令 ℓ、短期记忆上下文 m（如前序完成动作或异常状态）和当前视觉观察 O_t。它自回归地解码生成当前的语义子任务指令 g_t（如“拿起蓝色杯子”），仅在被评论家触发时进行重规划，避免了持续的推理开销。</li>
+<li><strong>小脑（系统一）</strong>：一个基于流匹配（flow matching）的专用连续动作生成网络。它以大脑生成的当前子任务 g_t、即时视觉观察 O_t 和机器人本体感觉状态 s_t 为条件，学习一个向量场 v_t，将随机高斯分布迭代去噪为平滑、确定性的运动动作块 a_{t:t+H}，实现高频、闭环的精确控制。</li>
+<li><strong>评论家（系统三）</strong>：一个轻量级的、基于视觉的模型（如Florence-2-base）。其核心创新在于将子任务评估统一为一个视觉问答（VQA）任务。输入是视觉观察 O_t 和文本提示“评估任务 g_t 的进度”，输出是一个文本字符串，代表执行进度或离散的异常状态。<ul>
+<li><strong>进度估计</strong>：进度值 V_t 定义为特定子任务归一化的预期完成时间，通过训练轨迹的蒙特卡洛估计获得，计算公式为 V_t = max(-1.0, (t-L)/L_max^{g_t})，其中L是有效执行长度，L_max^{g_t}是训练集中该子任务长度的第90百分位数。V_t 被离散化为101个区间，模型输出对应的区间索引字符串。</li>
+<li><strong>异常检测</strong>：在异常轨迹的关键时间窗口（如最后20帧），将数值区间索引替换为离散的高优先级语义令牌 <code>&lt;aci&gt;</code>。通过将进度区间和 <code>&lt;aci&gt;</code> 令牌映射到相同的文本输出空间，并使用标准的因果语言建模交叉熵损失进行端到端训练，该设计无需独立的二元异常分类器，并能对罕见故障做出快速中断响应。</li>
+</ul>
+</li>
+</ol>
+<p><strong>动态调度机制</strong>：系统在三个不同的操作节奏下异步运行：（1）驱动与观察循环（~20 Hz）：评论家与小脑的执行并行，异步处理新帧；（2）系统一同步（动作生成）：仅当当前动作缓冲区耗尽时，小脑才生成新动作块；（3）系统二同步（子任务生成）：计算密集型的大脑仅在收到评论家驱动的中断信号时被按需查询。</p>
+<p><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x2.png" alt="执行时间线"></p>
+<blockquote>
+<p><strong>图3</strong>：三系统VLA执行时间线概述。系统三评论家（V.）异步评估进度并控制着系统二大脑（S2.）和系统一小脑（S1.）之间的动态调度。</p>
+</blockquote>
+<p><strong>动态抢占逻辑</strong>（如算法1所述）：评论家持续输出解析后的进度值 V_t 或异常标志 y_t。当满足以下任一条件时，系统将抢占当前策略执行：1) <strong>异常检测</strong>：y_t == <code>&lt;aci&gt;</code>；2) <strong>子任务完成</strong>：V_t &gt; τ_succ（成功阈值，例如-0.041）；3) <strong>执行停滞</strong>：自 V_t 上次更新历史最大值 V_max 以来经过的帧数 t_stag 超过停滞上限 N_stag（例如180帧），此时还会触发机器人状态重置。触发后，事件被编码为记忆 m，清空旧动作缓冲区，并强制同步调用大脑进行重规划。</p>
+<p><strong>自动化子任务标注流程</strong>：为训练三系统模型所需的对齐数据，本文提出了一个自动化标注流程。<br><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x3.png" alt="自动化标注流程"></p>
+<blockquote>
+<p><strong>图4</strong>：自动化子任务标注流程概述。原始末端执行器轨迹通过几何过滤和夹爪状态分析处理成候选路径点（右上角）。结合相应的视觉帧，VLM检索精确的语义标签，最终得到底部所示的连续时间分割和子任务标注。</p>
+</blockquote>
+<p>该流程分为两步：1) <strong>基于运动学的关键帧提议</strong>：解析原始遥操作轨迹，使用Ramer-Douglas-Peucker算法提取几何路径点，并结合夹爪状态变化（如开-关转换），再通过贪婪 proximity 过滤得到候选关键帧。2) <strong>基于VLM检索的子任务落地</strong>：将候选关键帧对应的图像输入VLM（如Qwen3-VL 32B），让其根据预定义的子任务描述词汇表检索最准确的语义标签。检索到相同标签的连续候选关键帧被合并，形成一个连续的子任务片段。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在Cobot Magic ALOHA双臂机器人平台上进行真实世界评估。使用三个Intel RealSense D435相机（一个前视，两个腕部）提供视觉感知。方法基于开源 pi0.5 架构实现大脑和小脑，评论家采用轻量级Florence-2-base模型。评估了两个复杂的长视界双手操作任务：</p>
+<ol>
+<li><strong>布置餐具</strong>：按大小顺序叠放盘子和碗，并将杯子叠放在一起。在四个场景下测试：有序放置、散乱放置（测试语义推理）、杯子放在左侧（分布外/OOD）以及执行中杯子被碰倒（需动态恢复）。</li>
+<li><strong>整理桌面</strong>：涉及与可变形物体交互，包括四个顺序步骤：展平打开塑料袋、放入第一个瓶子、放入第二个瓶子、放入皱纸巾。</li>
+</ol>
+<p><strong>基线方法</strong>：1) <strong>单系统 π_0.5</strong>：直接从观察和高级提示预测动作的标准模型。2) <strong>双系统 π_0.5</strong>：基于用户提示为每个动作块生成子任务的修改模型，缺乏系统三评论家和短期记忆。</p>
+<p><strong>定量结果</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x6.png" alt="定量结果表"></p>
+<blockquote>
+<p><strong>表1</strong>：真实世界评估结果。报告了使用人类数据训练的模型在10次试验中的成功执行次数。分别展示了“布置餐具”四个场景的成功率以及“整理桌面”各顺序子任务的成功率。粗体表示最佳结果。</p>
+</blockquote>
+<p>如表1所示，本文提出的三系统 π_0.5 在所有评估场景中均显著优于两个基线。单系统 π_0.5 对文本条件理解能力弱，偏向操作最近物体，因此在散乱和杯子被碰倒场景完全失败，并且在杯子左置（OOD）场景成功率为0%。双系统 π_0.5 虽然语义理解有所改善，但由于需要为每个动作块生成子任务导致延迟高，且缺乏状态跟踪，经常在不同子任务间振荡，尤其在处理可变形物体（塑料袋）时容易卡住。三系统 π_0.5 通过按需思考大幅降低了推理延迟，并防止了任务振荡。</p>
+<p><strong>定性结果</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x4.png" alt="定性结果"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界评估的定性结果。我们提出的系统在复杂场景中展示了鲁棒的能力：（左）对可变形物体的稳定、长视界操作；（中）通过人类启发式规则解决执行停滞，实现分布外（OOD）泛化；（右）实时异常检测（由 <code>&lt;aci&gt;</code> 令牌触发）及随后自主恢复。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05185v1/2603.05185v1/x5.png" alt="定性对比"></p>
+<blockquote>
+<p><strong>图6</strong>：长视界操作任务的定性对比。单系统抓错了物体，双系统遭遇执行停滞，而我们的三系统成功完成了连续的多步骤序列。底部图表展示了评论家在连续子任务中的实时进度跟踪。</p>
+</blockquote>
+<p>图5和图6的定性结果展示了三系统框架在处理柔性物体、通过停滞检测与状态重置规则解决OOD泛化问题（如使用未训练过的左臂抓取左侧杯子）、以及实时检测异常（如抓取失败）并自主恢复方面的强大能力。底部进度图清晰显示了评论家对每个子任务进度的连续监控。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1) <strong>自适应认知切换</strong>：提出了一个由评论家引导的异步调度机制，能动态调用高层推理，显著提高了计算效率和物理响应能力。2) <strong>主动异常检测与恢复</strong>：无缝集成了由人类启发规则和数据支持策略驱动的状态恢复机制，通过全面检测直观地打破了无限重试循环，极大地增强了系统在分布外场景下的鲁棒性和自主性。3) <strong>可扩展的子任务标注流程</strong>：开发了自动化子任务提取工具，消除了手动数据标注的瓶颈，使得能够从多样化数据集中进行鲁棒的长视界训练。</p>
+<p>论文自身提到的局限性包括：评论家模型的计算开销（尽管已使用轻量模型），以及停滞检测等恢复规则仍部分依赖于启发式参数。</p>
+<p>本研究对后续工作的启示在于：首先，它展示了一种将慢速语义推理与快速反应控制高效结合的可行架构，为具身智能系统设计提供了新范式。其次，将进度评估和异常检测统一为VQA任务是一个简洁而有效的设计思路。未来的研究可以探索更智能、数据驱动的评论家训练方式，减少对启发式规则的依赖，并进一步研究如何将三个系统更紧密地端到端优化。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对长时程机器人操作任务中，高级语义推理与低级反应控制难以兼顾的难题，提出“Critic in the Loop”三系统框架。其核心是动态VLM-专家调度机制：轻量视觉Critic实时监控，在常规子任务中由快速VLA模型闭环执行，一旦检测到执行异常（如停滞或失败）则自适应触发高延迟但强推理的VLM进行重规划。该方法显著减少了昂贵的VLM调用，并在分布外（OOD）场景中展现出卓越的鲁棒性与泛化能力，在多个长时程操作基准测试中取得了最先进的性能。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05185" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

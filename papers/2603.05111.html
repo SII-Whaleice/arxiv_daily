@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SPIRIT: Perceptive Shared Autonomy for Robust Robotic Manipulation under Deep Learning Uncertainty - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>SPIRIT: Perceptive Shared Autonomy for Robust Robotic Manipulation under Deep Learning Uncertainty</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05111" target="_blank" rel="noreferrer">2603.05111</a></span>
+        <span>作者: Konstantin Kondak Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前机器人领域越来越多地依赖深度学习进行感知与决策，尽管其性能卓越，但深度学习方法存在内部机制难以解释、预测可能意外失效等局限性，尤其在训练数据未充分覆盖的测试条件下。这导致将深度学习方法集成到高风险机器人应用中仍然充满挑战，主要问题不在于模型无效，而在于其不确定性很少在系统层面被考虑和处理。本文针对深度学习感知的不确定性如何影响机器人操作鲁棒性这一具体痛点，提出了“感知共享自主权”的新视角。核心思路是利用深度学习感知输出的不确定性估计，动态调节人机协作的自主权分配：当感知置信度高时，启用半自主操作以提升性能；当不确定性高时，则切换至触觉遥操作以保证鲁棒性。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>SPIRIT系统的整体框架是一个基于不确定性调节的混合主动共享自主权控制回路。系统输入包括来自操作者的遥操作指令和基于感知的自主引导指令，输出为发送给机器人执行器的最终控制指令（笛卡尔力/力矩）。其核心在于根据感知不确定性动态计算权威分配因子α，以加权融合人机输入。</p>
+<p><img src="https://arxiv.org/html/2603.05111v1/2603.05111v1/x2.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图3</strong>：左：提出的分区点云注册方法。将源点云（传感器测量）与从数字孪生中分割出的目标点云进行匹配，比直接匹配整个环境点云更容易。右：提出的注册架构。神经网络从特征对应关系中推断李代数（6维向量）（顶部），然后利用高斯过程进行不确定性估计（底部）。</p>
+</blockquote>
+<p>系统的核心模块包括：</p>
+<ol>
+<li><strong>不确定性感知的深度学习感知系统</strong>：该系统旨在估计目标物体位姿及其不确定性。其核心是一个分区点云注册流程。首先，将环境的数字孪生全局模型根据机器人可操作位置进行分区，生成一个局部目标点云，这简化了与传感器测量的源点云之间的配准问题。注册网络采用U-Net风格的6D卷积网络与多层感知机组合，输入为基于特征最近邻匹配得到的对应点对特征，输出为一个6维李代数向量，该向量可转换为对齐两个点云的变换矩阵。</li>
+<li><strong>基于高斯过程的不确定性估计模块</strong>：为了获得可靠的不确定性估计，该模块在注册网络输出的李代数空间上应用高斯过程。具体采用混合专家高斯过程模型，其中门控函数与数字孪生的分区对齐，将输入空间划分到不同的GP专家。所使用的核函数为神经正切核，定义为神经网络参数雅可比矩阵的内积。该方法的优势在于其不确定性估计是解析的、无需采样的，因此计算开销小，且GP能提供可靠的协方差估计，用于后续的自主权调节。</li>
+<li><strong>基于不确定性的共享自主权控制模块</strong>：控制指令由人类操作者输入和机器人自主引导输入加权融合而成：<code>a(t) = α * a_h(t) + (1-α) * a_a(t)</code>。自主引导输入<code>a_a(t)</code>基于感知系统估计的目标位姿生成，相当于提供虚拟夹具。权威分配因子α由感知不确定性度量<code>‖Σ‖</code>（协方差矩阵的迹）和一个阈值β决定：当<code>‖Σ‖ &gt; β</code>时，α=1，系统完全由人类通过触觉设备遥操作（关闭虚拟夹具，追求鲁棒性）；否则α=0.5，启用半自主操作（开启虚拟夹具，追求高性能）。</li>
+<li><strong>多模态用户交互界面</strong>：为向操作者直观传达机器人的感知不确定性状态，系统集成了触觉反馈（通过力矩控制机械臂）和视觉反馈（通过Microsoft HoloLens 2提供2D视频流、3D环境状态可视化及遥测数据显示，如α和<code>‖Σ‖</code>）。操作者可通过手势交互，并可通过脚踏板手动调整权威分配。</li>
+</ol>
+<p>与现有共享自主权方法相比，SPIRIT的创新点具体体现在：首次将深度学习感知的不确定性明确纳入共享自主权的权威分配决策中；设计了一个结合数字孪生分区策略与NTK-GP不确定性估计的感知管道，以支持上述决策；并通过一个集成了触觉与扩展现实可视化反馈的界面，使人能够与机器人的不确定性认知进行交互。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验评估使用了基于BlenderProc软件生成的合成点云数据（用于消融研究）以及真实世界的空中操作平台进行用户研究和工业场景演示。对比的基线方法包括：不进行分区的点云注册、使用蒙特卡洛Dropout或集成学习进行不确定性估计的方法。</p>
+<p><img src="https://arxiv.org/html/2603.05111v1/2603.05111v1/x3.png" alt="消融研究结果"></p>
+<blockquote>
+<p><strong>图4</strong>：消融研究结果。数值越低越好。图例显示了表现最好的三个基线的值。结果表明，依赖分区的基线方法获得了更低的旋转和平移误差。本文的GP方法在正常条件（ID）和故障条件（OOD）下都产生了更可靠的不确定性估计（通过负对数似然NLL衡量）。</p>
+</blockquote>
+<p>关键实验结果总结如下：</p>
+<ol>
+<li><strong>感知系统消融实验</strong>：在合成数据上的实验表明，提出的分区策略显著降低了点云注册的旋转误差（从约16°降至约4°）和平移误差（从约0.12m降至约0.02m）。在不确定性估计方面，与蒙特卡洛Dropout和集成学习相比，本文提出的GP方法在正常（分布内）和异常（分布外）条件下都给出了更可靠的负对数似然值（NLL），表明其不确定性估计更准确（见图4）。</li>
+<li><strong>用户研究（15名参与者）</strong>：用户被要求使用SPIRIT系统完成两个具有挑战性的空中操作任务。实验设置了三种模式：纯遥操作、固定权威分配（α=0.5）的共享自主权、以及SPIRIT的动态权威分配（基于不确定性）。结果显示，在深度学习感知发生意外故障（模拟的分布外条件）时，SPIRIT模式的任务成功率最高（约93%），而固定共享自主权模式因错误引导导致成功率最低（约60%）。在感知正常的分布内条件下，SPIRIT与固定共享自主权模式均实现了100%的成功率，且完成时间相近，但SPIRIT通过仅在需要时提供引导，减少了操作者的工作量。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.05111v1/2603.05111v1/x5.png" alt="用户研究结果"></p>
+<blockquote>
+<p><strong>图6</strong>：用户研究中的任务成功率。在感知失效（OOD）条件下，SPIRIT（基于不确定性）模式的成功率（<del>93%）显著高于固定共享自主权模式（</del>60%）和纯遥操作模式（~80%）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05111v1/2603.05111v1/x6.png" alt="任务完成时间与工作量"></p>
+<blockquote>
+<p><strong>图7</strong>：用户研究中的任务完成时间和NASA-TLX工作量评分。在感知正常（ID）条件下，SPIRIT与固定共享自主权模式性能相当，但SPIRIT的工作量评分更低。</p>
+</blockquote>
+<ol start="3">
+<li><strong>工业场景演示</strong>：SPIRIT原型系统成功完成了模拟工业维护场景中的两项任务：1）抓取并转移一个装有检测爬行机器人的笼子以扩展其移动范围；2）操作一个工业法兰阀门。该系统在为期五天的公开展览中进行了演示，并被选为一项重要工业创新奖的决赛入围者。</li>
+</ol>
+<p>消融实验总结：分区策略是提升点云注册精度的关键组件；基于NTK的GP不确定性估计方法是提供可靠不确定性度量（用于自主权切换）的关键组件；两者共同促成了SPIRIT系统的实现。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）提出了“感知共享自主权”的概念，通过利用深度学习感知的不确定性来动态调节人机协作的自主水平，从而在性能与鲁棒性之间取得平衡；2）开发了SPIRIT系统，其核心是一个结合数字孪生分区策略与基于神经正切核的高斯过程不确定性估计的感知管道；3）设计了一个集成了触觉与扩展现实可视化反馈的人机交互界面，有效传达了机器人的不确定性状态。</p>
+<p>论文自身提到的局限性在于：其感知方法依赖于环境的数字孪生模型，这在某些应用中可能是一个限制；此外，权威分配策略（α）采用了简单的阈值切换，未来可以探索更平滑或自适应的过渡策略。</p>
+<p>本工作对后续研究的启示在于：它强调了在集成深度学习组件时进行系统级不确定性管理的重要性，而非一味追求感知模型的绝对精度。该方法为在安全关键应用中可靠地部署性能强大但“黑盒”的深度学习模型提供了一种可行思路，即通过人机协作和透明化的不确定性交互来构筑安全防线。未来的工作可以探索更复杂的不确定性感知决策框架，并将该概念推广至更广泛的机器人任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对深度学习（DL）用于机器人感知时鲁棒性不足、不可解释且难以安全部署的核心问题，提出“感知共享自主权”框架。该框架利用DL感知的不确定性估计动态调节自主水平：高置信时启用半自主操作以提升性能，高不确定时切换至触觉遥操作以维持鲁棒性。关键技术采用基于神经切线核（NTK）的不确定性感知点云配准方法。通过15名参与者的用户研究和模拟工业场景实验验证，系统SPIRIT在DL感知失败时仍能实现可靠操作，显著提升了机器人操作性能和系统可靠性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05111" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>SeedPolicy: Horizon Scaling via Self-Evolving Diffusion Policy for Robot Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>SeedPolicy: Horizon Scaling via Self-Evolving Diffusion Policy for Robot Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05117" target="_blank" rel="noreferrer">2603.05117</a></span>
+        <span>作者: Shuaicheng Liu Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>模仿学习（IL）已成为机器人获取操作技能的主流范式。其中，扩散策略（Diffusion Policy， DP）通过将机器人策略建模为条件去噪扩散过程，在捕捉人类行为的多模态分布方面表现出色。然而，论文指出标准扩散策略存在一个关键局限：随着观测视野（observation horizon）的增加，其性能会反常地下降（如图1（a）所示）。这源于一个根本性的建模缺陷：简单地将观测帧堆叠起来无法有效捕捉复杂的时间依赖关系，当帧数增多时，问题愈发严重。</p>
+<p>本文针对扩散策略的这一“时间建模瓶颈”提出了解决方案。核心思路是：设计一个能够递归更新、紧凑编码历史信息的时变潜状态，并引入基于注意力的动态门控机制来过滤无关的时间扰动，从而实现对长时程依赖的有效建模，并逆转基线方法随视野增大而性能下降的趋势。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>SeedPolicy的整体框架是一个端到端的机器人操作策略模型。其输入是当前时刻的RGB图像 $I_t$ 和关节位姿 $P_t$，输出是未来一系列14自由度的动作 $A_t$。</p>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/1.png" alt="SeedPolicy框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：SeedPolicy框架总览。系统接收当前RGB图像和关节位姿，通过ResNet编码器进行编码。核心的自演化门控注意力（SEGA）模块（蓝色框）递归更新一个时变潜状态（$State_t$），以捕获长期时空依赖，同时生成增强的观测特征（$EObs_t$）。这些富含上下文信息的特征随后被送入基于Transformer的动作专家（扩散模型），以预测未来动作序列。</p>
+</blockquote>
+<p>整体流程可形式化为四个步骤：1) 编码观测：$O_t = \text{Encoder}(I_t, P_t)$；2) 更新状态：$S_t = \text{Update}(S_{t-1}, O_t)$；3) 检索增强特征：$EObs_t = \text{Retrieve}(O_t, S_{t-1})$；4) 生成动作：$A_t = \text{Diffusion}(EObs_t)$。其中，$S_t \in \mathbb{R}^{N_s \times D}$ 是固定大小的潜状态，$N_s=60$ 为序列长度，$D=256$ 为特征维度。</p>
+<p>核心创新模块是<strong>自演化门控注意力（SEGA）</strong>。如图3（a）所示，SEGA采用并行双流Transformer设计，协调两个过程：<strong>状态更新流</strong>（上）和<strong>状态检索流</strong>（下）。</p>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/2.png" alt="SEGA模块细节"></p>
+<blockquote>
+<p><strong>图3</strong>：(a) SEGA采用双流设计：状态更新流（上）通过整合新观测来演化潜状态（$State_{t-1}$），而状态检索流（下）利用历史上下文生成增强的观测特征（$EObs_t$）。(b) 自演化门（SEG）直接从交叉注意力图中动态计算门控信号，选择性地融合中间演化状态与先前状态，确保只保留语义相关信息并过滤噪声。</p>
+</blockquote>
+<p><strong>状态更新流</strong>负责维护时变潜状态。首先，历史状态 $S_{t-1}$ 和当前观测 $O_t$ 分别经过多头自注意力（MSA）进行内部上下文特征提取（公式5，6）。接着，处理后的状态特征 $S‘_{t-1}$ 作为查询（Query），从观测特征 $O’<em>t$（作为键和值）中提取相关信息，产生中间状态 $\text{Inter} \cdot S_t$ 和原始注意力分数图 $\mathcal{A}$（公式7）。为了避免不加区分地整合所有观测信息导致状态被视觉扰动污染，论文引入了<strong>自演化门（SEG）</strong>（图3（b））。SEG将原始注意力分数 $\mathcal{A}$ 解释为“相关性信号”，通过计算所有层、所有头、所有观测token上的注意力分数的平均值，得到一个全局相关性分数 $R$（公式9），并据此通过Sigmoid函数 $\sigma$ 生成更新门 $G_t$（公式8）。最终更新后的状态 $S_t$ 是门控融合的结果：$S_t = G_t \odot \text{Inter} \cdot S_t + (1 - G_t) \odot S</em>{t-1}$（公式10），这确保了只有语义相关的信息被整合到状态中。</p>
+<p><strong>状态检索流</strong>与更新流并行，但交互角色相反。处理后的观测特征 $O‘<em>t$ 作为查询，主动从历史状态特征 $S’</em>{t-1}$（作为键和值）中检索相关的时序线索，生成增强的观测特征 $EObs_t = \text{CA}(O‘<em>t, S’</em>{t-1}, S‘_{t-1})$（公式11）。这个机制对于弥补因长期依赖而丢失的信息至关重要，为后续的动作预测提供了鲁棒的感知基础。</p>
+<p>与现有方法相比，SeedPolicy的创新点在于：1) 提出了一个完全由注意力驱动的递归模型（SEGA），其状态演化和门控均由交叉注意力计算，实现了内容自适应、无参数的更新；2) 将门控机制应用于时间维度（而非特征深度维度），利用内在的注意力分数动态过滤历史信息，增强了模型对时序噪声和冗余的鲁棒性。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在RoboTwin 2.0仿真基准（包含50个操作任务，使用ALOHA-AgileX机器人）和真实机器人（Dexmal Dos W1）平台上进行。在仿真中，每个策略使用50条专家演示训练600轮，并在Easy（demo_clean）和Hard（demo_randomized）两种配置下，每个任务进行100次 rollout 测试，报告三次独立试验的平均成功率。</p>
+<p>对比的基线方法包括：1) **Diffusion Policy (DP)**：使用堆叠RGB图像和关节位姿的原始扩散策略。2) <strong>DP w. Temporal Attention</strong>：使用标准时序注意力聚合历史上下文的DP。3) <strong>DP w. State</strong>：使用循环状态更新机制但无门控模块的DP。4) **SeedPolicy (Ours)**：完整方法。</p>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/3.png" alt="任务长度与性能关系"></p>
+<blockquote>
+<p><strong>图4</strong>：不同任务长度下的性能比较。两种架构都呈现出一致的趋势：随着任务长度增加，SeedPolicy与基线之间的性能差距逐渐扩大。这验证了我们方法的架构无关有效性，表明在长时程场景中，我们显式的时间建模相比固定窗口基线优势愈发显著。</p>
+</blockquote>
+<p>关键定量结果总结如下：在RoboTwin 2.0基准测试的50个任务中，SeedPolicy在Transformer和CNN骨干网络下，分别优于或匹配基线模型45个和44个任务。在Easy设置下，SeedPolicy（Transformer）实现了7%的绝对提升和21.10%的相对提升；CNN骨干则实现了14.72%的绝对提升和52.50%的相对提升。在更具挑战性的Hard设置下，SeedPolicy表现出更强的韧性，Transformer版本取得了3%的绝对提升和197.22%的相对提升。与拥有12亿参数的大规模视觉-语言-动作模型RDT相比，SeedPolicy（Transformer，3336万参数；CNN，1.4726亿参数）在Easy设置下取得了具有竞争力的性能（CNN版成功率42.76%，超过RDT的34.50%），展现了出色的参数效率。</p>
+<p>图4的分析表明，SeedPolicy在捕获长期依赖关系方面具有卓越能力。随着任务长度（短、中、长）增加，SeedPolicy相对于基线的性能优势持续扩大，尤其在长时程任务中，Transformer和CNN骨干的优势分别达到16.0%和21.9%，验证了SEGA模块在维持连续演化状态、避免信息丢失方面的有效性。</p>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/4.png" alt="仿真失败案例定性对比"></p>
+<blockquote>
+<p><strong>图5</strong>：仿真中失败案例的定性可视化。我们比较了SeedPolicy（上行）的成功执行与DP在三个任务中的代表性失败模式：（a）Put_Bottles_Dustbin（”clean”设置），（b）Handover_Mic（”hard”设置），和（c）Grab_Roller（”hard”设置）。红圈突出了关键错误，包括执行停滞（卡住）和空间定位失败（碰撞或空中抓取）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/5.png" alt="真实世界定量结果"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界定量结果。在三个挑战性任务上的成功率比较：Looping_Place-Retrieval, Sequential_Picking, 和 Bottle_Handover。SeedPolicy展现出卓越的鲁棒性，在所有场景中均显著优于基线（DP）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05117v1/2603.05117v1/6.png" alt="真实世界失败分析"></p>
+<blockquote>
+<p><strong>图7</strong>：真实世界场景中的定性失败分析。我们将SeedPolicy（上排）的成功执行与基线在（a）Looping_Place-Retrieval和（b）Bottle_Handover中的常见失败进行可视化对比。红圈突出关键错误。失败案例1展示了由感知混淆（在（a）中将放回的积木误认为初始状态）或对停顿过拟合（在（b）中）导致的执行停滞。失败案例2展示了由于缺乏显式深度信息导致的空间精度错误（空中抓取和碰撞）。</p>
+</blockquote>
+<p>定性分析（图5，7）揭示了SeedPolicy的两大优势：1) <strong>缓解执行停滞与状态混淆</strong>：在包含视觉上相似阶段的多阶段任务中，基线因固定窗口无法区分任务阶段而停滞，而SeedPolicy通过递归更新的潜状态维持了对任务进度的结构化表征，能平滑过渡。2) <strong>对缺乏深度信息的鲁棒性</strong>：在仅使用单目RGB相机的设置下，基线因无法从有限历史中解决深度模糊而导致空间定位错误（如空中抓取）。SeedPolicy通过整合长时程的连续运动线索，隐式地重建和记忆场景的空间几何，补偿了深度信息的缺失。</p>
+<p>消融实验（论文中提及但未在提供图片中展示的图8）表明，状态机制和动态门控的集成对于有效的视野扩展至关重要。完整SeedPolicy（SEGA）的性能优于仅使用状态更新（DP w. State）或标准时序注意力（DP w. Temporal Attention）的变体，证明了门控机制在过滤噪声、选择性整合信息方面的重要作用。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1) <strong>提出了自演化门控注意力（SEGA）模块</strong>：这是一个通过门控注意力机制维护紧凑时变潜状态的时间模块，能有效捕获长期依赖并过滤无关时序干扰。2) <strong>实现了扩散策略的有效视野扩展</strong>：成功逆转了先前扩散策略随观测视野增加而性能下降的趋势，使更长的观察窗口能转化为可衡量的性能增益。3) <strong>提出了高性能且高效的SeedPolicy</strong>：在RoboTwin 2.0基准测试中达到了模仿学习方法的先进水平，相比原始扩散策略在简单和困难设置下分别取得了平均36.8%和169%的相对改进，并以少一到两个数量级的参数量，取得了与大规模视觉-语言-动作模型具有竞争力的性能。</p>
+<p>论文自身提到的局限性包括：实验主要与模仿学习基线对比，未与更复杂的基于世界模型或离线强化学习的方法进行广泛比较；此外，SEGA模块的递归更新虽然降低了长视野下的计算复杂度，但仍引入了额外的计算开销。</p>
+<p>本文的启示在于：将门控机制从特征/通道维度扩展到时间维度，利用模型内在的注意力分数进行动态信息过滤，是构建鲁棒、高效的长时程序列模型的一个有力设计原则。这项工作为扩散策略在更复杂、长周期的机器人任务中的应用扫除了一个关键障碍，并为未来在具身智能中设计更高效的时间建模架构提供了新思路。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对模仿学习中扩散策略在长观察时域下性能下降的问题，提出自进化扩散策略SeedPolicy。其核心是自进化门控注意力模块，通过门控注意力机制维护时变潜在状态，以循环更新方式压缩长时域观测为固定尺寸表示，过滤无关时序信息。在RoboTwin 2.0基准的50项任务上，SeedPolicy相比原扩散策略在常规和随机设置下分别取得36.8%和169%的相对性能提升，并以少1–2个数量级的参数量达到与大规模视觉-语言-动作模型相当的效能。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05117" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

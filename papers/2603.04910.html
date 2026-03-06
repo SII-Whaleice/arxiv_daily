@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>VPWEM: Non-Markovian Visuomotor Policy with Working and Episodic Memory - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>VPWEM: Non-Markovian Visuomotor Policy with Working and Episodic Memory</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.04910" target="_blank" rel="noreferrer">2603.04910</a></span>
+        <span>作者: Ping Luo Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人模仿学习领域，从人类示范中学习策略已取得显著成功。然而，当前主流视觉运动策略（如基于Transformer或扩散模型的方法）通常仅基于单步观察或短时上下文历史（如2、6或10步）来预测动作。这种做法将任务建模为马尔可夫决策过程或部分可观测马尔可夫决策过程，但仅使用有限的历史窗口。在现实场景中，由于传感器限制、环境随机性以及涉及多个子目标的复杂长时程任务，机器人任务往往是非马尔可夫的。现有方法在处理这类需要长期记忆的任务时面临两大关键挑战：首先，随着历史长度L增加，计算复杂度和内存需求（如自注意力机制的O(L²)复杂度）急剧增长，导致训练成本过高和推理延迟；其次，简单地依赖更长历史而不加选择地利用信息，容易导致模型过拟合到历史中的虚假相关性（如因果混淆、模仿问题），从而在分布偏移下出现灾难性失败。</p>
+<p>本文针对机器人策略缺乏有效长期记忆机制这一痛点，提出了一种新视角：受人类大脑海马体将工作记忆转化为长期存储的机制启发，设计一种能够压缩并利用长时历史信息的记忆系统。本文的核心思路是提出VPWEM，一个配备工作记忆和情景记忆的非马尔可夫视觉运动策略，它通过一个基于Transformer的上下文记忆压缩器，递归地将超出窗口的观察令牌压缩成固定数量的情景记忆令牌，从而以近乎恒定的每步计算和内存成本，为动作生成提供短期和全局信息。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>VPWEM的整体框架旨在为扩散策略同时提供短期工作记忆和长期情景记忆。其核心是在标准的扩散策略基础上，增加了一个上下文记忆压缩器模块。</p>
+<p><img src="https://arxiv.org/html/2603.04910v1/2603.04910v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：VPWEM框架概览。(a) 策略架构。绿色模块为可学习组件，包括多模态编码器、上下文记忆压缩器、摘要令牌和扩散策略中基于Transformer的噪声预测器。(b) 训练过程。每个训练样本包含从回合开始起的完整轨迹。短期记忆组件遵循标准扩散策略基线。对上下文窗口外的观察以固定比例进行子采样，并传递给上下文记忆压缩器，后者输出固定数量的记忆令牌。结合后的长短期记忆令牌用于条件化噪声预测网络。(c) 推理过程。每个决策步骤包含三步：编码新帧并更新观察和摘要缓存；压缩窗口外令牌以获得长期记忆令牌；预测动作块。</p>
+</blockquote>
+<p><strong>整体流程</strong>：在每一步t，策略接收新的多模态观察（如RGB图像、本体感知状态），通过编码器得到观察令牌o_t。系统维护一个固定大小为L的滑动窗口，其中的令牌构成工作记忆 w_t = o_{t-L:t}。同时，一个上下文记忆压缩器会递归地将刚刚移出窗口的观察令牌（以及更早的历史）压缩成固定大小为M的情景记忆令牌 e_τ。最终，扩散去噪网络基于工作记忆 w_t、情景记忆 e_τ 和去噪步数k，预测当前的动作块。</p>
+<p><strong>核心模块一：工作记忆</strong>。工作记忆是策略对近期历史的直接感知。多模态编码器（如图像编码器、MLP）将原始观察（如RGB-D图像、本体状态）编码为特征向量 o_t ∈ ℝ^D。工作记忆定义为最近L个观察令牌的拼接 w_t ∈ ℝ^{L×D}，采用先进先出（FIFO）队列管理。这继承了现有短时上下文策略的优点，但不足以应对超出窗口L的长期依赖。</p>
+<p><strong>核心模块二：情景记忆（上下文记忆压缩器）</strong>。这是本文的核心创新。为了处理超出窗口的长期历史 o_{≤ t-L}，VPWEM引入了一个基于Transformer编码器架构的记忆压缩器。其输入是刚刚移出窗口的观察令牌 f_τ（添加了位置编码），该令牌被存入一个最大容量为S的观察缓存 C_f。压缩器包含N个块，每个块包含自注意力层（与过去的摘要令牌交互）、交叉注意力层（与历史观察令牌交互）和前馈网络。具体过程如公式(1)-(5)所示：每个块操作M个可学习的查询令牌 q_{n,τ}。自注意力层让当前查询与存储在过去摘要缓存 C_q 中的历史查询交互，形成对过往记忆的紧凑摘要 x_{1,n}。随后，交叉注意力层以此摘要为查询，与观察缓存 C_f 中的多帧观察特征交互，捕获跨帧的长期依赖。最后一个块的输出经过MLP投影后，得到固定大小的情景记忆 e_τ ∈ ℝ^{M×D}。查询令牌 q_{n,τ} 也会被存入对应的摘要缓存 C_{q,n} 以供未来步骤使用。在训练时，观察特征 f_τ 和查询令牌 q_{n,τ} 在存入缓存前会从计算图中分离，防止梯度随时间反向传播，这大幅减少了内存消耗并缓解了过拟合。</p>
+<p><strong>核心模块三：基于记忆的动作生成</strong>。VPWEM基于扩散策略生成动作。与基线方法仅以观察历史为条件不同，VPWEM的条件信息是工作记忆 w_t 和情景记忆 e_τ 的拼接。训练目标如公式(6)所示，是预测噪声的均方误差损失。记忆压缩器通过此行为克隆损失与策略联合端到端优化，从而学会从历史中提取与任务相关的信息。推理时，如公式(7)所示，去噪网络迭代地将噪声序列转换为最终动作。</p>
+<p><strong>创新点</strong>：1) <strong>记忆机制</strong>：首次在机器人扩散策略中显式引入可学习的、递归压缩的长期情景记忆模块，与短期工作记忆互补。2) <strong>恒定成本</strong>：通过将不断增长的历史压缩为固定大小的记忆令牌，实现了随任务时长增长而近乎恒定的每步计算和内存开销。3) <strong>抗过拟合</strong>：压缩器通过端到端训练学习过滤历史中的无关信息，有望缓解对虚假相关性的过拟合。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：VPWEM在三个基准上进行了评估：1) <strong>MIKASA</strong>：包含ShellGameTouch-v0和RememberColor3-v0两个记忆密集型桌面操作任务。2) <strong>MoMaRT</strong>：包含5个长时程移动操作任务（如dwsetup, dscleanup等）。3) <strong>Robomimic</strong>：包含Square和Transport两个近似马尔可夫的任务，以及一个非马尔可夫的Long-Horizon Square任务。对比的基线方法包括RNN策略、扩散策略(DP)、带过去令牌预测的扩散策略(DP-PTP)、基于Mamba的模仿学习(MaIL)，以及在MIKASA上对比的多个先进VLA模型（如Octo-small, OpenVLA, π_0等）。</p>
+<p><img src="https://arxiv.org/html/2603.04910v1/2603.04910v1/x2.png" alt="基准任务图示"></p>
+<blockquote>
+<p><strong>图3</strong>：实验中使用的三个基准任务示例。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.04910v1/2603.04910v1/x3.png" alt="MoMaRT结果"></p>
+<blockquote>
+<p><strong>图4</strong>：在MoMaRT基准上的性能。VPWEM（基于DP和MaIL实例化）在多数任务上超越了基线，平均提升约5%。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.04910v1/2603.04910v1/x4.png" alt="MIKASA结果"></p>
+<blockquote>
+<p><strong>图5</strong>：在MIKASA基准上的性能。VPWEM显著优于固定上下文窗口的对比方法，并且平均超越最先进的VLA基线20%以上。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.04910v1/2603.04910v1/x5.png" alt="Robomimic结果"></p>
+<blockquote>
+<p><strong>图6</strong>：在Robomimic基准上的性能。在近似马尔可夫的任务上，VPWEM与基线表现相当；在非马尔可夫的Long-Horizon Square任务上，VPWEM（DP-VPWEM）明显优于基线DP-PTP。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>记忆密集型任务（MIKASA）</strong>：VPWEM取得了最先进的性能。在ShellGameTouch-v0任务上，DP-VPWEM成功率达91.7%，远超DP-PTP（16.7%）及其他VLA模型（最高63.3%）。在RememberColor3-v0任务上，DP-VPWEM成功率达83.3%，同样大幅领先。</li>
+<li><strong>移动操作任务（MoMaRT）</strong>：VPWEM在五个任务上平均比基线提升约5%。例如，在unload-suboptimal任务上，DP-VPWEM成功率达到58.3%，而DP-PTP（上下文长度32）为49.6%。</li>
+<li><strong>近似马尔可夫任务（Robomimic）</strong>：在Square和Transport任务上，VPWEM与基线方法性能相当，表明其引入的记忆机制在不需要长期记忆的任务中不会带来性能损失。在非马尔可夫的Long-Horizon Square任务上，DP-VPWEM（83.3%）显著优于DP-PTP（50.0%）。</li>
+</ol>
+<p><strong>计算成本分析</strong>：如表II所示，在MoMaRT的unload-suboptimal任务上，随着上下文长度增加，DP-PTP的GPU内存和推理时间显著增长（从656 MB/0.17s到1792 MB/0.72s），而DP-VPWEM（L2S2配置，即L=2，M=2）以适中的成本增加（734 MB/0.22s）换来了更高的成功率（58.3% vs. 49.6%），证明了其效率优势。</p>
+<p><strong>消融实验</strong>：论文通过消融研究验证了关键设计。例如，移除了情景记忆（仅用工作记忆）或工作记忆（仅用情景记忆）都会导致在MIKASA任务上性能显著下降，证明了二者互补的重要性。对压缩器层数N、记忆令牌数M、缓存大小S等超参数进行了分析，表明较小的M（如2）和适中的N（如2）即可取得良好效果，过大的M或N可能引入噪声或导致过拟合。子采样策略也被证明是平衡信息保留与训练效率的有效手段。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了一个新颖的机器人策略框架VPWEM，首次将基于Transformer的、可递归更新的上下文记忆压缩器与扩散策略相结合，为动作生成提供互补的短期工作记忆和长期情景记忆。</li>
+<li>该方法实现了对全长轨迹历史的有效利用，同时通过将历史压缩为固定大小的记忆令牌，控制了计算和内存成本的增长，使其近乎恒定。</li>
+<li>在多个基准上的实验表明，VPWEM能显著提升在非马尔可夫、记忆密集型任务上的性能（如在MIKASA上超越SOTA方法20%以上），而在近似马尔可夫任务上保持相当性能，验证了其有效性和通用性。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，记忆压缩器的设计（如缓存管理策略、压缩比率）可能并非最优，未来可以探索更高效的记忆机制。此外，当前方法主要处理视觉和本体感知模态，未来可扩展至更丰富的多模态输入（如语言指令、触觉）。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>记忆机制的设计</strong>：VPWEM展示了在机器人策略中显式设计记忆模块的潜力。后续工作可以探索不同的记忆架构（如基于检索的、层次化的）、更先进的压缩机制，或引入遗忘/巩固机制来动态管理记忆。</li>
+<li><strong>与基础模型的结合</strong>：该方法可视为对现有VLA模型或扩散策略的增强模块。未来可以尝试将其集成到更大的多模态基础模型中，以提升其在长时程、复杂推理任务上的能力。</li>
+<li><strong>从仿真到现实</strong>：论文工作在仿真环境中验证。将其部署到真实机器人，并处理真实世界的不确定性、部分观测和延迟，是重要的下一步方向。记忆机制可能有助于机器人应对真实环境中更复杂的非马尔可夫性。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人模仿学习中现有视觉运动策略因缺乏长期记忆而难以处理非马尔可夫任务的问题，提出了VPWEM策略。该策略结合工作记忆（滑动窗口近期观测）与情景记忆（通过Transformer记忆压缩器递归压缩历史观测为固定数量令牌），并与扩散策略结合实现高效信息利用。实验表明，VPWEM在MIKASA记忆密集型操作任务上超越现有基线超过20%，在MoMaRT移动操作基准上平均提升5%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.04910" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

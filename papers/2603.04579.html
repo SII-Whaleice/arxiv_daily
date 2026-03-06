@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Risk-Aware Reinforcement Learning for Mobile Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Risk-Aware Reinforcement Learning for Mobile Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.04579" target="_blank" rel="noreferrer">2603.04579</a></span>
+        <span>作者: Lars Kunze Team</span>
+        <span>日期: 2026-03-04</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>移动操作机器人结合移动基座与机械臂，为复杂任务提供了广阔的工作空间，但其在动态、非结构化环境中面临定位、感知和执行等多重不确定性。这些不确定性带来了潜在的行动风险，尤其是在人机共存的环境中，仅优化期望回报的标准方法可能不安全，因为忽略了低概率、高成本的灾难性后果。现有的全身控制器通常缺乏在不确定性下进行显式风险敏感决策的机制。基于学习的框架，特别是强化学习，能够从高维传感器数据实现反应式控制，但标准强化学习旨在最大化期望回报，本质上忽略了结果的方差和尾部风险。分布强化学习通过建模完整的价值分布来允许对风险进行显式推理，然而由于在线强化学习的样本效率低下，其在训练视觉运动策略方面的应用仍较少探索。</p>
+<p>本文针对移动操作中缺乏从原始感官输入进行运行时可调节的风险感知决策这一具体痛点，提出了一个新的视角：将分布强化学习与失真风险度量相结合，以训练具备风险感知能力的策略，并通过模仿学习将这种风险感知行为转移到基于视觉的策略中。本文的核心思路是：首先利用特权信息训练一个风险感知的教师策略，该策略使用分布评论家预测回报分布，并应用失真风险度量来计算用于策略更新的风险调整优势估计；然后，通过模仿学习将该教师策略蒸馏为一个仅依赖自我中心深度观测的学生策略。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架是一个两阶段流程。第一阶段训练一个具备风险感知能力的特权教师策略；第二阶段通过模仿学习将该教师策略蒸馏为一个基于视觉（深度图像）的学生策略。</p>
+<p><img src="https://arxiv.org/html/2603.04579v1/2603.04579v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：方法整体框架。左侧为第一阶段：使用分布强化学习训练风险感知教师策略。评论家预测价值分布 (Z_{\phi}(s))，通过风险度量进行扭曲以计算风险扭曲期望值，用于更新同时以风险敏感参数 (\beta) 为条件的教师策略 (\pi_{\theta})。右侧为第二阶段：通过与风险感知教师策略 (\pi_{\theta}) 进行模仿学习，训练以高维深度观测为条件的学生策略 (\pi_{\psi})。风险敏感参数 (\beta) 在运行时由外部操作员或规划器提供。</p>
+</blockquote>
+<p><strong>核心模块1：风险感知特权教师策略</strong><br>教师策略 (\pi_{\theta}(a_t|o_t^{teacher}, \beta)) 的输入是低维特权观测 (o_t^{teacher}=(\tilde{h}_t, s_t^{robot}, s_t^{goal}, s_t^{task}))，包括真实高度扫描、机器人状态和任务目标，并额外以风险敏感参数 (\beta) 为条件。高度扫描信息通过一个2层CNN编码，然后与其他观测及 (\beta) 拼接，输入1层LSTM和3层MLP以产生动作。</p>
+<p>其核心创新在于评论家设计和策略更新机制。评论家采用QR-DQN，将风险中性价值分布建模为以评论家网络预测的分位数 (\phi_i(s)) 为中心的狄拉克δ函数的均匀混合：(Z_{\phi}(s)=\frac{1}{N}\sum^{N}<em>{i=1}\delta</em>{\phi_i(s)})。为了将风险敏感性引入演员策略更新，对预测的回报分布 (Z_{\phi}(s)) 应用失真风险度量，得到扭曲后的价值分布。扭曲期望值 (V_{\beta}(s)) 计算为分布的风险调整分位数支撑的加权和：(V_{\beta}(s)=\sum_{k=1}^{N}\left(g_{\beta}\left(\tau_{k}\right)-g_{\beta}\left(\tau_{k-1}\right)\right)\phi_{k}(s))，其中 (g_{\beta}(\tau)) 是基于风险参数 (\beta) 修改分位数的失真函数。本文研究了Wang和条件风险价值两种失真风险度量。风险敏感的价值估计 (V_{\beta}(s)) 被用于PPO策略更新的优势估计中。改变 (\beta) 会在计算用于策略更新的扭曲价值时，重新权衡低回报与高回报分位数，从而直接控制风险厌恶或风险寻求行为。</p>
+<p><strong>核心模块2：风险感知视觉运动学生策略</strong><br>学生策略 (\pi_{\psi}) 的输入是实际可获得的观测 (o_t^{student}=(d_t, s_t^{robot}, s_t^{goal}, s_t^{task}))，其中 (d_t) 是自我中心深度图像。将教师策略中输入高度扫描的CNN编码器替换为输出维度匹配的深度图像CNN编码器 (E_{depth}(d_t))，并复用教师的LSTM+MLP架构（用教师权重初始化）。学生策略使用DAgger进行训练，以最小化学生动作与教师动作之间的 (L_2) 损失。训练时，先使用教师动作在环境中交互600个回合以缓解分布偏移，仅更新CNN深度编码器权重；然后解冻所有学生策略权重，使用学生动作进行交互。</p>
+<p>与现有方法相比，本文的创新点具体体现在：1) 首次将动态风险感知强化学习（结合分布强化学习与失真风险度量）扩展到基于自我中心深度观测的移动操作任务，并引入了运行时可调的风险敏感参数；2) 首次通过模仿学习框架，将学习到的风险感知行为成功转移至基于视觉的学生策略。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验使用丰田HSR移动操作机器人，在IsaacLab仿真环境中进行，使用RSL-RL库训练。评估了两个任务：<strong>导航任务</strong>（在存在静态和动态障碍物的环境中到达3D目标）和<strong>拾取任务</strong>（抓取立方体并将其抬升到目标位置）。基线方法包括风险中性的分布近端策略优化和标准PPO策略。</p>
+<p><img src="https://arxiv.org/html/2603.04579v1/2603.04579v1/x2.png" alt="训练环境"></p>
+<blockquote>
+<p><strong>图3</strong>：训练环境。(a) 导航任务：到达3D目标（坐标轴所示）同时避开静态和动态障碍物。(b) 拾取任务：抓取并抬起立方体至目标位置（红色球体）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.04579v1/2603.04579v1/x3.png" alt="训练曲线"></p>
+<blockquote>
+<p><strong>图4</strong>：(a)导航和(b)拾取任务的训练曲线。教师策略每回合评估步数更多（4096 vs. 256个并行环境）。(b)中第600回合处的下降标志着切换到学生驱动环境交互。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.04579v1/2603.04579v1/x4.png" alt="任务性能"></p>
+<blockquote>
+<p><strong>图5</strong>：导航和拾取任务的政策评估结果。(a)从左到右：任务成功率；与环境及动态障碍物的接触率；累积回报。(b)从左到右：任务成功率；超时率（非终止）；达到目标成功所需时间；任务失败终止所需时间。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：</p>
+<ul>
+<li><strong>导航任务</strong>：使用Wang度量的风险感知策略（(\beta) 从-1.0到1.0）表现出连续的行为谱。风险厌恶策略（(\beta=1.0)）实现了<strong>零碰撞</strong>，但成功率较低（<del>75%）且回报较低。风险寻求策略（(\beta=-1.0)）成功率最高（</del>95%），但碰撞率也最高（~35%）。风险中性策略（(\beta=0.0)）平衡了成功率和安全性。</li>
+<li><strong>拾取任务</strong>：成功训练了使用Wang度量的风险感知分布PPO策略，但未能成功训练PPO或使用CVaR度量的分布PPO策略。风险厌恶策略（(\beta=1.0)）在最具挑战性的测试场景（立方体置于桌子深处）中表现出<strong>最佳的最坏情况性能</strong>，成功率达65%，而风险中性策略为40%，风险寻求策略为20%。这表明风险厌恶策略更稳健。</li>
+<li><strong>模仿学习有效性</strong>：基于深度图像的学生策略成功继承了教师策略的风险感知行为。在导航任务中，学生策略在成功率、碰撞率和回报方面与教师策略趋势一致。</li>
+<li><strong>消融实验</strong>：论文通过图6（导航任务课程学习进展）表明，直接使用深度图像训练策略（“Depth”）失败，而使用特权高度扫描的教师策略（“Scandots”）则能稳定学习，这凸显了所提两阶段模仿学习框架的必要性。课程学习和域随机化对于成功训练至关重要。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.04579v1/2603.04579v1/figures/depth_curriculum_plot.png" alt="课程学习对比"></p>
+<blockquote>
+<p><strong>图10</strong>：导航任务课程学习进展对比。基于特权高度扫描的教师策略学习稳定，而直接基于深度图像的策略未能学习，证明了模仿学习框架的必要性。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了首个结合分布强化学习与失真风险度量、并具备运行时可调风险敏感参数的移动操作视觉运动策略训练框架；2) 首次证明通过模仿学习可以将学习到的风险感知行为成功转移至仅依赖深度观测的学生策略，使其能在无地图的非结构化动态环境中进行反应式全身控制。</p>
+<p>论文自身提到的局限性包括：1) 在拾取任务中，无法成功训练使用CVaR风险度量的策略，作者推测这与训练CVaR策略众所周知的挑战有关；2) 对于CVaR策略，当风险参数 (\beta &lt; 0.05) 时，性能严重下降，因为过小的 (\beta) 过度强调价值分布中极小的部分，导致风险调整后的价值估计噪声大且不可靠。</p>
+<p>本工作对后续研究的启示在于：为在安全关键的机器人任务中实现可调节的风险感知决策提供了一条可行路径。它展示了如何将基于低维状态的动态风险感知强化学习与基于视觉的模仿学习相结合，以应对高维感知输入带来的挑战。未来的工作可以探索更复杂的风险度量、将风险敏感参数 (\beta) 与在线不确定性估计自动关联，以及将框架部署到真实机器人系统。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对移动操作机器人在动态非结构化环境中缺乏风险感知决策机制的核心问题，提出一种风险感知强化学习方法。关键技术包括：采用分布强化学习训练特权教师策略，利用扭曲风险度量计算风险调整优势估计以实现风险敏感行为；再通过模仿学习将策略蒸馏到以自我中心深度观察为条件的学生策略，支持运行时风险敏感性调节。实验表明，所训练的视觉运动策略在未知环境中执行全身运动时，能表现出风险感知行为，特别是在最坏情况性能方面获得提升。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.04579" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
