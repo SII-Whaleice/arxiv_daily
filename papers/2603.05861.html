@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DexEMG: Towards Dexterous Teleoperation System via EMG2Pose Generalization - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DexEMG: Towards Dexterous Teleoperation System via EMG2Pose Generalization</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05861" target="_blank" rel="noreferrer">2603.05861</a></span>
+        <span>作者: Kaifeng Zhang Team</span>
+        <span>日期: 2026-03-06</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前灵巧手遥操作主要有两种主流范式：基于机械外骨骼的系统和基于视觉的运动捕捉系统。外骨骼系统（如CyberGrasp）虽然控制精度高，但体积庞大、笨重且昂贵，其同构设计也意味着机器人手的任何结构修改都需要对应地重新设计外骨骼硬件。视觉系统（如Vicon、Leap Motion）则受限于高昂成本、对专用静态基础设施的依赖，以及灵巧操作中普遍存在的手指自遮挡问题。这些局限性阻碍了它们在非结构化家庭环境中的广泛应用。本文针对现有方法在便携性、成本与性能之间难以兼得的痛点，提出了利用表面肌电（sEMG）信号作为人机交互媒介的新视角。sEMG具有可穿戴、低成本、无视线遮挡的优点，但将其用于连续、高维的手部运动学预测而非离散手势分类仍是一个挑战。本文核心思路是：通过采集同步的sEMG信号与手部姿态数据，训练一个名为EMG2Pose的神经网络来从肌肉活动连续预测手部运动学，再结合运动重定向算法实时控制多指灵巧手，从而构建一个轻量、低成本的遥操作系统。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DexEMG系统整体流程包含三个阶段：数据收集、模型训练和实时遥操作。</p>
+<p><img src="https://arxiv.org/html/2603.05861v1/2603.05861v1/figures/fig2-model.jpg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：DexEMG系统架构总览。（左上）通过多模态数据收集同步获取sEMG信号和真实手部运动学数据。（左下）EMG2Pose感知引擎通过TDS阶段提取时空特征，并使用基于LSTM的解码器重建连续手部姿态。（右上）实时部署流程将预测的手部动作块与手腕跟踪相结合，以控制多指灵巧手。</p>
+</blockquote>
+<p><strong>1. 基于运动重定向的数据集收集</strong>：为了建立从神经肌肉信号到可执行机器人命令的映射，系统同步采集操作者前臂的多通道sEMG信号以及通过动捕手套获取的高精度人手骨骼关键点。随后，通过一个基于关键点的优化问题，将捕捉到的人手姿态映射到机器人手上，生成几何一致的关节角度真值。优化目标是最小化人手与机器人手之间对应解剖关键点（如指尖、掌心）的L2距离：$q^{<em>}=\arg\min_{q}\sum_{i}|p_{i}^{h}-p_{i}^{r}(q)|_{2}^{2}$。为确保生成的轨迹物理可行，系统使用一个预训练的碰撞分类器对优化后的关节角度$q^{</em>}$进行评估，若检测到潜在自碰撞，则将姿态动态调整至安全流形。最终，数据集包含同步的sEMG流和无碰撞的机器人关节角度对。</p>
+<p><strong>2. EMG2Pose泛化模型</strong>：系统采用EMG2Pose架构作为其核心感知引擎。该模型采用编码器-解码器设计。编码器处理形状为$(B, 8, T)$的原始sEMG输入，经过两个一维卷积块和两个时间-深度可分离（TDS）阶段。每个TDS阶段包含一个2D卷积、层归一化、前馈层和最终的层归一化。解码器采用LSTM网络配合多层感知机（MLP），其创新之处在于预测关节角速度$\dot{\theta}$，而非绝对关节角度$\theta$。绝对姿态通过迭代重建：$\theta_{t}=\theta_{t-1}+\dot{\theta}_{t}$。这种基于速度的回归方法有效解耦了肌肉激活强度与静态姿势的关系，减轻了持续抓握时的信号漂移，并确保了不同操作任务间更平滑的过渡。模型输出是一个形状为$(B, 22, T^{*})$的动作块。</p>
+<p><strong>3. DexEMG系统集成</strong>：在实时部署阶段，操作者仅需佩戴sEMG接口和空间跟踪设备（如HTC Vive Tracker用于手腕6D位姿）。系统对sEMG输入滑动窗口进行在线推理，生成预测的关节角度动作块。通过执行每个动作块的初始帧并迭代地推进窗口，实现平滑、连续的姿态估计。</p>
+<p><img src="https://arxiv.org/html/2603.05861v1/2603.05861v1/figures/fig4-visualization.jpg" alt="姿态估计可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：EMG2Pose连续姿态估计的代表性截图。EMG2Pose模型准确跟踪了各种抓取和手内操作手势的高维手部运动学。估计的姿态（渲染）与用户的实际手部动作高度吻合。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：使用gForce 8通道sEMG臂带采集信号，Manus动捕手套提供35个高精度骨骼关键点作为真值。遥操作阶段使用HTC Vive Tracker跟踪手腕空间运动。目标机器人平台是拥有22个自由度的Sharpa Wave灵巧手。</p>
+<p><strong>姿态估计实证研究</strong>：定性评估（图3-a）显示，在简单的抓取和复杂的手内旋转任务中，预测的网格模型都与操作者实际手部姿态高度对齐。定量关节跟踪（图3-c）显示，预测的关节角度（红色实线）能紧密跟踪真值（黑色虚线），相位滞后极小。对于抓取任务，模型实现了0.09弧度的极低平均绝对误差（MAE）；对于更具挑战性的手内旋转任务，验证误差保持在0.15弧度的可接受范围内。</p>
+<p><img src="https://arxiv.org/html/2603.05861v1/2603.05861v1/figures/fig3-objects.jpg" alt="物体集"></p>
+<blockquote>
+<p><strong>图4</strong>：用于评估的训练集和未见过的物体集。该集合包含具有不同尺寸、质量和纵横比的各种几何形状。</p>
+</blockquote>
+<p><strong>泛化能力评估</strong>：系统在两个物体集（图4）和五种几何类别上进行测试，并定义了包含随机物体放置和杂乱背景遮挡的“新场景”条件。</p>
+<p><img src="https://arxiv.org/html/2603.05861v1/2603.05861v1/figures/fig5-grasp.jpg" alt="抓取性能"></p>
+<blockquote>
+<p><strong>图5</strong>：在不同几何形状和泛化场景（包括训练过的物体、未见过的物体和新环境）下的抓取性能快照。</p>
+</blockquote>
+<p><strong>表 I：跨物体类别和场景的详细性能</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">场景</th>
+<th align="center">微小物体</th>
+<th align="center">圆柱体</th>
+<th align="center">球体</th>
+<th align="center">不规则体</th>
+<th align="center">可变形体</th>
+<th align="center"><strong>整体</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>训练物体</strong></td>
+<td align="center">80.0% / 18.8%</td>
+<td align="center">90.0% / 5.6%</td>
+<td align="center">85.0% / 5.9%</td>
+<td align="center">50.0% / 30.0%</td>
+<td align="center">75.0% / 20.0%</td>
+<td align="center"><strong>76.0% / 14.5%</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>未见物体</strong></td>
+<td align="center">70.0% / 14.3%</td>
+<td align="center">75.0% / 13.3%</td>
+<td align="center">75.0% / 13.3%</td>
+<td align="center">40.0% / 37.5%</td>
+<td align="center">70.0% / 21.4%</td>
+<td align="center"><strong>66.0% / 18.2%</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>新场景</strong></td>
+<td align="center">45.0% / 22.2%</td>
+<td align="center">70.0% / 14.3%</td>
+<td align="center">80.0% / 18.8%</td>
+<td align="center">25.0% / 60.0%</td>
+<td align="center">60.0% / 50.0%</td>
+<td align="center"><strong>56.0% / 28.6%</strong></td>
+</tr>
+<tr>
+<td align="left"><em>注：表格内数据格式为“成功率(SR) ↑ / 掉落率(DR) ↓”。</em></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table>
+<p>实验结果表明，系统在训练物体集上整体成功率为76.0%，掉落率为14.5%。泛化到未见物体时，整体成功率降至66.0%，掉落率升至18.2%，性能下降在可接受范围内，表明模型捕获了可泛化的运动模式而非过拟合特定物体。在新场景下，整体成功率进一步降至56.0%，性能下降主要归因于杂乱环境和随机放置增加了手臂级规划难度，而非EMG2Pose模型本身的根本性失败。</p>
+<p><strong>长时程操作与可扩展性</strong>：系统测试了桌面包装和桌面擦拭两个长时程任务（图6）。</p>
+<p><img src="https://arxiv.org/html/2603.05861v1/2603.05861v1/figures/fig6-task.jpg" alt="长时程任务"></p>
+<blockquote>
+<p><strong>图6</strong>：长时程操作任务：DexEMG系统执行桌面包装和桌面擦拭的顺序快照。</p>
+</blockquote>
+<p><strong>表 II：长时程操作任务的子阶段成功率</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">任务</th>
+<th align="center">抓取成功率</th>
+<th align="center">执行成功率</th>
+<th align="center">一次成功率</th>
+<th align="center">允许重试成功率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>包装</strong></td>
+<td align="center">17/20</td>
+<td align="center">13/20</td>
+<td align="center">12/20 (60%)</td>
+<td align="center">16/20 (80%)</td>
+</tr>
+<tr>
+<td align="left"><strong>擦拭</strong></td>
+<td align="center">15/20</td>
+<td align="center">11/20</td>
+<td align="center">8/20 (40%)</td>
+<td align="center">14/20 (70%)</td>
+</tr>
+</tbody></table>
+<p>包装任务的一次成功率为60%，擦拭任务为40%。擦拭任务执行率较低是因为需要持续的接触力，EMG预测姿态的微小漂移会导致布料滑落。当允许操作者重新尝试失败的抓取时，包装和擦拭的成功率分别提升至80%和70%，表明系统在失败后不会进入不可恢复的状态。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一个轻量、低成本的灵巧遥操作系统DexEMG，它利用消费级sEMG臂带，避免了昂贵的外骨骼或视觉系统；2) 通过EMG2Pose模型实现了从sEMG到连续手部运动学的准确预测，并展示了系统对未见物体和新环境（如杂乱背景）的强泛化能力；3) 验证了系统执行复杂、多阶段、接触丰富的长时程操作任务（如包装、擦拭）的可行性，在允许重试时成功率高达80%。</p>
+<p>论文自身提到的局限性包括：1) 目前系统需要针对新用户进行个体校准；2) 缺乏力反馈，限制了处理易碎或需要精细力控物体的能力。</p>
+<p>这项工作表明，基于sEMG的遥操作是替代视觉和外骨骼系统的一种实用且可扩展的方案。对未来研究的启示包括：探索跨用户的基础模型以消除校准需求，以及集成触觉反馈通道以实现更高精度的灵巧操作。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对灵巧机器人遥操作系统中性能与便携性难以兼顾的问题，提出DexEMG系统。该系统利用表面肌电信号(sEMG)，通过EMG2Pose神经网络（采用TDS编码器和带反馈的LSTM解码器）直接从肌肉活动连续预测手部姿态，并结合鲁棒的手部重定向算法实现实时映射。实验表明，该系统在多样遥操作任务中精度高，且对新物体和复杂环境表现出强泛化能力，无需大量个体重校准。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05861" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

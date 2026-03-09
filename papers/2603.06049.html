@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Devil is in Narrow Policy: Unleashing Exploration in Driving VLA Models - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Devil is in Narrow Policy: Unleashing Exploration in Driving VLA Models</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.06049" target="_blank" rel="noreferrer">2603.06049</a></span>
+        <span>作者: Baochang Zhang Team</span>
+        <span>日期: 2026-03-06</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前自动驾驶领域的视觉语言动作（VLA）模型主要遵循两种范式：VLA-Planner（利用VLM进行语义推理并指导外部轨迹规划器）和VLA-Token（将轨迹规划视为序列生成任务，由VLM直接输出轨迹令牌）。尽管架构不同，两者通常采用相似的两阶段训练流程：首先通过监督微调（SFT）进行模仿学习（IL），以获取基本的轨迹规划能力；随后通过强化学习（RL）结合思维链（CoT）优化来增强推理能力。然而，这种“先IL后RL”的流程存在一个根本性的“窄策略”（Narrow Policy）局限：IL阶段过度利用（over-exploit）专家轨迹，导致策略分布坍缩，探索性严重不足；这使得后续的RL阶段由于缺乏多样化的反馈样本而梯度消失，优化过早饱和，从而限制了模型性能的进一步提升。本文针对这一核心痛点，提出从数据和奖励机制两方面系统性促进VLA模型探索能力的新视角。其核心思路是：在IL阶段，通过生成多条物理可行的轨迹来扩展训练数据，并采用逐步归一化来平衡学习目标；在RL阶段，通过自适应多样性感知采样筛选高方差样本，并设计跨度奖励函数来放大不同驾驶行为之间的奖励差异，从而有效解锁VLA模型的探索潜力。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>Curious-VLA的整体框架是一个两阶段训练流程，旨在分别缓解IL和RL阶段的“窄策略”问题。</p>
+<p><img src="https://arxiv.org/html/2603.06049v1/2603.06049v1/x1.png" alt="方法整体框架"></p>
+<blockquote>
+<p><strong>图2</strong>：Curious-VLA的整体流程。左侧为IL阶段，通过可行轨迹扩展、思维链数据合成和逐步归一化来提升轨迹模式的分离性。右侧为RL阶段，通过自适应多样性感知采样和跨度驾驶奖励来解决优势值坍缩问题并维持探索。中间面板展示了方法在多样性、质量和性能上的提升。</p>
+</blockquote>
+<p><strong>1. 模仿学习阶段的可行轨迹扩展</strong><br>为应对IL阶段因单一专家轨迹导致的探索坍缩，本阶段设计了三个核心组件：</p>
+<ul>
+<li><strong>探索性数据扩展</strong>：从Navsim训练集中筛选出12k个具有挑战性的驾驶片段（如多车道、交叉路口、遮挡）。利用基于扩散模型的ReCogDrive规划器，通过扰动其潜在表示来生成多条物理上有效的驾驶路径（即可行轨迹），并使用PDMS评分器进行安全过滤。最终将数据从103k扩展到142k个安全且多样化的样本，覆盖了意图内（围绕同一驾驶目标）和跨意图（改变路线级决策）的多样性。</li>
+<li><strong>思维链数据合成</strong>：为每个数据样本构建一个四阶段的推理思维链，以结构化驾驶决策过程：(i) 关键物体感知，(ii) 驾驶解释，(iii) 元行为描述，(iv) 最终轨迹预测。该过程利用Qwen2.5-VL-72B模型自动生成。</li>
+<li><strong>逐步归一化</strong>：针对轨迹点坐标在远视野方差远大于近视野（如图3所示）导致的学习不平衡问题，对轨迹的每个预测步长 <code>t</code> 进行独立归一化：<code>\tilde{w}_{t}=\frac{w_{t}-\mu_{t}}{\sigma_{t}}</code>，其中 <code>(\mu_{t}, \sigma_{t})</code> 来自训练集的每步统计量。在SFT训练时使用归一化后的坐标 <code>\tilde{w}_{t}</code>，推理时再将模型输出的 <code>\hat{\tilde{w}}_{t}</code> 反归一化回原始坐标 <code>\hat{w}_{t}</code>。这平衡了不同时间步的梯度贡献，提升了轨迹模式的分离性。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.06049v1/2603.06049v1/x2.png" alt="视野物理尺度不匹配可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：轨迹点分布的视野物理尺度不匹配可视化。远视野（如4秒）的坐标方差远大于近视野（如0.5秒），导致损失函数被远视野主导。</p>
+</blockquote>
+<p><strong>2. 强化学习阶段的多样性感知学习</strong><br>为维持RL阶段的探索并防止优势值坍缩，引入了两个互补机制：</p>
+<ul>
+<li><strong>自适应多样性感知采样</strong>：ADAS算法（如算法1所述）动态地从整个训练集中筛选出能产生多样化rollout的场景，用于GRPO更新。其核心思想是将每个场景的奖励分布近似为伯努利过程（成功/失败）。在每个训练外循环开始时，使用当前策略对每个场景进行 <code>M</code> 次离线rollout，估计其平均成功率 <code>\hat{p}</code>。一个场景被选入当前活跃训练集需满足两个条件：1）<code>\hat{p}^{G}+(1-\hat{p})^{G} &lt; \epsilon_{\text{div}}</code>，确保在一次采样 <code>G</code> 个在线样本时，它们全部成功或全部失败的概率很低，即保证样本结果的变异性；2）<code>|\sigma_{R}-\sqrt{\hat{p}(1-\hat{p})}R_{\text{range}}| &lt; \epsilon_{\text{conf}}</code>，确保经验奖励标准差 <code>\sigma_R</code> 与理论伯努利方差接近，过滤掉不稳定或噪声大的场景。</li>
+<li><strong>跨度驾驶奖励</strong>：对Navsim基准中的PDMS和EPDMS奖励进行重构，采用一种聚焦损失风格的函数来放大奖励的价值跨度：<code>R_{\text{span}}=\prod_{c\in C}c\cdot\frac{\sum_{m\in M}w^{\prime}_{m}\cdot(1-(1-m)^{\gamma_{m}})}{\sum_{m\in M}w^{\prime}_{m}}</code>。其中，<code>C</code> 是安全约束（如无碰撞、可行驶区域合规），<code>M</code> 是加权目标（如自我进度、碰撞时间、舒适度），<code>\gamma_{m}</code> 是超参数。该设计放大了次优行为与最优行为之间的奖励差异，提升了奖励函数对驾驶质量的敏感性。</li>
+</ul>
+<p><strong>创新点</strong>：与现有方法相比，Curious-VLA的创新性体现在系统性而非局部地解决“窄策略”瓶颈。它不仅在IL阶段通过数据合成和表示归一化来注入和适应多样性，更在RL阶段通过主动采样和奖励重塑来维持和利用多样性，形成了一个完整的“促进探索”训练框架。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>数据集与评估指标</strong>：主要实验在Navsim v1和v2基准上进行，该基准基于OpenScene（nuPlan的重发布）。模型仅使用单目前置摄像头图像作为输入。主要评估指标为PDMS（v1）和EPDMS（v2），它们综合了安全性、舒适度和效率等多个子指标。补充实验在nuScenes数据集上进行，使用L2距离误差和碰撞率作为指标。</p>
+<p><strong>对比方法</strong>：与多种基线进行了对比，包括：1）经典端到端方法（如UniAD, DiffusionDrive）；2）VLA-Planner范式方法（如ReCogDrive, DriveVLA-W0）；3）VLA-Token范式方法（如Qwen2.5-VL, AutoVLA, AdaThinkDrive）。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>Navsim v1基准性能</strong>：如表1所示，Curious-VLA使用Qwen2.5-VL-3B基础模型和单目摄像头输入，取得了90.3的PDMS分数，创造了新的SOTA记录。其性能超越了使用更多传感器（摄像头+激光雷达）的传统方法（如WoTE，88.3），也与使用更大或更先进基模型的VLA方法（如DriveVLA-W0，90.2；使用Emu-3-8B）相当。在采用Best-of-N（N次采样取最佳）评估策略时，Curious-VLA的PDMS高达94.8，显著优于其他方法的Best-of-N性能（如AutoVLA的92.1，AdaThinkDrive的93.0），这验证了其生成高质量多样化轨迹的能力。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.06049v1/2603.06049v1/x4.png" alt="Navsim V1基准结果对比"></p>
+<blockquote>
+<p><strong>表1</strong>：Navsim V1基准上不同方法的对比。Curious-VLA取得了最佳的PDMS性能（90.3），其Best-of-N性能（94.8）尤为突出。</p>
+</blockquote>
+<ol start="2">
+<li><p><strong>Navsim v2基准性能</strong>：如表2所示，在更全面的EPDMS指标下，Curious-VLA以85.3分同样达到了最佳性能，超越了包括DiffusionDrive（84.5）和ReCogDrive（83.6）在内的强基线。</p>
+</li>
+<li><p><strong>nuScenes开放环评估</strong>：如表3所示，在nuScenes的真实世界泛化测试中，Curious-VLA在ST-P3和UniAD两种评估协议下的L2误差（0.31m, 0.60m）和碰撞率（0.10%， 0.33%）均达到了领先或极具竞争力的水平。</p>
+</li>
+<li><p><strong>行为诊断与消融实验</strong>：</p>
+<ul>
+<li><p><strong>行为诊断</strong>：如图1(a)定量所示，基线方法（Qwen2.5-VL, ReCogDrive）在多样性（平均pFDE分别为0.20m, 0.33m）和质量（最小FDE分别为1.05m, 0.86m）上表现较差，显示了“窄策略”问题。而Curious-VLA在多样性和质量上均有显著提升。图1(b)的定性对比进一步显示，基线模型的多次推理轨迹趋于单一模式甚至不安全，而Curious-VLA能产生多样且合理的轨迹。<br><img src="https://arxiv.org/html/2603.06049v1/2603.06049v1/x3.png" alt="窄策略问题可视化"></p>
+<blockquote>
+<p><strong>图1</strong>：(a) 探索性的定量比较，显示基线方法多样性低、质量有限。(b) 轨迹可视化对比，显示基线方法存在探索坍缩（单模或不安全行为），而Curious-VLA则能产生多样且合理的轨迹。</p>
+</blockquote>
+</li>
+<li><p><strong>消融研究</strong>：论文通过消融实验验证了各个组件的贡献。移除FTE（可行轨迹扩展）或ADAS（自适应多样性感知采样）都会导致性能显著下降（PDMS分别下降约1.5和1.0分）。同时使用FTE和ADAS但移除SDR（跨度驾驶奖励）也会带来性能损失。这证明了IL阶段的多样性数据、RL阶段的多样性采样以及增强的奖励信号对于解决“窄策略”问题都是不可或缺的。</p>
+</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.06049v1/2603.06049v1/x5.png" alt="定性对比（BEV与摄像头视角）"></p>
+<blockquote>
+<p><strong>图4</strong>：与基线方法的定性对比（BEV和摄像头视角）。Curious-VLA能规划出更多可行且合理的轨迹。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>问题识别与诊断</strong>：首次明确识别并形式化分析了自动驾驶VLA模型两阶段训练流程中固有的“窄策略”瓶颈，并提出了包含多样性、质量、性能三个维度的“行为诊断”指标对其进行定量评估。</li>
+<li><strong>系统性解决方案</strong>：提出了Curious-VLA框架，通过IL阶段的可行轨迹扩展与逐步归一化，以及RL阶段的自适应多样性感知采样与跨度驾驶奖励，系统性地激发了VLA模型自身的探索潜力。</li>
+<li><strong>卓越的性能表现</strong>：在Navsim v1/v2和nuScenes等多个基准测试中取得了最先进的或极具竞争力的性能，特别是在Best-of-N评估中展现出的高分，验证了其在生成高质量多样化轨迹方面的有效性。</li>
+</ol>
+<p><strong>局限性</strong>：论文提及的局限性包括：1) FTE数据生成依赖于一个预训练的扩散模型（ReCogDrive），其生成质量和多样性可能受限；2) ADAS策略在每次外循环中需要进行大量离线rollout以估计奖励分布，增加了计算开销。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>探索更高效的探索机制</strong>：可以研究无需依赖额外生成模型的数据增强方法，或者设计更轻量级的在线多样性评估与采样策略。</li>
+<li><strong>奖励函数的进一步设计</strong>：SDR展示了奖励重塑对探索的重要性，未来可以探索更精细的、基于课程学习的奖励设计，或在多目标权衡上做进一步优化。</li>
+<li><strong>框架的泛化性</strong>：Curious-VLA解决“窄策略”的思路（平衡IL-RL的探索与利用）可能适用于其他需要从演示中学习并进行策略优化的序列决策任务，如机器人操控等，值得进一步探索。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对驾驶视觉语言动作模型中模仿学习导致的探索崩溃问题，提出Curious-VLA框架。在模仿学习阶段，采用可行轨迹扩展策略生成多样轨迹，并使用步进归一化表示；在强化学习阶段，引入自适应多样性感知采样和跨度驾驶奖励以增强探索。在Navsim基准上，该方法取得PDMS 90.3、EPDMS 85.4的先进性能，Best-of-N PDMS达94.8，有效提升了模型探索能力。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.06049" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

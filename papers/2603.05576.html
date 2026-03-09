@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Task Parameter Extrapolation via Learning Inverse Tasks from Forward Demonstrations - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Task Parameter Extrapolation via Learning Inverse Tasks from Forward Demonstrations</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05576" target="_blank" rel="noreferrer">2603.05576</a></span>
+        <span>作者: Emre Ugur Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人技能学习领域的一个核心挑战是开发能够泛化到训练时未见条件的策略。数据驱动的模仿学习方法（如动态运动基元、条件神经运动基元及最新的扩散模型）虽然数据高效，但其优势主要在于内插，对于超出训练分布的任务参数输入，往往无法进行外推，导致策略失败和不可预测的轨迹。另一方面，迁移学习或领域随机化等方法旨在处理环境或任务变化，但通常需要大量数据，且在零样本泛化上缺乏准确性。</p>
+<p>本文针对模仿学习方法在任务参数外推上的局限性，提出了一个新的视角：将问题置于任务反转学习的框架下。许多机器人技能天然地以正向-逆向任务对的形式存在（例如，推物体到目标与将其拉回；组装与拆卸）。本文的核心思路是，如果能够学习到正向与逆向任务的一个共同表示，那么对于一个新环境配置，仅需提供其正向任务的演示，即可泛化出执行相应逆向任务的能力，而无需任何关于该逆向任务的直接监督。概括而言，本文提出了一种新颖的联合学习框架，通过构建正向与逆向任务的共同表示，并利用来自新配置的辅助正向演示，来实现对逆向任务参数的准确、高效的零样本外推。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文方法的整体目标是在给定未配对的正向和逆向演示集，以及额外的、仅包含正向演示的辅助集的情况下，推断并生成针对来自辅助分布的新任务参数的逆向执行轨迹。方法分为两个阶段：第一阶段是通过匹配算法构建配对的演示数据集；第二阶段是基于配对数据集和辅助数据集进行技能训练，以学习共同表示并实现外推。</p>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/problem_definition.png" alt="方法概述"></p>
+<blockquote>
+<p><strong>图1</strong>：问题定义与方法概览。顶部将演示解耦为任务参数空间和传感器运动空间。我们的方法首先识别演示之间的对应关系，并利用配对和辅助数据集学习正向和逆向任务的共同表示。学习目标是从辅助分布中推断出任务参数对应的逆向执行轨迹。</p>
+</blockquote>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><strong>前向-逆向对识别</strong>：给定未组织的正向演示集 $\mathcal{D}<em>F$ 和逆向演示集 $\mathcal{D}<em>I$，通过构建成本矩阵 $C$（其中 $C</em>{ij}$ 量化第 $i$ 个正向演示的最终环境状态与第 $j$ 个逆向演示的初始环境状态之间的差异），将其表述为线性分配问题，并使用匈牙利算法求解最优双射配对，形成配对数据集 $\mathcal{D}</em>{paired}$。这确保了共同表示能够捕捉任务参数与其正逆向执行之间的正确关系。</li>
+<li><strong>技能训练框架</strong>：方法基于条件神经过程和深度模态混合网络的框架进行扩展。网络结构包含独立的编码器和解码器。<ul>
+<li><strong>编码器</strong>：包含正向编码器 $E_F$、逆向编码器 $E_I$ 和任务参数编码器 $E_{\psi}$。$E_F$ 和 $E_I$ 分别处理正向和逆向轨迹的观测点，输出表征 $r_F$ 和 $r_I$。$E_{\psi}$ 将任务参数 $\psi$（标量或图像）编码为嵌入 $e_{\psi}$。</li>
+<li><strong>共同表示</strong>：通过随机权重 $p$ 对 $r_F$ 和 $r_I$ 进行凸组合得到共同潜在表示 $r = p \times r_F + (1-p) \times r_I$。</li>
+<li><strong>解码器</strong>：包含正向解码器 $D_F$ 和逆向解码器 $D_I$。将 $r$、$e_{\psi}$ 和查询时间步拼接后，分别输入 $D_F$ 和 $D_I$，预测对应时间步的传感器运动值（高斯分布的均值和标准差）。</li>
+<li><strong>训练策略</strong>：采用交错训练方案，包含两种前向传播。<ul>
+<li><strong>配对传播</strong>：从 $\mathcal{D}_{paired}$ 采样一批轨迹对，按上述流程计算损失（负对数似然）。</li>
+<li><strong>辅助传播</strong>：从 $\mathcal{D}_{aux}$ 采样一批正向轨迹，固定 $p=1$（即共同表示 $r$ 仅来自正向观测），并冻结逆向编码器 $E_I$ 和解码器 $D_I$ 的参数。此过程旨在将分布外任务参数整合到共同潜在空间中。</li>
+</ul>
+</li>
+<li>两种传播以概率 $p_{\text{aux}}$ 随机交替执行，以平衡学习配对任务参数的传感器运动执行与整合新任务参数。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/proposed_method.png" alt="训练与推理流程"></p>
+<blockquote>
+<p><strong>图2</strong>：所提方法概述。第一、二行分别展示了训练期间的配对传播和辅助传播。第三行展示了在推理时，以新任务参数和正向执行的观测为条件，生成完整逆向执行的过程。</p>
+</blockquote>
+<p><strong>创新点</strong>：</p>
+<ol>
+<li><strong>任务反转的联合学习框架</strong>：首次提出通过联合学习正向与逆向任务的共同表示，实现从正向演示到逆向任务的零样本知识迁移和外推。</li>
+<li><strong>分离的任务参数编码</strong>：将任务参数 $\psi$ 的编码与传感器运动轨迹的编码分离，这是泛化到未见参数的关键。</li>
+<li><strong>包含辅助数据的交错训练</strong>：设计了专门的辅助传播和交错训练策略，使模型能够利用未配对的、分布外的正向演示来丰富共同表示，从而处理新任务参数。</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在合成数据、机器人仿真和真实机器人环境三个层面进行，以评估方法的核心贡献和外推能力。</p>
+<p><strong>1. 合成数据实验</strong>：</p>
+<ul>
+<li><strong>设置</strong>：使用正弦曲线模拟传感器运动轨迹，正向轨迹为 $\tau_F(t)=\psi\cdot\sin(\frac{3}{2}\pi t)+t$，逆向为其时间反转。任务参数 $\psi$ 为振幅。创建了四种不同的训练数据集条件：随机配对、使用算法配对的噪声数据、完美配对、均匀完美配对。</li>
+<li><strong>结果</strong>：模型在随机配对条件下表现最差（MSE: $8.87 \pm 14.3 \times 10^{-3}$）。应用本文匹配算法后（噪声配对），误差显著降低超过80%（MSE: $1.22 \pm 1.48 \times 10^{-3}$，$p&lt;0.001$）。在完美配对和均匀完美配对条件下，误差进一步大幅降低（分别约降低14倍和140倍）。这证明了建立正确的演示对应关系对于学习共享结构和生成轨迹至关重要。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/syn_figure.png" alt="合成数据集可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：合成轨迹数据集的可视化。颜色对应关系说明了配对情况。左上图为正向任务轨迹。其余图显示了不同条件下（随机配对、算法配对（噪声）、完美配对）对应的逆向任务轨迹。</p>
+</blockquote>
+<p><strong>2. 机器人仿真中的物体外推实验</strong>：</p>
+<ul>
+<li><strong>设置</strong>：在MuJoCo模拟器中，使用7自由度机械臂进行桌面物体操作。正向任务是将物体从起始区域移动到结束区域，逆向任务则是反向移动。任务参数为物体的俯视深度图及其初始位置。训练数据包括圆柱体（水平/垂直）的配对演示，以及球体和方块的辅助正向演示。测试对象为全新的球体和方块。</li>
+<li><strong>对比方法</strong>：与三种受扩散策略启发的联合学习替代方案进行对比：DP-Dual（双解码器）、DP-2Head（单解码器，输出拼接动作）、DP-Mode（单解码器，输入模态位）。</li>
+<li><strong>评估指标</strong>：任务成功率、轨迹误差、最终物体位置误差。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/simulation_tasks.png" alt="模拟任务可视化"></p>
+<blockquote>
+<p><strong>图4</strong>：模拟环境中操作任务的可视化。展示了指定正向任务（将物体移动到目标）及其逆向任务的示例执行，使用了三种不同的操作模态（从左到右，从上到下：大水平圆柱、球体、垂直圆柱、大方块、小水平圆柱、小方块）。</p>
+</blockquote>
+<p><strong>关键结果</strong>：</p>
+<ul>
+<li><strong>匹配算法效果</strong>：如表I所示，在完美和噪声初始数据集上使用本文匹配算法训练的模型，任务成功率很高（完美：98.3%，噪声：95.0%），而随机配对导致成功率大幅下降（完美：68.3%，噪声：36.7%），再次验证了配对的重要性。</li>
+<li><strong>与基线对比</strong>：本文方法在完美配对数据上的成功率为98.3%，显著高于所有DP基线（DP-Dual: 78.3%, DP-2Head: 71.7%, DP-Mode: 46.7%）。在轨迹误差和最终位置误差上，本文方法也优于或与最佳基线相当。</li>
+<li><strong>消融实验</strong>：移除了任务参数编码器 $E_{\psi}$ 的模型性能严重下降（成功率从98.3%降至11.7%），证明了分离的任务参数编码对于泛化至关重要。在训练中移除辅助传播也会导致性能显著下降（成功率从98.3%降至53.3%），显示了利用辅助数据学习共同表示的必要性。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/simulation_ablation.png" alt="仿真消融实验"></p>
+<blockquote>
+<p><strong>图5</strong>：仿真消融研究结果。展示了不同模型配置在任务成功率、轨迹误差和最终位置误差上的表现，包括与扩散基线的对比以及关键组件（任务参数编码、辅助训练）的消融。</p>
+</blockquote>
+<p><strong>3. 真实机器人实验</strong>：</p>
+<ul>
+<li><strong>设置</strong>：使用Franka Emika Panda机械臂执行“放置”和“拾取”任务。任务参数为工具（锤子、扳手、螺丝刀）的RGB图像。训练数据包括锤子和扳手的配对演示，以及螺丝刀的辅助正向演示。测试时，要求模型在仅看到螺丝刀的正向“放置”演示后，执行其逆向“拾取”任务。</li>
+<li><strong>结果</strong>：本文方法在5次试验中实现了100%的拾取成功率，而所有DP基线均未能成功拾取任何工具（成功率0%），展示了其在真实场景中外推能力的优势。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/real_setup.png" alt="真实实验设置与演示"></p>
+<blockquote>
+<p><strong>图6</strong>：真实机器人实验设置。展示了用于实验的机器人、工具以及任务的工作空间。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05576v1/2603.05576v1/figures/real_demos.png" alt="真实演示示例"></p>
+<blockquote>
+<p><strong>图7</strong>：真实机器人演示示例。从左到右展示了“放置”（正向）和“拾取”（逆向）任务的演示序列。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了一个新颖的联合学习框架，通过构建正向与逆向任务的共同表示，实现了仅利用辅助正向演示即可对逆向任务参数进行零样本外推。</li>
+<li>设计了一套完整的训练方法，包括基于环境状态匹配演示的算法，以及能够灵活利用辅助演示的交错训练策略。</li>
+<li>通过将任务参数编码与传感器运动编码分离，明确了实现泛化到未见参数的关键设计选择，并通过实验验证了其必要性。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，其方法范围排除了分布外动作的生成，专注于推断与已观测传感器运动演示相似的逆向执行。这意味着对于需要完全新颖动作策略的极端新任务参数，方法可能面临挑战。</p>
+<p><strong>启示</strong>：</p>
+<ul>
+<li>任务反转为技能泛化和外推提供了一个富有前景的结构化范式，将技能视为可逆的过程可能是一种有效的归纳偏置。</li>
+<li>在模仿学习中，显式地建立不同技能或模态演示之间的语义对应关系（如通过状态匹配），而非随机或隐式关联，对于学习可泛化的表示至关重要。</li>
+<li>该方法为数据收集提供了灵活性，允许使用未完全配对的数据集（例如，仅收集了大量正向演示和部分逆向演示），并通过算法和训练策略来弥补配对信息的缺失，从而更高效地利用现实世界中可能不完美的演示数据。</li>
+</ul>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人技能策略在训练区域外泛化困难的核心问题，提出一种通过从正向演示学习逆向任务的方法。模仿学习方法数据效率高但局限于插值，迁移学习鲁棒但数据需求大且零样本精度不足。关键技术为任务反转学习的联合方法，构建正向和逆向任务的共同表示，利用辅助正向演示执行逆向任务，无需直接监督。实验在模拟和真实环境中进行，涉及复杂操作技能和多样对象，结果显示该方法具有外推能力，并优于基于扩散的替代方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05576" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

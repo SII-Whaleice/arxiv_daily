@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AnyCamVLA: Zero-Shot Camera Adaptation for Viewpoint Robust Vision-Language-Action Models - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>AnyCamVLA: Zero-Shot Camera Adaptation for Viewpoint Robust Vision-Language-Action Models</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05868" target="_blank" rel="noreferrer">2603.05868</a></span>
+        <span>作者: Young Min Kim Team</span>
+        <span>日期: 2026-03-06</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>视觉-语言-动作模型通过在大规模视觉-语言-动作配对数据上训练，已成为具身智能领域的重要范式。然而，这些预训练模型在部署到特定环境时通常需要微调，而微调后的模型对训练时未见的相机视角变化极为敏感。在非结构化的日常环境中，相机与机器人间的硬件配置发生微小偏移（例如腕部相机3厘米的移动）就可能导致成功率减半。</p>
+<p>目前提升视角鲁棒性的方法主要有两类：一是通过收集或合成多视角数据进行数据增强来微调策略，但这需要大量数据和计算，尤其对于大型VLA成本高昂；二是引入几何感知或视角不变的表示（如点云、多视图特征），但这通常需要修改VLA架构，且可能无法充分利用其在互联网规模RGB数据上预训练的先验知识。</p>
+<p>本文针对VLA对相机视角变化的脆弱性这一具体痛点，提出了一个无需额外演示数据、策略微调或架构修改的零样本相机适配新视角。其核心思路是：保持预训练的VLA策略参数完全冻结，在测试时利用一个前馈式新视角合成模型，实时将测试相机观测到的图像虚拟地合成为训练相机视角的图像，从而适配任意相机配置变化。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出一个即插即用的零样本相机适配框架。整体流程是：在机器人控制的每一步，首先从当前测试相机配置捕获输入图像，然后通过相机适配模块将其合成为训练视角的图像，最后将合成图像输入冻结的VLA策略以获取并执行动作。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：零样本相机适配框架示意图。在策略执行的每个控制步骤（VLA策略运行频率约10 Hz），来自测试相机的图像被一个运行频率约30 Hz的相机适配模块合成为训练相机视角的图像，随后输入冻结的VLA策略。该方法适用于不同的相机外参、内参，甚至是自由移动的手持相机。</p>
+</blockquote>
+<p>核心模块是相机适配模块 ℱ，其功能定义如公式(2)：<code>I_hat_t^train = ℱ(I_t^test, C^test, C^train)</code>。该模块将测试时图像 <code>I_t^test</code> 及其相机参数 <code>C^test</code>，合成为目标训练相机参数 <code>C^train</code> 下的图像 <code>I_hat_t^train</code>。模块的输入和输出相机数量可以不同（<code>N</code> 和 <code>M</code>）。适配后的策略推理如公式(3)：<code>a_t = π_θ(ℱ(I_t^test, C^test, C^train), l)</code>。</p>
+<p>该方法使用一个前馈式新视角合成模型（具体为LVSM）来实现 ℱ。与需要逐场景优化的NeRF等方法不同，前馈模型单次前向传播即可合成新视角，满足实时控制需求。LVSM以源图像及其相机参数为输入，直接合成目标视角的光照真实图像，无需中间3D表示，并能灵活处理不同数量的输入/输出视图和完整的相机参数。</p>
+<p>与现有方法相比，本方法的创新点在于：1) <strong>零样本与即插即用</strong>：无需为新的相机配置收集机器人演示数据或微调庞大的VLA策略，避免了灾难性遗忘的风险；2) <strong>保持模态一致性</strong>：适配模块仅处理视觉输入，输出仍是RGB图像，因此完全保留了预训练VLA的原始架构和视觉-语言推理能力，无需引入额外的表示模态；3) <strong>实时性</strong>：LVSM合成2个新视角（从2个输入）的延迟为36.55毫秒（在NVIDIA RTX 4090上），对应27 FPS，高于典型VLA的10 Hz运行频率，不会成为控制回路的瓶颈。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验平台与基准</strong>：主要评估在LIBERO基准上进行。该基准包含来自两个相机的输入图像：面向机械臂前方的智能体相机和安装在末端执行器上的腕部相机。评估时，对相机位姿施加三个级别（小、中、大）的随机扰动，以单独考察智能体相机或腕部相机视角变化的影响。</p>
+<p><strong>对比方法</strong>：</p>
+<ol>
+<li><strong>基础策略</strong>：在无相机扰动的LIBERO数据上训练的OpenVLA-OFT和π_0.5模型。</li>
+<li><strong>数据增强</strong>：在视角增强的LIBERO数据上微调π_0.5策略（记为π_0.5*）。</li>
+<li><strong>表示中心方法</strong>：GeoAwareVLA，用VGGT提取3D感知特征以增强视角不变性。</li>
+<li><strong>本文方法</strong>：将LVSM作为视觉适配模块与基础策略结合，记为Ours-OV（结合OpenVLA-OFT）和Ours-π（结合π_0.5）。为弥合LVSM训练数据与仿真图像之间的域差距，在基于LIBERO-Plus资产构建的自定义多视图数据集上对LVSM进行了微调，该数据集仅包含多视图图像，无机器人动作数据。</li>
+</ol>
+<p><strong>关键实验结果</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x1.png" alt="相机扰动可视化与仿真结果"></p>
+<blockquote>
+<p><strong>图2</strong>：（a）对智能体相机和腕部相机施加的三个级别（小、中、大）扰动示意图。（b）视角增强的LIBERO数据集中相机分布的视觉化。</p>
+</blockquote>
+<p>表I展示了在智能体相机扰动下，所有LIBERO任务套件上的成功率。本文方法（Ours-π）在所有套件和扰动级别上均取得最佳性能，平均成功率达94.5%，且在不同扰动级别间表现一致。而基础策略（如π_0.5）性能随扰动增大而急剧下降（从92.4%降至39.9%）。数据增强方法（π_0.5*）虽有效，但平均成功率（87.2%）仍低于本文方法。GeoAwareVLA平均成功率为86.1%。</p>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x5.png" alt="腕部相机扰动结果"></p>
+<blockquote>
+<p><strong>表II</strong>：在LIBERO-Long套件上，腕部相机扰动下的成功率。本文方法（Ours-π）以88.6%的平均成功率大幅领先。</p>
+</blockquote>
+<p>表II展示了在更具挑战性的LIBERO-Long套件上，腕部相机扰动的结果。本文方法（Ours-π）以88.6%的平均成功率显著优于数据增强（83.1%）和GeoAwareVLA（5.2%）。值得注意的是，GeoAwareVLA在腕部相机扰动下性能崩溃，这表明其3D感知特征可能隐式地锚定在腕部相机坐标系中，当该坐标系发生变化时，特征失去一致性。</p>
+<p><strong>零样本适配 vs. 策略微调</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x2.png" alt="微调过程分析"></p>
+<blockquote>
+<p><strong>图3</strong>：在LIBERO-Long上，不同任务覆盖范围下微调π_0.5策略的过程分析。（左图）在三个未见视角上的平均任务成功率。（右图）在原始视角上的平均任务成功率。</p>
+</blockquote>
+<p>图3揭示了策略微调方法的两个关键问题：1) <strong>泛化性差</strong>：仅使用1个任务的增强数据微调，会损害对其他9个任务在新视角上的性能，表明从单个任务学到的视角泛化无法迁移。2) <strong>灾难性遗忘</strong>：在所有微调配置中，随着训练进行，模型在原始视角上的性能持续下降。这表明仅增加视角增强数据无法完全防止先前学习行为的退化。相比之下，本文的零样本适配框架完全避免了这些问题。</p>
+<p><strong>视角适配方法消融实验</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x3.png" alt="消融实验与图像质量对比"></p>
+<blockquote>
+<p><strong>图4</strong>：LVSM在仿真和真实图像上的定性结果。微调有效减少了仿真输入视图的域差距。</p>
+</blockquote>
+<p>表III比较了不同视角适配方法。本文完整方法（Ours-π）在任务成功率和图像质量（PSNR）上均显著优于基线。单应性变换和基于深度图的3D投影等几何方法，在大视角变化下会因非真实感伪影或几何不准确而性能受限。未在自定义数据集上微调的LVSM（Ours-π w/o FT）性能很差（平均33.2%），这凸显了针对目标域（仿真环境）微调LVSM以学习特定几何关系（如智能体与腕部相机关系）和弥合域差距的重要性。尽管需要对LVSM进行一次性的域适应微调，但其参数量（171M）远小于VLA（如π_0.5有3.3B参数），且仅需多视图图像，数据收集成本远低于机器人演示数据。</p>
+<p><strong>真实世界实验</strong>：<br>在Franka Panda机械臂上进行了四项真实世界操作任务的验证。实验设置了与训练视角不同的新颖测试视角。</p>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x4.png" alt="真实世界实验设置与结果"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界实验设置。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05868v1/2603.05868v1/x6.png" alt="真实世界性能提升"></p>
+<blockquote>
+<p><strong>图6</strong>：（a）在新颖视角下的任务成功率。条形图和标记点分别表示任务进度和二元任务成功率。（b）真实世界任务执行快照。</p>
+</blockquote>
+<p>如图6所示，在未见过的相机视角下，应用本文适配框架后，所有四项任务的成功率均得到显著提升，验证了该方法在真实机器人操作场景中的有效性和实用性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一个<strong>零样本相机适配框架</strong>，通过在测试时实时合成训练视角的图像，使冻结的VLA策略能够泛化到任意相机配置，无需额外演示或微调；2) 该方法具有<strong>即插即用</strong>的特性，适用于任何基于RGB的策略，且完全保留了预训练VLA的能力；3) 通过利用前馈式新视角合成模型，能够为VLA生成<strong>高质量、光照真实</strong>的合成视图，从而在LIBERO基准和真实世界任务中实现了最先进的视角鲁棒性。</p>
+<p>论文提到的局限性包括：1) 尽管LVSM延迟较低，但额外的计算开销仍然存在；2) 方法依赖于已知且准确的相机参数（<code>C^test</code> 和 <code>C^train</code>），这需要初始的相机标定；3) 当前方法主要处理静态场景，对快速动态场景的适应性有待探索。</p>
+<p>本文工作对后续研究的启示在于：为提升具身智能模型的环境适应性和部署灵活性提供了一个新颖且高效的思路——即通过“适配输入”而非“调整模型”来应对分布偏移。未来可探索将类似原理应用于其他模态（如深度、触觉）或应对其他类型的分布变化（如光照、外观）。同时，开发更轻量、更快速的新视角合成模型将进一步推动此类方法在实时机器人系统中的应用。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作模型在微调后对相机视角变化敏感、导致机器人操作性能下降的核心问题，提出AnyCamVLA零样本相机适应框架。该方法利用前馈式新视角合成模型，实时虚拟调整测试图像以匹配训练时的相机配置，无需额外数据或微调。在LIBERO基准测试中，该方法始终优于使用数据增强或3D感知特征的基线，并在真实机器人操作场景中验证了其对不同相机参数和移动视角的鲁棒性提升。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05868" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

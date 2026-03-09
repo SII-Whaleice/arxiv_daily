@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EmboAlign: Aligning Video Generation with Compositional Constraints for Zero-Shot Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>EmboAlign: Aligning Video Generation with Compositional Constraints for Zero-Shot Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05757" target="_blank" rel="noreferrer">2603.05757</a></span>
+        <span>作者: Qi Zhu Team</span>
+        <span>日期: 2026-03-05</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>基于大规模互联网数据预训练的视频生成模型能够生成时序连贯、蕴含丰富物体动态的推演视频，为零样本机器人操作提供了一个有前景的基础。然而，当前基于视频生成的操作流程存在两个关键局限性：首先，视频生成模型经常产生物理上不合理的幻觉（如物体穿透、非保守运动），因为其训练数据中物理基础交互数据稀缺；其次，通过几何重定向将像素空间运动转换为机器人动作会引入深度估计和关键点跟踪不完美带来的累积误差。这些失败模式在需要精确执行的操作任务中尤为突出。本文观察到，成功的操作本质上需要满足一系列组合约束（如空间关系、运动学要求、安全条件），而现有方法缺乏强制执行这些约束的机制。本文提出EmboAlign，其核心思路是利用视觉语言模型的结构化空间推理能力，自动从语言指令中提取任务特定的组合约束，并利用这些约束在视频选择与轨迹优化两个阶段对齐视频生成模型的输出，从而将生成模型的运动多样性与现实世界操作所需的物理精度结合起来。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>EmboAlign的整体流程是一个四阶段管道：1）组合约束生成；2）约束引导的视频推演选择；3）基于抓取的重定向以初始化轨迹；4）基于约束的轨迹优化。其核心创新在于利用视觉语言模型生成的同一套组合约束，在两个关键阶段对视频生成模型的输出进行对齐和修正。</p>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/img/8.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：EmboAlign 整体流程。给定语言指令和RGB-D观测，VLM生成组合约束，同时VGM生成候选推演视频。一个潜在世界模型根据物理合理性对推演视频排序，然后约束集按分数降序过滤候选视频。最优的有效推演被重定向为末端执行器轨迹，并在相同约束下进行优化以用于真实世界执行。</p>
+</blockquote>
+<p><strong>1. 组合约束生成</strong>：首先，使用Segment Anything从初始RGB图像中分割出任务相关实体，并从每个掩码中采样一组稀疏的2D关键点。然后，将带有标注关键点的图像与语言指令一同输入视觉语言模型，以生成一组组合约束。每个约束 <code>c</code> 是一个Python函数，它将3D关键点配置 <code>k</code> 映射为一个标量成本，<code>c(k) ≤ 0</code> 表示约束得到满足。约束集可包含目标状态条件（如“方块居中放置”）和过程级要求（如“夹爪从上方接近”）。所有约束在下游阶段被统一处理。约束违反的总成本定义为所有约束在所有时间步上违反值的平方和。</p>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/x1.png" alt="约束示例"></p>
+<blockquote>
+<p><strong>图3</strong>：真实机器人评估任务的优化约束。对于六个操作任务中的每一个，VLM自动生成一组编码了空间、运动学和安全性要求的约束。这些约束作为执行期间轨迹优化的目标。</p>
+</blockquote>
+<p><strong>2. 约束引导的视频选择</strong>：从视频生成模型中采样 <code>N</code> 个候选推演视频。为了选择既视觉连贯又符合任务物理约束的视频，采用两阶段评估策略。首先，使用自监督的潜在世界模型V-JEPA-2计算<strong>视觉合理性分数</strong>，该分数基于模型对未来帧潜在表示的预测与观测表示之间的余弦差异，分数越低表示动态越可预测、物理越合理。然后，对按视觉合理性排序后的候选视频，依次计算其<strong>空间约束分数</strong>：使用CoTracker跟踪关键点的2D轨迹，利用RollingDepth估计每帧深度并通过仿射变换校准全局尺度，最后将2D关键点反投影为3D轨迹，并计算其违反约束集的总成本。系统按视觉合理性升序评估，选择第一个空间约束成本低于阈值 <code>ε</code> 的视频作为最终选择 <code>V*</code>。这种顺序策略优先考虑视觉连贯的候选，同时保证所选视频满足任务级空间约束。</p>
+<p><strong>3. 基于约束的轨迹优化</strong>：选中的视频 <code>V*</code> 通过运动重定向转换为初始的末端执行器轨迹 <code>ξ^{(0)}</code>。具体步骤包括：使用AnyGrasp和SAM 3D估计稳定的抓取变换 <code>T_grasp</code>；假设抓取关系固定，通过将物体关键点运动拟合为刚体变换，推导出末端执行器的运动。由于深度估计、关键点跟踪和刚体拟合存在误差，重定向轨迹需要优化修正。优化问题定义如下：目标函数包含两项，第一项惩罚轨迹上所有时间步的约束违反（与公式1相同），第二项是轨迹与初始重定向轨迹 <code>ξ^{(0)}</code> 的偏差正则项，系数 <code>λ</code> 控制两者权衡。该非线性规划问题使用序列最小二乘规划求解器进行优化，初始化为 <code>ξ^{(0)}</code>，最终得到优化后的可执行轨迹 <code>ξ*</code>。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在Dobot Nova2真实机器人上评估了六个需要精确、约束敏感执行的操作任务：打开盖子、堆叠积木、按压订书机、用锤子敲击积木、安全放置积木（避开障碍）、倒水。</p>
+<p><strong>对比方法</strong>：</p>
+<ul>
+<li><strong>ReKep</strong>：仅使用约束的方法，直接从VLM生成的关键点约束进行规划，无视频引导。</li>
+<li><strong>NovaFlow</strong>：仅使用视频的方法，从VGM推演中提取3D光流，无基于约束的过滤或优化。</li>
+</ul>
+<p><strong>关键定量结果</strong>：如表I所示，EmboAlign在六个任务上的平均成功率达到68.3%，显著高于ReKep的21.7%和NovaFlow的25.0%，整体提升了43.3个百分点。在需要精确接触几何的任务上提升最大，例如“按压订书机”任务成功率从NovaFlow的0/10、ReKep的2/10提升到8/10；“安全放置积木”任务从NovaFlow的4/10、ReKep的1/10提升到8/10。</p>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/x2.png" alt="任务示例"></p>
+<blockquote>
+<p><strong>图4</strong>：任务示例。真实机器人评估任务的示例场景。</p>
+</blockquote>
+<p><strong>定性结果分析</strong>：图5展示了在堆叠任务中约束引导的视频选择过程。从VGM生成的六个候选推演中，约束检查器识别出多种失败模式：物体变形、物体消失、放置错位、移动了错误物体。只有满足所有约束的推演（如Video 1和2）才会被选中用于后续的重定向和执行。这一过滤步骤对于接触敏感的任务至关重要。</p>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/x3.png" alt="视频选择"></p>
+<blockquote>
+<p><strong>图5</strong>：基于约束的视频选择。对于堆叠任务，任务约束通过拒绝无效行为来过滤候选VGM推演。图中展示了被拒绝的代表性推演以及通过所有约束并被选中用于下游重定向和执行的候选推演示例。</p>
+</blockquote>
+<p><strong>消融实验</strong>：研究比较了不同视频生成模型作为提案源的效果，并评估了方法各个组件的贡献。组件级消融包括：（1）仅约束（即ReKep）；（2）仅视频（即NovaFlow）；（3）视频+选择（使用约束引导选择视频，但跳过轨迹优化）；（4）视频+选择+优化（完整方法）。结果表明，完整方法（EmboAlign）在所有任务上均取得最佳或接近最佳性能。约束引导的选择显著提升了仅视频基线的性能，而后续的轨迹优化则进一步修正了重定向误差，带来了额外增益。这验证了视频提案和组合约束的互补性：视频为约束优化提供了良好的初始化，避免了局部最优；而约束则纠正了视频的物理不合理性，并提升了执行精度。</p>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/x4.png" alt="消融研究"></p>
+<blockquote>
+<p><strong>图6</strong>：组件消融研究。比较了完整方法（Ours）与仅约束（Constraints-only）、仅视频（Video-only）以及视频加选择但无优化（+Selection）的变体在六个任务上的成功率。完整方法在大多数任务上表现最佳，证明了两个阶段（选择与优化）的必要性。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05757v1/2603.05757v1/x5.png" alt="VGM比较"></p>
+<blockquote>
+<p><strong>图7</strong>：视频生成模型消融。展示了使用三种不同VGM（Sora, Lumiere, CogVideoX）作为提案源时，下游重定向与优化后的任务成功率。结果表明，更强大的VGM能产生更高质量的初始提案，从而带来更高的最终任务成功率。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）提出了EmboAlign框架，首次利用视觉语言模型生成的组合约束在推理时对齐视频生成模型的输出，以实现精确、安全的零样本操作；2）设计了一种两阶段约束对齐机制，即约束引导的推演选择过滤物理上不合理的视频样本，随后基于约束的轨迹优化修正重定向误差，在一个统一框架内解决了基于视频生成的操作流程的固有局限；3）在六个真实机器人操作任务上验证了方法的有效性，无需任何任务特定训练数据，即比最强基线整体成功率提升了43.3个百分点。</p>
+<p>论文提到的局限性包括：1）框架性能依赖于初始观察和语言指令的质量，以及VLM准确生成约束的能力；2）约束生成、视频采样和优化步骤在测试时引入了一定的计算开销。</p>
+<p>本研究展示了将大规模生成模型（VGMs）与具有结构化推理能力的模型（VLMs）相结合的有效范式。它对后续研究的启示在于：如何进一步自动化或优化约束的生成与表述；能否将约束对齐过程以轻量级方式融入到视频生成模型本身的训练或微调中；以及该框架如何扩展到更复杂的多阶段、长视野操作任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>论文针对零-shot机器人操纵中，视频生成模型（VGMs）输出物理不可信且几何重定向误差累积的问题，提出EmboAlign框架。该框架利用视觉语言模型（VLMs）自动提取任务相关组合约束，通过两阶段对齐：约束引导的rollout选择筛选最物理可信视频；约束基轨迹优化纠正重定向误差。在六个需精确执行的真实机器人任务上评估，EmboAlign将整体成功率提升43.3个百分点，无需任务特定训练数据。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05757" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

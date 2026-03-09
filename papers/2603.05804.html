@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CDF-Glove: A Cable-Driven Force Feedback Glove for Dexterous Teleoperation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>CDF-Glove: A Cable-Driven Force Feedback Glove for Dexterous Teleoperation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.05804" target="_blank" rel="noreferrer">2603.05804</a></span>
+        <span>作者: Xueqian Wang Team</span>
+        <span>日期: 2026-03-06</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>灵巧操作任务的模仿学习（IL）高度依赖高质量的人类演示数据。数据手套是捕获人手运动学的一种直观接口，但其生成的IL策略性能严重依赖于所捕获数据的质量和维度。此外，触觉力反馈对于操作者感知抓取和操作过程中的交互至关重要，使操作者能够实时调整策略，从而显著提升演示数据的质量。然而，现有的高自由度（DoF）触觉手套面临严峻挑战：它们通常极其昂贵、传感维度有限、缺乏力反馈，并且往往忽视可穿戴性、舒适性和安全性等关键实用因素，限制了其在长时间数据收集中的应用。</p>
+<p>本文针对高质量遥操作演示数据收集的瓶颈，以及缺乏实用、低成本、高自由度的力反馈方案这一痛点，提出了一种新颖的缆绳驱动方案。核心思路是设计并实现一种轻量化、低成本、高自由度的CDF-Glove，其通过缆绳传动机制集成测量与力反馈系统，以提供实时触觉信息，从而提升遥操作演示的质量。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>CDF-Glove系统整体框架包含一个轻量化的可穿戴手套硬件、一套运动学模型和一个控制栈。操作者佩戴手套，其20个手指自由度（16个直接测量，4个通过运动学约束被动耦合）的状态被实时获取，并映射到机器人手上进行控制。同时，机器人手上的力传感器信号被传回，驱动手套上的执行器提供力反馈，形成一个闭环遥操作系统。</p>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/main.jpg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：CDF-Glove系统概览。(a) CDF-Glove系统整体结构图。(b) 人手系统的运动学结构。(c) CDF-Glove系统的整体运动学布局。</p>
+</blockquote>
+<p>系统的核心模块分为测量系统和力反馈系统。</p>
+<ol>
+<li><strong>测量系统</strong>：基于人手解剖学模型（图2b），为每个手指设计了一个缆绳驱动的外骨骼结构（图4）。系统使用RDC506018A编码器直接测量16个主动自由度：包括食指、中指、无名指和小指的掌指关节（MCP）外展/内收运动，以及拇指的腕掌关节（TM）的两个自由度。每个手指的远端指间关节（DIP）和MCP关节的弯曲角度通过两根独立的1mm钢缆测量。钢缆一端固定在指套上，另一端连接一个由弹簧复位、沿导轨滑动的齿条，齿条驱动齿轮旋转从而改变编码器读数。近端指间关节（PIP）的角度不直接测量，而是通过其与DIP关节角度的经验关系（θ_PIP = (θ_DIP + 0.230)/0.989）计算得出，从而以低成本实现了20个自由度的状态估计。</li>
+<li><strong>力反馈系统</strong>：集成了双模式反馈。<strong>振动触觉反馈</strong>由嵌入在DIP指套下的线性谐振执行器（LRA）提供，根据接触力大小（0.1<del>0.5N和0.5</del>1N）驱动不同波形。<strong>动觉力反馈</strong>由FEETECH HLS3606M伺服电机驱动一根独立的力反馈缆绳实现。当机器人手检测到大于1N的力时，伺服电机收紧缆绳，产生阻碍手指弯曲的拉力，模拟接触感（反馈策略见表I）。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/baozatu.jpg" alt="单指结构"></p>
+<blockquote>
+<p><strong>图4</strong>：单指结构的爆炸视图。展示了指套、连接弹簧、测量缆绳、复位弹簧、齿轮齿条编码器机构以及力反馈缆绳和LRA的布局。</p>
+</blockquote>
+<p>系统的创新点体现在：</p>
+<ul>
+<li><strong>低成本与高自由度</strong>：通过缆绳传动和部分关节角度推断，以约230美元的成本实现了20自由度的测量。</li>
+<li><strong>集成力反馈</strong>：在同一轻量化结构中同时实现了振动和缆绳拉力两种反馈模式。</li>
+<li><strong>轻量化与安全性</strong>：整体重量（含舵机）仅0.49kg，采用闭环缆绳驱动，在检测到异常力时可自动放松，保障安全。</li>
+</ul>
+<p>为了将编码器读数转换为关节角度并控制力反馈缆绳的随动，论文建立了两个核心模型。</p>
+<ul>
+<li><strong>手指关节运动学模型</strong>（图5a）：通过几何关系，将编码器旋转角度（θ_em， θ_ed）转换为测量缆绳的位移（ΔP1， ΔP3），再根据缆绳在各关节处的有效半径（r1， r1‘， r2’， r3‘）计算出MCP、PIP和DIP的关节角度（θ1， θ2， θ3）。</li>
+<li><strong>力反馈缆绳随动计算模型</strong>（图5b）：根据计算出的关节角度，通过正向运动学链计算指尖位置，进而推导出力反馈缆绳从基座到指尖的路径总长度（La）。根据伺服输出法兰的半径（rs），即可计算出伺服需要转动的角度（θs），以便在手指弯曲时放出缆绳、伸直时收回缆绳，保持缆绳张力，实现“透明”的力反馈。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/shouzhijiesuan.jpg" alt="运动学模型"></p>
+<blockquote>
+<p><strong>图5</strong>：手指关节运动学模型。(a) 单个手指关节角度计算示意图。(b) 基于指尖位置定位的力反馈缆绳随动计算。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验平台使用RY-H1、RY-H2灵巧手和Shadow Dexterous Hand（SDH）。使用HTC Vive Tracker 3.0进行手腕6D位姿跟踪。数据集收集使用了双臂机器人（AGIBOT）和RealSense D455/D405相机。</p>
+<p><strong>1. 系统性能验证</strong>：</p>
+<ul>
+<li><strong>基本控制</strong>：成功将操作者手指的MCP关节外展、弯曲和DIP关节弯曲等动作映射到RY-H1手上（图7）。</li>
+<li><strong>力反馈性能</strong>：实验测得从机器人手电流信号到产生缆绳力反馈的延迟约为200ms（图10）。在遮蔽视觉和听觉（戴眼罩和耳罩）的条件下，引入力反馈使抓取水瓶的成功率从10%提升至50%（提高了4倍）；在无遮蔽条件下，成功率从70%提升至90%（表IV）。</li>
+<li><strong>重复定位精度</strong>：对食指DIP关节进行三次重复弯曲接触实验，接触角度的标准差小于0.4°，表明其具有高重复性精度（图9）。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/lifankui.jpg" alt="力反馈过程"></p>
+<blockquote>
+<p><strong>图10</strong>：食指的触觉反馈过程信息。(a) RY-H1的电流变化曲线。(b) LRA的波形和伺服舵机角度变化曲线，包括模式切换。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/force_feedback_bottle.jpg" alt="抓瓶实验"></p>
+<blockquote>
+<p><strong>图11</strong>：基于触觉反馈的抓瓶实验。</p>
+</blockquote>
+<p><strong>2. 运动学模型验证</strong>：<br>通过在具有不同自由度（6-DoF RY-H2， 15-DoF RY-H1， 24-DoF SDH）的灵巧手上执行多种任务（可乐瓶运输、手势演示、灯泡旋转、勺子搬运、弹钢琴等，见图12），验证了所提运动学模型的有效性和通用性。</p>
+<p><strong>3. 数据质量评估（模仿学习）</strong>：<br>使用CDF-Glove收集了双臂遥操作数据（堆叠纸杯和搬运塑料薄膜卷，见图13），并与动觉教学（KT）收集的数据进行对比。分别用两个数据集训练Diffusion Policy模型。结果表明，使用CDF-Glove数据训练的策略在两项任务上的平均成功率比使用KT数据训练的策略高出55个百分点（从<del>31%提升至</del>86%），平均完成时间缩短了约15.2秒（相对减少47.2%）。</p>
+<p><img src="https://arxiv.org/html/2603.05804v1/2603.05804v1/figures/shuangbi.jpg" alt="双臂任务"></p>
+<blockquote>
+<p><strong>图13</strong>：使用CDF-Glove进行双臂遥操作数据收集。(a)和(c)展示了堆叠纸杯和搬运塑料薄膜卷的任务。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）设计并实现了一种新颖、轻量化、低成本（约230美元）、高自由度且集成力反馈的CDF-Glove，其远端关节重复定位精度达0.4°，力反馈延迟约200ms；2）提出了完整的测量系统运动学模型和力反馈缆绳随动计算模型；3）通过广泛的实验验证，证明了基于CDF-Glove收集的数据训练的模仿学习策略性能显著优于基于动觉教学的数据。</p>
+<p>论文提及的局限性主要在于200ms的力反馈延迟对于高速交互任务可能偏高，但对于其验证的准静态操作任务已足够。</p>
+<p>本工作对后续研究的启示在于：其开源的设计与较低的成本极大地促进了灵巧操作研究社区获取高质量演示数据的能力，为模仿学习、遥操作等方向提供了一个实用且可复现的数据收集工具。所展示的力反馈对操作成功率的显著提升，也强调了在遥操作系统中集成触觉反馈的重要性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对模仿学习中高质量遥操作演示数据稀缺的问题，提出了一种轻量、低成本的CDF-Glove力反馈手套。其核心技术是缆绳驱动与力反馈系统，能实时感知20个手指自由度（16个直接测量，4个被动耦合推断），并建立了通用的运动学模型与控制栈。实验表明，该手套力反馈延迟约200ms，远端关节重复精度达0.4°；相比无反馈遥操作，任务成功率提升4倍。基于其收集数据训练的模仿学习策略，比动觉教学成功率平均提高55%，平均完成时间减少约15.2秒（相对减少47.2%）。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.05804" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
