@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ArtLLM: Generating Articulated Assets via 3D LLM - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ArtLLM: Generating Articulated Assets via 3D LLM</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.01142" target="_blank" rel="noreferrer">2603.01142</a></span>
+        <span>作者: Jiayuan Gu Team</span>
+        <span>日期: 2026-03-01</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>创建用于游戏、机器人和仿真的交互式数字环境依赖于铰接式3D物体，其功能源于其部件几何形状和运动学结构。然而，现有方法存在根本性局限：基于优化的重建方法需要缓慢的、逐物体的关节拟合，通常只能处理简单的单关节物体；而基于检索的方法从固定库中组装部件，导致几何形状重复且泛化能力差。与此同时，尽管通用3D生成和部件级生成取得了进展，但这些模型缺乏对底层运动学结构的认知，导致几何与运动之间存在脱节。</p>
+<p>本文针对现有方法在速度、几何新颖性和运动学推理方面的不足，提出了一种从完整3D网格直接生成高质量铰接资产的新框架。其核心思路是：首先利用一个在大规模铰接数据集上训练的3D多模态大语言模型（ArtLLM），自回归地预测物体的部件布局和关节结构；然后，该运动学感知的布局作为条件，引导一个部件感知的生成模型合成高保真度的部件几何形状。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ArtLLM框架旨在从点云输入生成可直接用于仿真的铰接资产。其整体流程分为三步：首先，一个3D铰接语言模型（ArtLLM）预测一个标记化的运动学蓝图；其次，该蓝图引导一个部件感知的生成模型合成高保真度的部件几何；最后，一个基于物理的关节限制修正模块优化关节运动范围，确保无碰撞。</p>
+<p><img src="https://arxiv.org/html/2603.01142v1/2603.01142v1/figures/method/pipeline_old.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ArtLLM整体框架概述。给定输入点云，ArtLLM首先预测一个指定部件布局和运动学结构的标记化铰接蓝图。该蓝图随后条件化一个部件感知生成模型以合成高保真度的连杆几何，最后通过一个基于物理的关节限制修正模块精炼铰接结构，产出仿真就绪的铰接资产。</p>
+</blockquote>
+<p><strong>核心模块1：3D铰接语言模型 (ArtLLM)</strong><br>该模型将铰接结构理解重新表述为语言建模问题。输入是经过预处理的、包含法线的点云（32，768个点）。通过一个基于Point Transformer v3的点云编码器提取特征，并像SpatialLM一样用位置嵌入增强，再通过一个两层MLP投影器进行模态对齐。语言模型主干采用Qwen3 0.6B。<br>其核心创新在于将整个运动学结构（部件和关节）表示为统一的离散令牌序列。每个部件由其轴对齐包围盒（AABB）的六个量化坐标定义。关节则根据其类型（旋转、连续、棱柱、螺旋）使用结构化模板定义，包含父/子部件ID、旋转轴/原点向量和运动范围等参数。所有连续参数（坐标、轴、范围）都被量化为离散的桶（如坐标和原点用128桶，旋转角用48桶），使模型能够在一个稳健的语言建模范式中进行自回归预测。生成顺序是先预测所有部件包围盒，然后是一个分隔符令牌，最后是所有关节定义，确保关节预测建立在完整的部件布局之上。</p>
+<p><strong>核心模块2：多任务与多阶段监督微调 (SFT)</strong><br>训练策略是另一个关键创新。模型通过三个SFT任务进行训练：1) <strong>部件布局预测</strong>：仅从点云预测部件包围盒；2) <strong>运动学预测</strong>：在给定点云和真实部件布局的条件下预测关节；3) <strong>端到端铰接预测</strong>：从输入点云同时预测部件和关节。<br>训练分为两个阶段：第一阶段，仅使用任务1训练模型，并使用在大型部件分割数据集上预训练的P3SAM权重初始化点云编码器，以建立强大的几何基础。第二阶段，使用第一阶段的权重初始化编码器和投影器，然后在所有三个任务上进行SFT，以细化模型对运动学推理的理解。这种策略有效地将几何理解与运动学推理解耦，使模型能更稳健地学习它们之间的复杂关系。</p>
+<p><strong>核心模块3：部件感知几何合成</strong><br>在获得预测的部件包围盒蓝图后，框架将其与先进的部件级生成模型（如XPart）集成以合成几何。为确保生成的几何完整覆盖输入形状，引入了一个鲁棒的包围盒扩展步骤：首先，将输入点云中未被任何预测包围盒包含的点，根据欧氏距离分配给最近的包围盒；然后，每个包围盒被扩展以紧密包围新分配给它的所有点。这保证了整个物体点云都被覆盖，防止了几何伪影。</p>
+<p><strong>核心模块4：基于物理约束的关节限制修正</strong><br>由于模型仅基于单时刻几何状态预测关节限制，可能导致部件在运动过程中发生碰撞。因此，引入了一个后处理修正步骤。对于旋转关节，使其子部件在初始预测范围内运动，并计算与所有其他静态部件在离散步长下的碰撞体积。碰撞体积相对于关节角度的导数出现尖峰则表明发生显著碰撞。通过首先识别包含尖峰的粗略角度窗口，然后在该窗口内进行分层搜索，精确定位初始接触的角度，并将其设置为修正后的无碰撞关节限制。对棱柱关节采用类似基于平移距离的程序。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>数据集与对比方法</strong>：评估在PartNet-Mobility数据集上进行，采用了SINGAPO提出的数据划分，选取了7个类别共77个物体作为测试集。对比的基线方法包括URDFormer、SINGAPO和Articulate-Anything。对于Articulate-Anything，评估时从检索库中移除了真实物体部件以确保公平。</p>
+<p><strong>定量结果</strong>：如表2所示，ArtLLM在部件布局预测（mIoU: 0.6884）、关节类型准确率（0.9084）、关节轴误差（0.1271）、关节枢轴误差（0.0801）和运动学图准确性（0.7741）上均显著优于所有基线方法。尽管Articulate-Anything在关节范围IoU（0.8653）上表现较好（因其采用基于规则的预测），但其关节轴和枢轴误差很大。此外，ArtLLM的推理时间（19秒）远快于其他优化或检索方法。</p>
+<p><img src="https://arxiv.org/html/2603.01142v1/2603.01142v1/figures/exp/comparison.png" alt="定性对比"></p>
+<blockquote>
+<p><strong>图4</strong>：定性对比。基线方法依赖于从固定资产库中检索部件，因此常常无法恢复准确的几何形状，并频繁生成关节类型错误或关节位置错位的错误铰接。相比之下，我们的方法生成的几何形状与输入高度匹配，并恢复了正确、连贯的铰接结构。</p>
+</blockquote>
+<p><strong>消融实验</strong>：如表3所示，消融研究验证了关键组件的有效性。实验A（直接预测连续参数）导致模型在坐标和方向相关属性上的能力显著下降。实验B（移除多任务设置）略微改善了轴方向预测但降低了其他所有指标。实验C（移除数据增强）导致部件IoU性能下降。实验D（移除多阶段训练）同时降低了部件和关节预测的准确性。这些结果证实了量化预测、多任务学习、数据增强和多阶段训练策略的重要性。</p>
+<p><img src="https://arxiv.org/html/2603.01142v1/2603.01142v1/figures/exp/ablation_physical_v2.png" alt="物理限制修正"></p>
+<blockquote>
+<p><strong>图5</strong>：物理限制修正的定性结果。修正前，预测的关节范围在运动过程中导致明显的自碰撞。应用我们基于物理的限制修正后，铰接部件平滑运动而无碰撞，产生了物理上合理且稳定的运动。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.01142v1/2603.01142v1/figures/exp/robot_demo.png" alt="机器人应用"></p>
+<blockquote>
+<p><strong>图7</strong>：在机器人领域的应用展示。通过ArtLLM从真实图像重建铰接资产并放入仿真环境，可以用于机器人操作任务的模拟训练（真实到仿真）。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) <strong>提出ArtLLM框架</strong>：首次将3D LLM应用于铰接资产生成，通过自回归预测标记化的运动学蓝图，统一了部件布局与关节结构推理。2) <strong>创新的训练与表示策略</strong>：设计了参数量化、多任务/多阶段SFT以及物理后处理修正，有效解决了连续参数预测、几何-运动学联合学习以及物理合理性等挑战。3) <strong>卓越的性能与效率</strong>：在多个指标上显著超越现有方法，且推理速度更快，为大规模仿真环境构建提供了高效方案。</p>
+<p>论文提到的局限性包括：模型在训练数据中未见的复杂关节类型（如球窝关节）上可能表现不佳；对于具有非常多部件（&gt;20）的物体，需要进行数据过滤。对后续研究的启示在于：证明了3D LLM在结构化3D内容生成中的强大潜力；将几何生成与运动学推理端到端结合是未来的重要方向；基于物理的修正模块展示了将学习与基于规则的优化相结合以提升结果实用性的价值。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对铰接式3D资产生成中，现有优化方法速度慢、仅能处理简单对象，而检索方法几何重复、泛化性差的核心问题，提出ArtLLM框架。其关键技术是训练于大规模铰接数据集的3D多模态大语言模型（3D LLM），能自回归预测可变数量的部件和关节布局，并以此条件化生成模型合成高保真部件几何。在PartNet-Mobility数据集上的实验表明，该方法在部件布局准确性和关节预测方面显著优于现有最优方法，且能鲁棒泛化到真实世界物体。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.01142" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
