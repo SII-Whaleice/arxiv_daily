@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>EquiBim: Learning Symmetry-Equivariant Policy for Bimanual Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>EquiBim: Learning Symmetry-Equivariant Policy for Bimanual Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08541" target="_blank" rel="noreferrer">2603.08541</a></span>
+        <span>作者: Yu She Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人模仿学习在从示教中学习复杂操作行为方面取得了显著成功。然而，许多现有方法没有显式地考虑机器人系统的物理对称性，这常常导致在对称观察下产生不对称或不一致的行为。这一局限在双臂操作中尤为突出，因为双臂形态和许多任务结构本身具有双边对称性。当前探索对称性的方法，如对称感知网络架构、等变表示或数据增强方案，通常与特定的模型设计、观察模态或动作参数化紧密耦合，缺乏一种通用、可复用的归纳偏置。</p>
+<p>本文针对上述痛点，提出了EquiBim框架，旨在为双臂模仿学习提供一个模型无关的对称等变性正则化方法。其核心思路是：将物理对称性形式化为对观察空间和动作空间的群作用，并在训练时对策略预测施加一个等变性约束，即要求策略在对称变换下的输出与对原输出进行对称变换的结果一致，而无需修改网络架构。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>EquiBim的整体框架是一个在标准模仿学习流程上增加对称一致性正则化的训练过程。给定一个观察历史 (\mathcal{O})，策略 (\pi) 预测未来动作序列 (\mathcal{A})。框架的核心是引入一个对称变换 (\mathcal{S})（对应于机器人工作空间的左右交换），并利用它来构造一个正则化损失。</p>
+<p><img src="https://arxiv.org/html/2603.08541v1/2603.08541v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：EquiBim概览。给定观察 (\mathcal{O}) 及其对称变换后的版本 (\mathcal{S}(\mathcal{O}))，共享策略 (\pi) 处理两者并产生动作预测。对称等变损失 (\mathcal{L}_{\mathrm{sym}}) 在训练中强制要求预测的动作在 (\mathcal{S}) 下具有一致性变换。</p>
+</blockquote>
+<p>核心模块是<strong>对称一致性正则化</strong>。其具体作用是通过一个损失函数约束策略行为：对于给定的观察 (\mathcal{O})，策略从变换后观察 (\mathcal{S}(\mathcal{O})) 预测的动作，应等于对原始观察预测的动作进行同样的对称变换。该损失函数定义为：<br>[<br>\mathcal{L}_{\text{sym}} = \left|\pi(\mathcal{S}(\mathcal{O})) - \mathcal{S}(\pi(\mathcal{O}))\right|_2。<br>]<br>这个目标鼓励策略为对称等价的任务实例产生相容的动作。该正则化纯粹在输出层面操作，不需要额外的监督或显式的对称标注，且与底层策略架构、观察模态和动作表示无关。</p>
+<p>与现有方法相比，EquiBim的核心创新点在于其<strong>模型无关性</strong>。它不依赖于特定的网络架构（如等变卷积）来编码对称性，而是通过一个基于输出的正则化项来施加约束。这使得它可以作为一个“即插即用”的模块，无缝集成到各种现有的模仿学习流程中。</p>
+<p>实现这一点的关键是<strong>跨模态的统一对称变换 (\mathcal{S})</strong> 定义。对于图像观察，(\mathcal{S}) 对应水平翻转。对于点云观察，点首先通过相机外参变换到图像坐标系，然后沿横向轴（y轴）进行反射，再变换回原始坐标系（公式2）。对于末端执行器空间的动作，其位姿在图像坐标系中进行相同的反射变换。对于关节空间的动作，根据机器人URDF模型确定的关节对称符号，通过对角矩阵 (\mathbf{D}) 进行关节级的符号翻转（公式3）。这种统一的定义确保了对称一致性可以在几何上连贯的方式下，应用于不同的感知和控制接口。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在RoboTwin仿真基准（包含八个具有自然左右对称性的双臂操作任务，如图3所示）和真实的LeRobot SO101双臂平台上进行。</p>
+<p><img src="https://arxiv.org/html/2603.08541v1/2603.08541v1/x2.png" alt="仿真任务"></p>
+<blockquote>
+<p><strong>图3</strong>：用于评估的八个仿真双臂操作任务的可视化。每个任务左侧图像显示初始状态，右侧图像显示目标状态。</p>
+</blockquote>
+<p>对比的基线方法包括广泛使用的视觉模仿学习方法：图像基础的Diffusion Policy (DP) 和点云基础的DP3。评估了四种观察-动作配置组合：图像+关节空间、图像+末端执行器空间、点云+关节空间、点云+末端执行器空间。</p>
+<p>关键仿真实验结果总结如下：EquiBim在所有观察-动作设置下均一致提升了性能。如表1所示，在图像+关节空间配置下提升最大，成功率从34.1%提升至43.6%（+9.5%）。点云基础的设置提升相对温和（+3.3%至+4.4%）。作者分析认为，点云和末端执行器空间本身提供了较强的几何先验，而图像+关节空间配置缺乏显式的3D空间结构，因此对称正则化提供的结构先验补偿了缺失的几何信息，带来了更大的收益。</p>
+<p>表2进一步展示了每个任务的性能差异。EquiBim在具有清晰双边结构或可互换手臂角色的任务（如Beat Block Hammer, Move Can Pot, Place Empty Cup, Press Stapler）上带来了显著提升。然而，在Handover Block和Pick Dual Bottles等任务上观察到了性能下降。论文指出，这些任务尽管在几何上对称，但其最优控制策略可能在实例层面存在不对称性（例如功能角色不对称、接触条件差异），对称正则化可能会部分抑制有用的非对称适应。</p>
+<p>在真实世界评估中，使用ACT作为策略骨架，在香蕉交接、挂钩悬挂等任务上进行测试。</p>
+<p><img src="https://arxiv.org/html/2603.08541v1/2603.08541v1/x3.png" alt="真实世界设置"></p>
+<blockquote>
+<p><strong>图4</strong>：真实世界双臂操作设置概览。两个LeRobot SO101机械臂在共享工作空间内操作，由一个Logitech C920x相机观察。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08541v1/2603.08541v1/x4.png" alt="任务执行"></p>
+<blockquote>
+<p><strong>图5</strong>：在双臂LeRobot平台上的真实世界任务执行。展示了香蕉交接、鼓槌挂钩悬挂和玩具鸡挂钩悬挂三个任务的时间进程。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08541v1/2603.08541v1/x5.png" alt="分布偏移泛化"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界双臂平台上在分布偏移下的泛化。左侧为训练分布下的 rollout，右侧为偏移条件下的 rollout。可视化叠加了多个rollout（每次设置共10次试验）以说明轨迹变异性。</p>
+</blockquote>
+<p>如表3所示，在训练分布下，对于香蕉交接任务，ACT+EquiBim将成功率从3/10提升至6/10。在引入分布偏移（如物体方向镜像、示教质量不对称、随机初始化）后，EquiBim展现出更强的鲁棒性。例如，在香蕉方向镜像的偏移下，基线ACT失败（0/10），而ACT+EquiBim取得了5/10的成功。这表明对称正则化能够将学习到的左右交互模式迁移到镜像配置中，并利用较强一侧的示教来正则化较弱一侧的数据。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了EquiBim，一个模型无关的对称等变正则化框架，可即插即用地融入现有模仿学习流程；2）定义了适用于多种观察模态（图像、点云）和动作表示（末端执行器空间、关节空间）的统一对称变换；3）通过仿真和真实实验验证了该框架能一致提升性能，并在分布偏移下增强鲁棒性。</p>
+<p>论文自身提到的局限性在于，当任务的最优策略本质上包含不对称时（例如某些交接或抓取任务中因时序或接触导致的功能角色不对称），强制的对称约束可能会抑制必要的非对称适应，导致性能下降。</p>
+<p>这项工作对后续研究的启示在于：显式编码物理对称性是一种简单有效的归纳偏置。未来的工作可以探索更灵活地结合对称性，例如学习任务何时是对称的，或者开发能动态调整对称约束强度的机制。此外，将这种模型无关的正则化思想扩展到其他类型的物理对称性（如旋转对称）也是一个有前景的方向。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对双手操作中现有模仿学习方法忽视物理对称性，导致对称观察下行为不对称的问题，提出EquiBim对称等变策略学习框架。该框架将物理对称性表述为观察与动作空间上的群作用，通过强制双边等变约束确保策略预测的对称一致性，并能无缝集成于多种观察模态与动作表示的模仿学习流程。在双手机器人平台的仿真与实物实验中，该方法有效提升了分布偏移下的性能与鲁棒性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08541" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

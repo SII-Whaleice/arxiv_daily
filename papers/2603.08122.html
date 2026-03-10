@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Towards Human-Like Manipulation through RL-Augmented Teleoperation and Mixture-of-Dexterous-Experts VLA - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Towards Human-Like Manipulation through RL-Augmented Teleoperation and Mixture-of-Dexterous-Experts VLA</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08122" target="_blank" rel="noreferrer">2603.08122</a></span>
+        <span>作者: Kaifeng Zhang Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型在机器人操作领域取得了显著成功，但其应用主要局限于低自由度末端执行器执行简单的、视觉引导的拾放任务。将此类模型扩展到类人的双手灵巧操作——特别是接触丰富的掌内操作——面临着高保真数据获取、多技能学习和多模态感知融合的关键挑战。现有方法主要存在三个关键瓶颈：首先，操作一个具有63个自由度的双手系统极其困难，获取高质量的、需要精确多指协调的掌内操作演示数据超出了即使专家操作员的能力。其次，复杂的任务包含截然不同的阶段，需要不同的技能，单一策略难以在高维动作空间中掌握所有技能。最后，直接将力和触觉观测与预训练的VLA主干网络简单拼接，忽略了它们不同的时间动态和物理语义，往往会导致性能下降而非提升。</p>
+<p>本文针对这些痛点，提出了一个集成框架，其核心思路是：通过一个强化学习训练的原子技能套件来辅助高效数据采集并作为可调用的低级执行原语，同时设计一个专用的混合专家架构来融合异构的力与触觉模态，从而实现接触感知的灵巧操作。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文框架由两个协同组件构成：用于辅助数据采集与低级执行的IMCopilot，以及用于多模态融合的MoDE-VLA。</p>
+<p><img src="https://arxiv.org/html/2603.08122v1/2603.08122v1/x1.png" alt="系统总览"></p>
+<blockquote>
+<p><strong>图2</strong>：系统总览。(a) 遥操作系统，包括外骨骼、VR头显和脚踏板。(b) VR视图，集成了机器人相机流以及实时力和触觉反馈叠加。(c) 用于执行接触丰富任务的机器人平台。</p>
+</blockquote>
+<p>整体流程如下：在数据采集阶段，操作员通过外骨骼进行粗略的臂部运动遥操作，同时在需要精细掌内操作时（如旋转苹果），通过脚踏板触发预训练的IMCopilot技能，形成人机协作的共享自治模式，从而高效获取高质量演示轨迹。在自主执行阶段，预训练的MoDE-VLA模型接收多模态观测（视觉、语言、本体感觉、力、触觉），生成动作。该动作包含一个触发信号，当信号超过阈值时，掌内动作将由IMCopilot接管，而臂部动作仍由VLA生成并经由MoDE模块的力信号进行修正，形成一个分层决策架构。</p>
+<p>核心模块一：IMCopilot。这是一个通过强化学习训练的一组原子掌内操作技能，目前包括稳定抓握保持和绕指定轴掌内旋转物体。其训练采用PPO算法在仿真中进行，使用了非对称的演员-评论家架构与师生蒸馏策略。观察状态包括本体感觉、指尖接触力和目标旋转轴的历史信息。策略输出关节位置偏移，由底层PD控制器跟踪。奖励函数鼓励围绕目标轴的角速度，同时惩罚不必要的线速度、过度的关节做功、扭矩和关节偏差以确保稳定性。IMCopilot扮演双重角色：在数据采集中作为共享自治助手，在自主执行中作为VLA可调用的低级原语。</p>
+<p>核心模块二：MoDE-VLA。该架构在预训练的VLA骨干网络基础上，增加了处理力和触觉模态的专用通路。</p>
+<p><img src="https://arxiv.org/html/2603.08122v1/2603.08122v1/x2.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图3</strong>：MoDE-VLA概览。左侧：OpenPI-0骨干网络将视觉、语言、本体感觉和含噪动作输入编码为令牌序列。中部：MoDE-VLA接收力和触觉观测，通过稀疏专家路由它们，并产生模态特定的残差修正——力引导的臂部动作调整和触觉引导的手部动作调整。右侧：分层决策机制在每个时间步在两个选项间选择：选项1，手部动作由VLA生成并经MoDE触觉修正；选项2，RL训练的IMCopilot直接基于手部本体状态控制手部动作。两种情况下，臂部及其他动作均由VLA生成并经MoDE力修正。</p>
+</blockquote>
+<p>具体而言，力信号（来自机械臂关节扭矩）和触觉信号（来自所有指尖触觉传感器的六维力/力矩读数）分别通过线性层投影到与骨干网络相同的嵌入空间。由于原始读数是单帧的，而动作预测跨越多步，因此将每个嵌入复制H次并添加正弦位置编码，形成时间索引的令牌序列。接着，MoDE模块将骨干网络的上下文输出、当前去噪状态以及力/触觉令牌沿序列维度拼接，并通过自注意力层处理，使力/触觉令牌能够同时关注视觉-语言上下文和去噪状态。处理后的令牌经过一个令牌级别的混合专家层，该层包含E个专家MLP，采用top-k稀疏路由。这种设计允许不同的专家专注于不同的操作阶段。最后，MoE层输出的精炼力令牌和触觉令牌通过模态特定的投影头，以残差形式注入到骨干网络的动作预测中，分别修正臂部和手部动作。这种残差注入设计确保了MoDE仅作为对基础VLA预测的 refinement，当力/触觉信号信息量少时，修正趋近于零，从而保留骨干网络的预训练知识。</p>
+<p>与现有方法相比，创新点体现在：1) 提出了一个统一的、兼具数据采集辅助和自主执行原语功能的RL技能套件；2) 设计了通过稀疏专家路由和残差注入来融合异构力/触觉模态的专用架构，实现了接触感知的精细化控制。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在四个接触复杂性递增的任务上进行评估：齿轮装配、充电器插拔、试管重新排列和苹果削皮。使用的机器人平台是SharpaNorth，配备双7自由度机械臂和22自由度灵巧手。基线方法为预训练的VLA骨干网络π0。</p>
+<p><img src="https://arxiv.org/html/2603.08122v1/2603.08122v1/x3.png" alt="任务图示"></p>
+<blockquote>
+<p><strong>图4</strong>：四个评估任务的图示：苹果削皮、试管重新排列、齿轮装配和充电器插拔。每行从左到右展示了任务执行的五个关键帧。</p>
+</blockquote>
+<p>首先，实验验证了IMCopilot在数据采集中的有效性。在掌内旋转物体的任务中，使用IMCopilot辅助的遥操作成功率（89%）远高于纯遥操作（34%），尤其是在操作苹果时，成功率从27%提升至90%。这证明了IMCopilot能显著缓解高质量演示数据获取的瓶颈。</p>
+<p>其次，对比了MoDE-VLA与基线π0的性能。如表二所示，在苹果削皮任务上，本文方法将成功率从8%提升至30%，剥皮完成率从15%提升至73%。在试管重新排列任务上，成功率从40%提升至60%。在齿轮装配任务上，成功率从5%提升至15%。在充电器插拔任务上，成功率保持为30%。平均成功率从15%提升至34%。结果表明，MoDE-VLA在接触丰富的任务上相比基线有显著提升。</p>
+<p>最后，通过消融实验分析了各组件贡献。移除力反馈后，平均成功率从34%降至23%，在需要力调节的充电器插拔任务中性能下降尤其明显（从15%降至5%）。移除触觉反馈后，平均成功率降至26%，在需要精细手部协调的试管重新排列任务中影响显著（成功率从60%降至45%）。在苹果削皮任务中移除IMCopilot（即完全由VLA控制双手），任务完全失败（0%成功率），凸显了在极端复杂任务中分层技能调用的必要性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献有两点：1) 提出了IMCopilot，一个统一遥操作辅助与自主低级控制的RL训练掌内操作原语套件，形成了VLA负责高层规划、IMCopilot提供反应式灵巧性的分层框架；2) 提出了MoDE-VLA，通过专用的自注意力、稀疏专家路由和残差注入机制，将力与触觉模态融合到预训练VLA骨干中，实现了接触感知的动作生成且不损害骨干的预训练能力。</p>
+<p>论文提到的局限性包括对特定硬件平台（如高自由度灵巧手和触觉传感器）的依赖，以及IMCopilot技能库目前较小，可能无法覆盖所有复杂的掌内操作场景。</p>
+<p>本研究对后续工作的启示在于：为复杂灵巧操作提供了一种结合技能抽象与多模态融合的可行范式。未来方向可能包括扩展技能库的多样性与泛化能力，探索更高效的多模态对齐与融合机制，以及研究如何将此类系统迁移到更广泛的机器人平台和任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>这篇论文旨在解决现有视觉-语言-动作模型在扩展到类人双手灵巧操作时面临的数据获取困难、多技能学习与多模态融合三大挑战。提出了两大核心技术：IMCopilot（一套基于强化学习的原子技能，用于辅助遥操作数据收集并作为低级执行原语）和MoDE-VLA（一种通过残差注入机制集成力与触觉模态的专家混合架构）。实验表明，该方法在四个复杂度递增的接触丰富灵巧操作任务上，相比基线实现了成功率翻倍的性能提升。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08122" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

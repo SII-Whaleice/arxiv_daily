@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>LAR-MoE: Latent-Aligned Routing for Mixture of Experts in Robotic Imitation Learning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>LAR-MoE: Latent-Aligned Routing for Mixture of Experts in Robotic Imitation Learning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08476" target="_blank" rel="noreferrer">2603.08476</a></span>
+        <span>作者: Stefanie Speidel Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人模仿学习（IL）使机器人能够从演示中学习操作技能，但将单一策略部署到具有异质动态（如手术任务中不同的接触模式）的任务中仍然具有挑战性，因为现有方法倾向于对不同行为模式进行平均，而非专门化处理。混合专家（MoE）架构通过基于输入特征条件激活专用子网络来解决此问题，这种稀疏计算范式与机器人学习自然契合。然而，将MoE应用于视觉运动策略学习的一个关键挑战在于，如何在没有显式监督或人工定义技能的前提下，为专家路由发现有意义的行为分解。</p>
+<p>本文针对这一痛点，提出了一种名为LAR-MoE（潜在对齐路由的混合专家）的两阶段框架，其核心思路是将无监督的技能发现与策略学习解耦：首先通过学生-教师协同训练学习观测与未来动作的联合潜在表示；然后在策略训练阶段，将专家路由机制正则化，使其遵循所学潜在空间的结构，从而引导专家专业化并防止专家崩溃。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>LAR-MoE的整体框架分为预训练和后训练两个阶段，旨在解耦表示学习与专家路由。</p>
+<p><img src="https://arxiv.org/html/2603.08476v1/2603.08476v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：LAR-MoE方法整体框架。左侧为预训练阶段，通过学生-教师协同训练学习观测与未来动作块的联合潜在表示。右侧为后训练阶段，冻结学生编码器，并利用潜在对齐正则化策略，将专家路由决策锚定到所学潜在空间的结构上。动作专家采用简单的Transformer解码器架构实现。</p>
+</blockquote>
+<p><strong>1. 预训练：路由网络学习</strong><br>在预训练阶段，目标是为后续的专家路由学习一个结构化的任务潜在空间。该方法采用学生-教师协同训练策略。教师网络 $\phi_{t,\theta}$ 接收当前观测 $o_t$ 和未来动作块 $a_{t:t+H}$，编码为潜在向量 $z_t$，并通过一个可训练解码器 $\psi$ 重建动作，其损失为 $\mathcal{L}<em>t = \operatorname{MSE}(\hat{a}</em>{t:t+H}, a_{t:t+H})$。学生网络 $\phi_{s,\theta}$ 仅接收当前观测 $o_t$，预测潜在向量 $\hat{z}_t$，并通过最小化 $\mathcal{L}_s = \operatorname{MSE}(\hat{z}_t, z_t)$ 来匹配教师的潜在表示。这种无监督训练使学生网络能够学习观测与动作潜在表示之间的关联，其学到的潜在空间结构将用于后续的专家选择。</p>
+<p><strong>2. 后训练：混合专家策略</strong><br>策略由视觉编码器（EdgeNeXt18）、语言编码器（冻结的MiniLM-L6）和 N 个动作专家 $(\psi_1, \psi_2, ..., \psi_N)$ 组成。每个专家是一个Transformer解码器，用于预测动作块。在后训练和推理时，使用预训练阶段冻结的学生模型来预测动作潜在 $\hat{z}_t$。</p>
+<p><strong>路由机制</strong>：采用软门控机制，通过一个MLP和可学习的温度参数 $T$（初始化为100）将 $\hat{z}<em>t$ 转换为专家权重 $p_t$：$p_t = \text{softmax}!\left(T\cdot\text{MLP}(\hat{z}<em>t)\right)$。最终的动作块输出是各专家输出的加权和：$\hat{a}</em>{t:t+H} = \sum</em>{n=1}^{N} (p_t)<em>n (\hat{a}</em>{t:t+H})_n$。</p>
+<p><strong>损失与正则化</strong>：总损失 $\mathcal{L} = \mathcal{L}<em>{MSE} + \lambda</em>{DC}\mathcal{L}<em>{DC} + \lambda</em>{H}\mathcal{L}<em>{H} + \lambda</em>{G}\mathcal{L}_{G}$，其中：</p>
+<ul>
+<li>$\mathcal{L}_{MSE}$：预测动作与演示动作之间的均方误差损失。</li>
+<li>**距离一致性损失 $\mathcal{L}_{DC}$**：这是核心创新点。它鼓励专家选择分布 $P$ 的成对距离与由学生模型预测的任务潜在 $Z$ 的成对距离保持一致（计算公式见论文式3-5）。这迫使路由决策与无监督学到的任务相似性结构对齐，从而缓解专家失衡问题。</li>
+<li>**熵正则化 $\mathcal{L}_{H}$**：鼓励专家专业化，即每个时间步的权重分布更集中。</li>
+<li>**组稀疏正则化 $\mathcal{L}_{G}$**：借鉴图像分类MoE工作，通过鼓励空间上相邻的专家被共同激活来提高训练稳定性。</li>
+</ul>
+<p>与现有方法相比，LAR-MoE的主要创新在于：1) 提出了两阶段训练范式，将无监督技能发现（路由网络学习）与策略学习解耦；2) 引入了距离一致性损失，将软专家路由显式地正则化到无监督学得的潜在空间结构上，从而实现了无需人工标注的、有意义的专家专业化。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验评估在仿真基准LIBERO和真实硬件手术任务（肠道抓取与牵拉）上进行。</p>
+<p><strong>1. 消融实验与组件分析</strong><br>实验在LIBERO基准上进行，以确定最佳模型配置。</p>
+<p><img src="https://arxiv.org/html/2603.08476v1/2603.08476v1/x3.png" alt="消融研究"></p>
+<blockquote>
+<p><strong>图4</strong>：在LIBERO基准上的消融研究。(a) 冻结学生编码器(+F)和应用潜在对齐正则化(+R)对LAR-MoE16成功率的影响。逐步引入组件带来持续性能提升，完整配置比基线（-F -R）提升16.4%。(b) 专家数量对性能的影响。专家数增至16时性能持续提升（比单专家基线提升16.7%），但32专家时性能下降，可能因训练周期不足。</p>
+</blockquote>
+<p><strong>2. 与基线方法对比</strong><br>在LIBERO基准上，使用150M参数的LAR-MoE16与多种方法对比。</p>
+<table>
+<thead>
+<tr>
+<th align="left">Policy</th>
+<th align="left">Size</th>
+<th align="left">Spatial</th>
+<th align="left">Object</th>
+<th align="left">Goal 10</th>
+<th align="left">Avg.</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">Diffusion Policy</td>
+<td align="left">263M</td>
+<td align="left">78.3</td>
+<td align="left">92.5</td>
+<td align="left">68.3</td>
+<td align="left">50.5</td>
+</tr>
+<tr>
+<td align="left">Octo</td>
+<td align="left">90M</td>
+<td align="left">78.9</td>
+<td align="left">85.7</td>
+<td align="left">84.6</td>
+<td align="left">51.1</td>
+</tr>
+<tr>
+<td align="left">OpenVLA</td>
+<td align="left">8B</td>
+<td align="left">84.7</td>
+<td align="left">88.4</td>
+<td align="left">79.2</td>
+<td align="left">53.7</td>
+</tr>
+<tr>
+<td align="left">$\pi_0$</td>
+<td align="left">3.5B</td>
+<td align="left">90.0</td>
+<td align="left">86.0</td>
+<td align="left">95.0</td>
+<td align="left">73.0</td>
+</tr>
+<tr>
+<td align="left">$\pi_{0.5}$</td>
+<td align="left">3.5B</td>
+<td align="left">98.0</td>
+<td align="left">98.0</td>
+<td align="left">98.0</td>
+<td align="left">92.0</td>
+</tr>
+<tr>
+<td align="left">SmolVLA</td>
+<td align="left">240M</td>
+<td align="left">87.0</td>
+<td align="left">93.0</td>
+<td align="left">88.0</td>
+<td align="left">63.0</td>
+</tr>
+<tr>
+<td align="left">SmolVLA</td>
+<td align="left">2.25B</td>
+<td align="left">93.0</td>
+<td align="left">94.0</td>
+<td align="left">91.0</td>
+<td align="left">77.0</td>
+</tr>
+<tr>
+<td align="left"><strong>LAR-MoE16 (Ours)</strong></td>
+<td align="left"><strong>150M</strong></td>
+<td align="left"><strong>98.0</strong></td>
+<td align="left"><strong>99.0</strong></td>
+<td align="left"><strong>96.0</strong></td>
+<td align="left"><strong>88.0</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>表I</strong>：LIBERO基准上的成功率（%）。LAR-MoE16仅用150M参数，在平均成功率上超越了多数参数量大得多的VLA模型，并接近参数量为其20倍的$\pi_{0.5}$的性能。</p>
+</blockquote>
+<p><strong>3. 真实硬件手术任务评估</strong><br>任务为复杂的肠道抓取与牵拉，包含五个阶段，需要与外科医生器械交互。</p>
+<p><img src="https://arxiv.org/html/2603.08476v1/2603.08476v1/x4.png" alt="手术任务示意图"></p>
+<blockquote>
+<p><strong>图5</strong>：手术肠道抓取与牵拉任务示意图。展示了机器人器械（白色）和外科医生器械（黄色）在不同阶段（1-5）的交互过程。</p>
+</blockquote>
+<p>在体模上的成功率对比：</p>
+<table>
+<thead>
+<tr>
+<th align="left">Policy</th>
+<th align="left">Phase Success</th>
+<th align="left">Reach</th>
+<th align="left">Grasp</th>
+<th align="left">Retract</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">ACT</td>
+<td align="left">16/20</td>
+<td align="left">13/20</td>
+<td align="left">12/20</td>
+<td align="left">10/20</td>
+</tr>
+<tr>
+<td align="left">ACT + Supervised MoE</td>
+<td align="left">20/20</td>
+<td align="left">20/20</td>
+<td align="left">19/20</td>
+<td align="left">17/20</td>
+</tr>
+<tr>
+<td align="left"><strong>LAR-MoE16 (Ours)</strong></td>
+<td align="left"><strong>20/20</strong></td>
+<td align="left"><strong>18/20</strong></td>
+<td align="left"><strong>18/20</strong></td>
+<td align="left"><strong>17/20</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>表II</strong>：在肠道体模上的硬件任务成功率。LAR-MoE16在仅使用120个无相位标注的演示进行训练后，达到了与需要相位标注的监督MoE基线相当的成功率。</p>
+</blockquote>
+<p><strong>零样本迁移到离体组织</strong>：将训练好的策略直接应用于离体猪肠组织，在20次尝试中取得了45%（9/20）的成功率，显示了模型对不同视觉外观和力学特性的真实组织的泛化能力。</p>
+<p><strong>4. 专家路由模式分析</strong></p>
+<p><img src="https://arxiv.org/html/2603.08476v1/2603.08476v1/x2.png" alt="专家激活时序图"></p>
+<blockquote>
+<p><strong>图3</strong>：在离体肠道牵拉任务 rollout 过程中，专家随时间的激活情况。热图显示了每个时间步所有专家的激活权重。颜色条“Po”表示路由器在每个时间步选择的最活跃专家，“Hu”表示同一 rollout 的人工标注任务阶段分割。尽管没有接受阶段标注训练，路由模式与人工分割高度相似。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08476v1/2603.08476v1/x5.png" alt="专家空间分配"></p>
+<blockquote>
+<p><strong>图6</strong>：在(a)体模和(b)离体猪组织上10次 rollout 期间的空间专家分配。每个颜色对应一个不同的专家，表示在毫米为单位的空间位置上最活跃的专家。专家颜色在两张图中共享以便直接比较。结果显示，尽管初始接近和抓取阶段的主导专家因视觉域差异而不同，但牵拉和保持阶段在两个域中 largely shared，表明策略学习了可迁移的、与接触相关的操作技能表示。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一种无监督的学生-教师协同训练策略，用于学习捕获观测与未来运动轨迹关系的联合潜在表示；2) 提出了LAR-MoE架构及潜在对齐正则化策略，将软专家路由锚定到所学潜在空间的结构上，从而在没有监督的情况下实现了有意义的专家专业化，并防止了专家崩溃，显著提高了参数效率；3) 在仿真和真实硬件任务上验证了该方法的有效性，在LIBERO上以少量参数达到高性能，并在手术任务中实现了与监督方法相当的性能及向离体组织的零样本迁移。</p>
+<p>论文提到的局限性包括：在数据极其有限的情况下，学生模型可能无法学习到足够有区分度的表示，从而影响路由质量；此外，学生模型的表示能力上限也会制约路由的判别性。</p>
+<p>这项工作为机器人模仿学习提供了一种新的思路：通过无监督方式从演示数据中发掘内在的任务结构（阶段/技能），并利用此结构来引导模块化策略（如MoE）的学习。这种“表示学习引导策略结构”的范式减少了对昂贵人工标注的依赖，有利于利用更大规模的无标注演示数据，并为学习可解释、可组合和可迁移的机器人技能开辟了道路。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人模仿学习中，单一策略在处理异质动态任务时容易“平均化”不同行为模式的问题，提出LAR-MoE方法。其核心技术是两阶段框架：先通过学生-教师协同训练，无监督地学习观察与动作的联合潜在表示以发现技能；再正则化专家路由，使其与学到的潜在空间结构对齐，避免专家崩溃并保持参数效率。在LIBERO基准测试中，该方法以1.5亿参数取得了95.2%的平均成功率；在外科抓取任务上，其性能与需要阶段标注的监督MoE基线相当，且能零样本迁移至离体组织。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08476" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

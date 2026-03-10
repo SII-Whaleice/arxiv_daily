@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Exp-Force: Experience-Conditioned Pre-Grasp Force Selection with Vision-Language Models - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Exp-Force: Experience-Conditioned Pre-Grasp Force Selection with Vision-Language Models</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08668" target="_blank" rel="noreferrer">2603.08668</a></span>
+        <span>作者: Lillian Chin Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人抓取中施加合适的力是实现稳定、安全操作的基础。当前研究主要集中在接触后的自适应力控制，但其仍需要一个合理的初始力估计。抓取前（Pre-grasp）的力选择方法旨在接触前基于物体属性或先验知识选择初始力，但面临泛化性挑战。经典分析方法基于接触力学和力封闭原理，需要物体几何、摩擦系数等精确先验知识，这对于未见物体通常不可得。数据驱动方法通过学习从感知输入到抓取力的映射来避免显式建模，但其泛化能力受限于训练数据集中物体属性、交互条件和夹爪形态的多样性。这一挑战对于顺应性夹爪尤为突出，其非线性和依赖具体形态的接触行为使得精确建模异常困难。</p>
+<p>本文针对“如何为未见物体，特别是使用顺应性夹爪时，泛化地预测一个最小可行抓取力”这一具体痛点，提出了一个经验条件化的新视角。其核心思路是模仿人类抓取力选择过程：将物体的外观与先前和视觉、语义相似物体的交互经验联系起来。本文提出Exp-Force框架，利用视觉语言模型（VLM）中编码的常识知识，并通过检索少量相关的先验抓取经验来条件化VLM进行上下文推理，从而预测抓取力，避免了分析性接触模型或人工设计启发式规则。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>Exp-Force的目标是，给定一个物体实例的单张腕部相机图像，预测将其抓起而不滑动所需的最小抓取力标量。其整体流程将力预测构建为一个经验条件化推理问题：检索一小组相关的先验抓取经验，并将其作为上下文示例提供给VLM，以估计查询物体的。</p>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x1.png" alt="方法架构"></p>
+<blockquote>
+<p><strong>图2</strong>：Exp-Force架构。来自腕部相机的目标物体图像首先输入描述器VLM，生成与机器人抓取相关的物体物理属性文本描述。随后，物体图像和文本描述一同输入嵌入模型，得到物体嵌入。该嵌入用于与经验池进行余弦相似度搜索，检索出top-k个示例，并将其作为上下文示例提供给预测器VLM，用于估计抓取力。每个示例包含物体名称、质量、描述、图像和真实力。</p>
+</blockquote>
+<p>整体框架包含三个核心模块：</p>
+<ol>
+<li><p><strong>对象描述生成</strong>：此步骤为查询图像生成文本描述，以显式识别与抓取力估计相关的物体属性。通过构建一个包含三部分的提示词给描述器VLM：共享的抓取任务信息、任务特定的描述指令和查询图像。共享信息提供了任务目标（寻找）、夹爪的形态信息（几何、结构、材料、侧视图图像）以及在相同相机设置下捕获的视觉尺度参考图像，以确保一致的物理假设和操作约束。描述指令明确引导模型描述与相关的物体属性，不嵌入任何分析力模型或人工启发式规则。描述器VLM处理构造的提示词，生成物体物理属性的文本描述，例如大小、形状、表观刚性、表面特性和结构线索（如容器状 vs. 固体），该描述将支持下一阶段的相似性检索。</p>
+</li>
+<li><p><strong>经验检索</strong>：此模块利用生成的物体描述和物体图像来检索相似先验经验。首先，使用预训练的多模态嵌入模型计算查询物体和所有先验经验的嵌入。本文采用Qwen3-VL-Embedding-8B模型作为嵌入函数，将查询图像和文本描述映射到一个统一的向量空间。经验池中的每个经验包含物体名称、质量、文本描述、预抓取图像和通过先前机器人交互获得的真实力。通过计算查询嵌入与经验池中每个嵌入的余弦相似度，并排序，选择相似度最高的k个经验作为检索到的经验集，为后续的力预测模块提供上下文。</p>
+</li>
+<li><p><strong>经验条件化力推理</strong>：最后阶段，将检索到的经验集条件化到预测器VLM上，通过上下文推理来估计。构建的预测器提示词按顺序整合了四个部分：共享的抓取任务信息、选定的先验交互经验、任务特定的力预测指令（引导模型推断）以及查询图像。预测器VLM处理此提示词，产生一个经验条件化的最小可行抓取力标量估计值。本文中，描述器和预测器均实例化为GPT-5.2、Gemini-3-Flash和Gemini-3.1-Pro三种先进的VLM。整个流程端到端运行，仅从视觉观察出发，无需显式物理建模。当时，流程退化为零样本推理，便于对比。</p>
+</li>
+</ol>
+<p>与现有方法相比，Exp-Force的核心创新在于：1) <strong>首次将检索增强生成（RAG）范式与VLM结合用于抓取力估计</strong>，使VLM能够基于相关真实交互经验进行推理，而非依赖可能不准确的分析模型。2) <strong>完全避免显式物理建模</strong>，不依赖摩擦方程或人工设计的力启发式规则，而是让VLM隐式地从示例中学习复杂的接触物理。3) <strong>框架与平台无关</strong>，不依赖于特定的夹爪形态。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：使用包含129个物体实例的数据集进行评估，物体来自家庭物品和YCB数据集，分为6个语义类别（易碎-轻、易碎-重、长方体、圆柱体、瓶子、奇异形状）。使用带有FORTE触觉鳍状手指的夹爪和RealSense D435i腕部相机收集数据。通过自适应力控制方法精确测量每个物体的最小可行抓取力：从0.25N的小力开始抓取并提升物体，在检测到滑动时收紧夹爪，直至无滑动，此时的力即为。通过5折交叉验证进行离线评估，确保查询物体不在其对应的经验池中。</p>
+<p><strong>对比方法</strong>：</p>
+<ol>
+<li><strong>零样本VLM</strong>：作为基线，以隔离检索先验经验带来的性能增益。</li>
+<li><strong>监督学习基线</strong>：使用预训练视觉编码器（DINOv3-Large）和多模态编码器（Qwen3-VL-Embedding-8B），在其提取的特征上训练一个两层MLP头来预测。</li>
+<li><strong>消融实验</strong>：包括对检索到的top-k个示例的真实力取平均（Exp-Force Avg）、用随机采样的k个经验替换检索集（Random Exp）、以及从提示词中移除夹爪形态信息（w/o embodiment）。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x4.png" alt="不同模型与方法的力预测误差对比"></p>
+<blockquote>
+<p><strong>图5</strong>：三种VLM（GPT-5.2、Gemini-3-flash、Gemini-3.1-pro）的力预测误差对比。Exp-Force（有经验）相比零样本（无经验）基线，在所有模型上均显著降低了平均绝对误差（MAE）和均方根误差（RMSE）。Exp-Force也优于监督学习基线（DINOv3和Qwen）。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>与零样本VLM对比</strong>：Exp-Force显著提升了所有测试VLM在所有物体类别上的预测精度。平均绝对误差从零样本的1.86 N（GPT-5.2）、1.14 N（Gemini-3-Flash）、1.52 N（Gemini-3.1-Pro）分别降低至0.56 N、0.46 N、0.43 N，最佳情况误差降低72%。零样本VLM倾向于依赖分析性摩擦模型并高估摩擦系数，导致普遍高估抓取力；而Exp-Force的VLM能够引用相似物体的经验进行语义-物理插值，并隐式推理复杂的接触力学。</li>
+<li><strong>与监督基线对比</strong>：Exp-Force（配合Gemini-3.1-Pro或Gemini-3-Flash）的MAE（0.43 N， 0.46 N）优于DINOv3-Large（0.50 N）和Qwen3-VL-Embedding-8B（0.51 N），分别有14%和8%的提升。</li>
+<li><strong>消融实验分析</strong>：<ul>
+<li><strong>组件贡献</strong>：Exp-Force Avg（平均检索力的力）性能显著差于完整的Exp-Force，表明VLM的推理能力至关重要。Random Exp（随机经验）性能与零样本相当，证实了检索相关经验的有效性。移除形态信息（w/o embodiment）会导致性能下降，说明提供夹爪信息对于准确的力估计是必要的。</li>
+<li><strong>上下文样本效率</strong>：<br><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x5.png" alt="检索示例数量k对力估计误差的影响"><blockquote>
+<p><strong>图6</strong>：检索示例数量k对力估计误差的影响。性能在k=0（零样本）到k=5-10之间迅速提升并趋于稳定，显示了Exp-Force高效的上下文样本效率。Gemini模型比GPT-5.2具有更稳定的估计和更紧的误差边界。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li><strong>真实世界实验</strong>：在30个未见物体（每个类别5个）上进行150次抓取试验。使用Gemini-3-flash模型（k=7）。Exp-Force将“适当”力选择率从零样本VLM的63%提升至87%，并将力不足和过高估计的情况减少了约三分之二。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x2.png" alt="物体类别与模型性能"></p>
+<blockquote>
+<p><strong>图3</strong>：(A)实验中使用的代表性物体，按几何、易碎性和重量分类。(B)物体重量与最小可行抓取力的关系图，虚线为零样本模型用于力估计的摩擦系数范围。(C)六个物体类别中，零样本与Exp-Force在三种VLM上的平均绝对误差对比，显示了Exp-Force在所有类别上的普遍改进。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x3.png" alt="真实世界实验设置与物体"></p>
+<blockquote>
+<p><strong>图4</strong>：(A)用于预抓取图像捕获和力执行的顺应性触觉两指夹爪与腕部相机。(B)从六个类别中各选出的五个物体，用于真实世界实验。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x6.png" alt="真实世界抓取结果统计"></p>
+<blockquote>
+<p><strong>图7</strong>：真实世界抓取结果统计。Exp-Force相比零-shot VLM，将“适当”力选择率从63%提升至87%，并显著减少了力不足和过高估计的情况。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08668v1/2603.08668v1/x7.png" alt="不同k值在真实世界实验中的表现"></p>
+<blockquote>
+<p><strong>图8</strong>：不同k值在真实世界实验中的表现。当k=7时，Exp-Force达到了最高的适当力选择率（87%），与离线实验中观察到的样本效率趋势一致。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) <strong>首次提出了利用检索增强的视觉语言模型进行机器人抓取力估计的框架Exp-Force</strong>，为抓取前力选择问题提供了新范式。2) <strong>在129个物体实例的数据集上验证了有效性</strong>，最佳情况平均绝对误差为0.43 N，相比零样本推理误差降低72%，且优于标准监督学习基线。3) <strong>展示了高效的上下文样本效率</strong>，仅需少量（k=5-10）相关示例即可达到性能平台。4) <strong>在真实机器人实验中验证了泛化能力</strong>，在30个未见物体上将适当力选择率从63%提升至87%。</p>
+<p>论文提到的局限性包括：经验池的质量和多样性直接影响性能；框架依赖于VLM的推理能力，可能存在幻觉或不一致性；当前方法未考虑抓取姿态或接触点变化对力的影响。</p>
+<p>本研究对后续工作的启示在于：1) 证明了大型VLM在仅提供少量相关真实交互示例的情况下，能够隐式地捕捉顺应性夹爪与多样物体间复杂的交互物理，可作为物理交互的隐式模型。2) 经验条件化（检索增强）是提升基础模型在物理推理任务中泛化性和可靠性的有效途径。3) 该方法框架是平台无关的，为将其迁移到其他机器人形态或操作任务（如推、压）提供了可能。未来工作可探索动态更新经验池、结合触觉反馈进行在线调整，以及将力预测集成到更完整的抓取规划管道中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人抓取中预接触力选择难题，尤其顺应性夹具接触力学难以建模的问题，提出Exp-Force经验条件框架。该方法基于视觉-语言模型，检索少量相关先验抓取经验进行上下文推理，从单张RGB图像预测最小可行抓取力，无需分析模型或手动启发式。实验表明，在129个物体实例上最佳平均绝对误差为0.43 N，比零样本推理错误降低72%；在30个未见物体真实测试中，适当力选择率从63%提升至87%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08668" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>TRIAGE: Type-Routed Interventions via Aleatoric-Epistemic Gated Estimation in Robotic Manipulation and Adaptive Perception – Don’t Treat All Uncertainty the Same - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>TRIAGE: Type-Routed Interventions via Aleatoric-Epistemic Gated Estimation in Robotic Manipulation and Adaptive Perception – Don’t Treat All Uncertainty the Same</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08128" target="_blank" rel="noreferrer">2603.08128</a></span>
+        <span>作者: Amit Ranjan Trivedi Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前大多数具有不确定性感知能力的机器人系统将预测不确定性合并为单一标量分数，并利用它来触发统一的保守响应。这种聚合模糊了不确定性是源于被污染的观测数据，还是源于学习模型与真实系统动力学之间的不匹配。因此，纠正措施可能被应用于闭环系统的错误组件，导致性能相对于保持策略不变反而下降。本文针对这一痛点，提出不应同质化处理所有不确定性，而应根据其物理来源进行区分的新视角。具体而言，传感器扰动（如编码器噪声、校准漂移）会污染观测数据但保持底层动力学不变，而动力学偏移（如物体质量变化、摩擦改变）则会改变系统物理响应但传感器模型完好。这两种扰动需要不同的纠正措施：前者应改善观测而非修改控制输入，后者应调整控制动作而保持观测不变。本文的核心思路是设计一个轻量级的事后处理框架，将不确定性分解为随机（aleatoric）和认知（epistemic）两种成分，并利用这些信号在推理时调节系统响应，实现“对症下药”。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>TRIAGE框架是一个在训练好的策略之上运行的轻量级事后处理模块，无需重新训练。其核心是通过分解不确定性，将不同类型的扰动路由至对应的干预措施。</p>
+<p><img src="https://arxiv.org/html/2603.08128v1/2603.08128v1/figures/fig_trig_traj.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：TRIAGE方法整体框架。左侧展示了在复合扰动（传感器噪声+动力学偏移）下的典型控制流程：原始策略（Vanilla）和联合不确定性基线（Total-U）均失败，而分解控制器（Decomposed）成功将方块提升至目标高度。右侧图表展示了两种不确定性信号随时间的变化及其触发的干预。</p>
+</blockquote>
+<p>整体流程如下：首先，在名义（无扰动）条件下运行策略，收集校准数据以建立参考分布。在推理时，对于每个时间步的观测和动作，并行计算两个不确定性信号。<strong>随机不确定性</strong> $\sigma_{\text{alea}}$ 用于检测传感器扰动，<strong>认知不确定性</strong> $\sigma_{\text{epis}}$ 用于检测动力学偏移。当任一信号超过其自适应阈值时，则触发对应的类型特异性干预。</p>
+<p><strong>核心模块一：随机不确定性估计（观测密度）</strong>。该模块旨在检测观测分布是否偏离名义情况。其技术细节是：使用校准数据计算活跃维度（排除恒定维度如目标参数）的经验均值 $\boldsymbol{\mu}$ 和正则化协方差矩阵 $\boldsymbol{\Sigma}$。在运行时，对于新观测 $\mathbf{o}<em>t$，计算其马氏距离作为随机不确定性分数：$\sigma</em>{\text{alea}}(\mathbf{o}<em>{t})=\sqrt{(\mathbf{o}</em>{t,\mathcal{A}}-\boldsymbol{\mu})^{\top}\boldsymbol{\Sigma}^{-1}(\mathbf{o}<em>{t,\mathcal{A}}-\boldsymbol{\mu})}$。阈值 $\tau</em>{\text{alea}}$ 设置为校准分数分布的95分位数。高 $\sigma_{\text{alea}}$ 表明观测可能被传感器噪声污染。</p>
+<p><strong>核心模块二：认知不确定性估计（动力学预测）</strong>。该模块旨在检测真实的系统动力学是否发生了偏移。其创新点在于采用了<strong>噪声增强训练</strong>的动态集成，以区分传感器噪声和真实的动力学不匹配。具体而言，训练一个包含 $K=5$ 个MLP的前向动力学模型集成，每个模型 $f_k$ 预测观测的变化量 $\Delta\mathbf{o}<em>{t+1}$。关键的技术细节是训练数据构造：每个模型在干净、中等噪声（1×）和重度噪声（2×）的观测上进行训练，但所有情况都使用<strong>相同</strong>的干净状态转移目标 $\Delta\mathbf{o}</em>{t+1}$（公式3）。这使得集成能够学习对观测噪声鲁棒的底层动力学。在运行时，认知不确定性通过比较集成平均预测与真实观测到的状态转移之间的误差来计算：$\sigma_{\text{epis}} = \sqrt{\frac{1}{|\mathcal{G}|}\sum_{j\in\mathcal{G}}\Bigl(\bar{f}<em>{j}(\mathbf{o}</em>{t-1,\mathcal{A}},\mathbf{a}<em>{t-1})-\Delta o</em>{t,j}\Bigr)^{2}}$，其中 $\mathcal{G}$ 是校准阶段预测可靠（$R^2 &gt; 0.3$）的维度子集，这避免了噪声维度对信号的污染。其阈值 $\tau_{\text{epis}}$ 通过在名义 rollout 中计算信号的95分位数并乘以缩放因子 $m_e=1.5$ 得到，以适应闭环执行中更强的时序相关性。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="不确定性信号行为"></p>
+<blockquote>
+<p><strong>图2</strong>：MOT17数据集上不确定性信号的实证行为。(a) 随机不确定性（$\sigma_{\text{alea}}$）与预测误差正相关，表明其对观测污染敏感。(b) 认知不确定性（$\sigma_{\text{epis}}$）分布更广，反映了表征支持度的变化。(c) 两个信号在21,324个检测结果上的联合分布显示出近乎零的相关性（$r=0.048$），证实它们捕捉了不同的扰动机制。</p>
+</blockquote>
+<p><strong>类型特异性干预</strong>。两个不确定性信号触发不同的响应，这是框架的核心创新：</p>
+<ol>
+<li><strong>观测恢复</strong>（当 $\sigma_{\text{alea}} &gt; \tau_{\text{alea}}$）：触发对传感器观测的修复。在实验中，通过从同一物理状态重采样传感器模型 $N=5$ 次并对结果取平均来实现（公式6），这模拟了实际系统中可激活卡尔曼滤波或学习去噪器的过程。</li>
+<li><strong>动作阻尼</strong>（当 $\sigma_{\text{epis}} &gt; \tau_{\text{epis}}$）：触发对控制动作的缩放 $\mathbf{a}<em>{t}^{\prime}=(1-\alpha)\mathbf{a}</em>{t}$（$\alpha=0.3$），以减轻模型不匹配的影响，同时保持策略结构。</li>
+</ol>
+<p>与现有方法（如Total-U基线，它在任一信号触发时都应用<strong>两种</strong>干预）相比，TRIAGE的创新在于实现了<strong>解耦的、与扰动源对齐的响应</strong>。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ol>
+<li><strong>机器人操作</strong>：在NVIDIA Isaac Lab的 <code>Isaac-Lift-Cube-Franka-v0</code> 环境中评估。任务是用7-DOF Franka机械臂抓取并提升方块。评估四种扰动条件：名义、传感器扰动（对关节位置/速度等加高斯噪声）、动力学偏移（改变物体质量或表面摩擦）、复合扰动（前两者同时存在）。对比方法包括：原始策略（Vanilla）、始终观测恢复（Observation Recovery Only）、始终动作阻尼（Dampen Only）、联合不确定性基线（Total-U）以及本文的分解控制器（Decomposed）。</li>
+<li><strong>自适应感知</strong>：在MOT17行人跟踪数据集上评估。使用分解的不确定性信号来指导跟踪过程中的自适应模型选择（在轻量级和重量级检测器之间切换），以节省计算。</li>
+</ol>
+<p><strong>关键量化结果</strong>：<br>在机器人操作任务中，如表I所示，分解控制器（Decomposed）在所有扰动条件下均表现最佳。在最具挑战性的<strong>复合扰动</strong>下，其任务成功率达到 **80.4%**，显著高于联合不确定性基线（Total-U）的 <strong>59.4%</strong> 和原始策略（Vanilla）的 **44.6%**，相对Total-U的提升达 <strong>21.0个百分点</strong>。值得注意的是，在纯动力学偏移下，Total-U（70.1%）的性能甚至低于原始策略（72.4%），这证明了错误类型的干预（在动力学偏移时进行不必要的观测恢复）确实会损害性能，而分解控制器（84.2%）则成功避免了这一问题。</p>
+<p><img src="https://arxiv.org/html/2603.08128v1/2603.08128v1/x1.png" alt="触发率与轨迹"></p>
+<blockquote>
+<p><strong>图3</strong>：(a) 不同扰动条件下随机和认知不确定性的触发率。在传感器扰动下，$\sigma_{\text{alea}}$ 在85.2%的时间步上触发，而 $\sigma_{\text{epis}}$ 仅触发1.8%；在动力学偏移下则相反（$\sigma_{\text{epis}}$: 12.4%， $\sigma_{\text{alea}}$: 6.1%），证实了信号解耦。(b) 代表性复合扰动episode中的物体高度轨迹：Vanilla和Total-U均未能将方块提升至0.2米成功阈值以上，而Decomposed成功。</p>
+</blockquote>
+<p><strong>消融分析与组件贡献</strong>：<br>触发率分析（图3a）清晰地展示了框架的工作原理。在传感器扰动下，随机信号高频触发（85.2%），而认知信号基本不触发（1.8%），因此控制器仅应用观测恢复。在动力学偏移下，认知信号在相关时刻触发（12.4%），而随机信号触发率（6.1%）接近名义误报率（4.8%），因此控制器仅应用动作阻尼。这验证了噪声增强训练的动态集成成功区分了两种扰动。在复合扰动下，两种触发率得以保持（84.6%, 13.8%），控制器能独立激活两种干预。</p>
+<p>在自适应感知任务中，不确定性引导的模型选择将MOT17上的<strong>平均计算量减少了58.2%<strong>（相对于固定使用大容量检测器），同时将检测质量（mAP）的下降控制在</strong>0.4%以内</strong>。</p>
+<p><img src="https://arxiv.org/html/2603.08128v1/2603.08128v1/figures/model_hopping.png" alt="自适应模型选择"></p>
+<blockquote>
+<p><strong>图4</strong>：在MOT17跟踪任务中，基于分解不确定性信号的自适应模型选择。上图显示跟踪置信度与边界框，下图显示随机（红）和认知（蓝）不确定性信号，它们共同决定何时在轻量级（MobileNet）和重量级（ConvNeXt）检测器之间切换，以节省计算。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>提出了用于闭环决策的原理性不确定性分解框架</strong>：一个事后处理框架，将不确定性分离为随机和认知成分，并将其映射到不同的系统响应，实现了与底层扰动一致的纠正措施。</li>
+<li><strong>实现了动力学失配的鲁棒检测</strong>：通过噪声增强训练的动态集成，主动将传感器噪声与动力学偏移解耦，从而可靠地检测后者。</li>
+<li><strong>展示了框架在控制和感知任务中的统一应用</strong>：同一不确定性分解机制既支持机器人操作中的纠正控制，也支持视觉跟踪中的自适应模型选择，证明了其通用性。</li>
+</ol>
+<p><strong>局限性</strong>：论文指出，该方法需要一段简短的名义校准阶段来建立参考分布和阈值。此外，当前的干预措施（如观测恢复）在实验中依赖于模拟器的特定管道，在物理系统中的实现需要相应的传感器融合或去噪模块。</p>
+<p><strong>启示</strong>：本文的核心结论是“不要同质化处理所有不确定性”。将不确定性按其物理起源进行分解，能够实现更精准、更有效的系统调节。这一思想可推广至其他需要安全、稳健运行的自主系统，如自动驾驶、无人机等。未来的工作可以探索更复杂的干预策略（如自适应控制律调整）、更精细的不确定性量化方法，以及将该框架与在线学习或元学习相结合，以处理持续变化的扰动。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人控制中不确定性来源混淆导致纠正措施失效的问题，提出TRIAGE框架。该框架将预测不确定性分解为偶然性（源于观测噪声）和认知性（源于模型失配）两部分，分别通过马氏距离密度模型和噪声鲁棒前向动力学集成进行估计。基于分解结果，系统能实施类型化干预：高偶然性不确定性触发观测恢复，高认知性不确定性则调整控制动作。实验表明，在机器人操作任务中，该方法将成功率从59.4%提升至80.4%；在自适应视觉跟踪中，可在保证检测质量下降不超过0.4%的同时，减少58.2%的计算开销。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08128" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DAISS: Phase-Aware Imitation Learning for Dual-Arm Robotic Ultrasound-Guided Interventions - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DAISS: Phase-Aware Imitation Learning for Dual-Arm Robotic Ultrasound-Guided Interventions</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.07663" target="_blank" rel="noreferrer">2603.07663</a></span>
+        <span>作者: Yuan Bi Team</span>
+        <span>日期: 2026-03-08</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>超声引导下的介入操作（如穿刺活检）是临床常见但极具挑战性的任务，要求医生一手操纵超声探头以维持最佳声窗，另一手同时精准控制介入针具。现有机器人超声系统大多为任务特定设计，依赖刚性控制流程，难以适应不同患者和临床场景的多样性。同时，操作过程高度依赖医生的空间感知和直觉决策，专家与新手之间存在显著性能差距。模仿学习为将专家的感觉运动技能迁移至机器人提供了可能，但在双臂协调、特别是探头与针具这种非对称且顺序性的协同操作上仍探索不足。</p>
+<p>本文针对超声引导下双臂介入操作中，探头与针具角色非对称、操作阶段分明（如先定位声窗再进针）的痛点，提出了一种相位感知的模仿学习框架。核心思路是：构建一个高保真的双臂遥操作平台收集专家演示，并设计一种能感知操作阶段、动态调整学习目标的模仿策略，以实现对复杂、长视野临床工作流的鲁棒、协调自主执行。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DAISS的整体框架包含三个核心部分：领导者演示生成、机器人跟随执行以及相位感知模仿学习策略。</p>
+<p><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/teaser.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：DAISS平台及相位感知模仿学习概览。系统集成多模态感知，通过双臂遥操作收集演示，并利用相位感知策略执行复杂的超声引导介入任务。</p>
+</blockquote>
+<p><strong>硬件与遥操作平台</strong>：系统采用领导者-跟随者架构。领导者端使用NDI光学追踪系统（Polaris Vicra）实时捕捉操作者手持的模拟探头和针具的位姿。跟随者端是两个协作机械臂：Franka Research 3 (FR3) 操纵真实超声探头（Siemens ACUSON Juniper），Franka Panda 操纵介入针。为提供真实的触觉反馈并保证演示与执行的动觉一致性，系统在操作者和机器人工作空间分别放置了由同一模具铸造的、解剖表面轮廓一致的“镜像”组织体模。通过将追踪工具设计为真实器械的高精度几何复制品，系统实现了从领导者工具到位姿增量到机器人末端位姿增量的直接、低延迟映射，无需复杂的跨坐标系标定。</p>
+<p><strong>运动学控制与安全机制</strong>：运动映射采用基于绝对参考位姿的解耦策略（公式1），以避免积分漂移。通过线性插值（LERP）和球面线性插值（SLERP）对目标位姿进行平滑处理，确保运动流畅。为确保双臂操作安全，系统实施了两级安全机制：第一级为单臂笛卡尔空间约束；第二级为主动的机器人间碰撞避免。通过手眼标定建立统一全局坐标系后，将机械臂远端（包括工具）抽象为虚拟圆柱体，通过高效计算两圆柱体中心线之间的最短距离（公式4）来实现实时碰撞检测，当距离小于安全阈值时阻塞运动指令。</p>
+<p><strong>相位感知模仿学习网络</strong>：策略网络的核心创新在于显式建模了操作的不同阶段，并动态调整学习目标。</p>
+<p><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/network.png" alt="网络架构"></p>
+<blockquote>
+<p><strong>图2</strong>：相位感知模仿学习模块架构。网络处理多模态输入（蓝色），通过相位感知模块（绿色）监控状态并触发阶段转换，生成相位嵌入指导训练，最终由解耦的双动作头（橙色）分别输出探头和针的控制轨迹。</p>
+</blockquote>
+<p>网络包含三个编码器：处理腕部及全局相机图像的外部视觉编码器、处理超声图像的专用编码器以及编码双臂本体感觉（位姿）的状态编码器。<strong>相位感知模块</strong>持续监控超声图像特征和机器人状态，根据预设的多模态条件（如目标平面获取、空间位置收敛）自动触发四个离散操作阶段间的转换（详见实验部分），并将当前阶段信息投影为嵌入向量注入Transformer解码器。</p>
+<p><strong>动态掩码损失</strong>是另一关键创新。针对不同阶段对运动精度和稳定性的不同要求，该损失函数为每个阶段预定义了不同的惩罚权重。在训练时，这些权重被叠加到相应阶段的数据上，动态调制优化目标。例如，对于需要精细传感器协调的交互阶段（如扫描和进针），赋予更高的权重，迫使网络分配更多表示能力来学习这些关键细节；而对于相对粗放的移动阶段，则赋予较低权重以学习平滑的宏观轨迹。</p>
+<p>最后，网络使用<strong>解耦的双动作头</strong>分别输出探头臂（FR3）和针臂（Panda）的动作序列，以适配任务固有的非对称性。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验评估分为系统可行性分析和模仿学习策略性能验证两部分。</p>
+<p><strong>系统可行性评估</strong>：</p>
+<ol>
+<li><p><strong>安全性评估</strong>：如图4所示，基于虚拟圆柱体的碰撞避免机制能在复杂的工具交叉操作中可靠触发安全停止，防止物理接触。<br><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/safety.png" alt="碰撞避免"></p>
+<blockquote>
+<p><strong>图3</strong>：运动学碰撞避免示意图。绿色和黄色虚拟圆柱体代表了机器人末端关节和工具的几何包络，作为不可穿透的空间屏障。</p>
+</blockquote>
+</li>
+<li><p><strong>跟踪精度评估</strong>：量化了从NDI跟踪系统到机器人的运动传递保真度。采用“移动-保持”协议测量稳态误差和延迟。结果显示，最终稳态位置误差为 $0.622 \pm 0.478$ mm，姿态误差为 $0.222 \pm 0.095 ^{\circ}$，端点平均系统延迟为 $0.263 \pm 0.16$ s。图5和图6展示了平移和旋转的跟踪轨迹，表明系统具有高精度的运动复现能力。<br><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/translation.jpg" alt="平移跟踪"></p>
+<blockquote>
+<p><strong>图4</strong>：平移跟踪性能。机器人末端执行器能高保真地跟随平移指令。<br><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/rotation.jpg" alt="旋转跟踪"><br><strong>图5</strong>：旋转跟踪性能。旋转跟踪总体一致，但高频低幅度的旋转偶尔被过滤。</p>
+</blockquote>
+</li>
+</ol>
+<p><strong>模仿学习策略评估</strong>：<br>实验将工作流分解为四个阶段：I) 探头粗定位；II) 解剖扫描；III) 针预对准；IV) 精细插入。阶段转换由多模态状态（如超声图像特征、机器人位姿）自动触发。</p>
+<p>研究对比了多种基线方法：1) **行为克隆(BC)**；2) **动作分块Transformer(ACT)**；3) **扩散策略(Diffusion)**；4) **无相位感知的DAISS (Ours w/o Phase)**；5) **完整的DAISS (Ours)**。</p>
+<p><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/ablation.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图6</strong>：不同方法在四个阶段的任务成功率对比。完整DAISS方法在需要高精度的阶段II和IV表现最佳。</p>
+</blockquote>
+<p>关键定量结果如下：在最具挑战性的<strong>阶段IV（精细插入）</strong>，完整DAISS策略取得了 <strong>86.7%</strong> 的成功率，显著高于BC (40.0%)、ACT (53.3%)、Diffusion (60.0%) 以及无相位感知的DAISS变体 (66.7%)。在<strong>阶段II（解剖扫描）</strong>，DAISS也以 <strong>80.0%</strong> 的成功率领先。这表明相位感知机制和动态掩码损失有效提升了关键精细操作阶段的性能。</p>
+<p><img src="https://arxiv.org/html/2603.07663v1/2603.07663v1/figures/ablation_phase.png" alt="相位消融"></p>
+<blockquote>
+<p><strong>图7</strong>：相位感知模块的消融研究。展示了在有无相位感知条件下，网络注意力权重的差异，相位感知使网络能更聚焦于当前阶段相关的传感器模态。</p>
+</blockquote>
+<p>消融实验进一步验证了各组件贡献：移除相位感知模块（Ours w/o Phase）导致阶段IV成功率下降20%；而动态掩码损失对于平衡不同阶段的学习目标至关重要。注意力可视化（图8）表明，相位感知模块能引导网络在特定阶段关注最相关的输入模态（如在扫描阶段更关注超声图像）。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）构建了一个集成高保真NDI遥操作与镜像体模的双臂数据收集平台，为学习临床相关的探头-针具协调行为提供了高质量演示；2）提出了一个相位感知模仿学习框架，通过显式建模操作阶段、引入动态掩码损失和解耦动作头，有效解决了双臂非对称、顺序性任务中的控制问题；3）建立了镜像体模评估范式，并在实验中验证了该方法能从有限演示中鲁棒地迁移策略，实现精准靶向和稳定的超声视图维持。</p>
+<p>论文提到的局限性包括：当前系统依赖高质量的专家演示数据；实验在静态体模中进行，尚未在存在生理运动（如呼吸）的动态环境中验证；相位转换条件目前基于预设规则，未来可探索更自适应的方法。</p>
+<p>这项工作为图像引导介入机器人领域提供了新思路，表明将长视野任务分解为相位并施加阶段特异性学习约束，是提升模仿策略在复杂医疗任务中性能的有效途径。未来研究可探索如何将此类方法推广到更多样的解剖结构和动态临床场景中，并研究如何融入更高级的语义理解（如基于语言的阶段指令）以增强系统的通用性和适应性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对超声引导下介入手术中双臂协调自动化的挑战，提出了DAISS遥操作平台。采用相位感知模仿学习策略，结合动态掩码损失，基于规划轨迹融合实时超声与视觉观察，生成平滑协调的双臂运动。实验表明，DAISS能从有限演示中学习个性化专家策略，有效提升手术精度并降低认知负荷。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.07663" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

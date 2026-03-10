@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ProgAgent:A Continual RL Agent with Progress-Aware Rewards - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ProgAgent:A Continual RL Agent with Progress-Aware Rewards</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.07784" target="_blank" rel="noreferrer">2603.07784</a></span>
+        <span>作者: Jinoh Kim Team</span>
+        <span>日期: 2026-03-08</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>持续强化学习旨在让智能体在不断遇到新任务时持续学习并保留旧技能，但面临两大核心挑战：灾难性遗忘和奖励函数设计困难。现有方法通常将这两个问题分开处理。一方面，持续学习算法通过参数正则化、经验回放或动态网络结构来缓解遗忘，但往往忽略了系统层面的优化，导致计算开销大、难以规模化。另一方面，视觉奖励学习技术（如基于排序或对比的方法）尝试从无标签的专家视频中推导奖励，以减轻人工设计负担，但这些模型在智能体在线探索遇到分布外状态时容易失效，产生误导性奖励。这种算法与系统的割裂，阻碍了构建能够高效、鲁棒地进行终身学习的统一智能体。</p>
+<p>本文针对上述痛点，提出将进度感知的奖励学习与一个高通量、JAX原生的系统架构相统一的新视角。其核心思路是：训练一个感知模型从专家视频中估计任务进度，将其作为基于势能的稠密奖励信号来引导策略学习，并通过对抗性精炼机制使该奖励模型对在线探索中的分布偏移保持鲁棒；同时，利用JAX的即时编译将整个训练循环（包括数据收集、奖励更新和策略优化）高效融合，从而能够无缝集成先进的持续学习组件，实现稳定性与可塑性的平衡。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ProgAgent的整体框架是一个端到端的、可微分且支持即时编译的训练循环。它同时处理两个数据流：一个离线的专家视频流用于训练奖励模型，一个在线的智能体探索流用于策略优化和奖励模型正则化。输入是任务序列和对应的无标签专家演示，输出是能够在新旧任务上均表现良好的策略。</p>
+<p><img src="https://arxiv.org/html/2603.07784v1/2603.07784v1/pipe.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ProgAgent的完整训练流程。包含两条并行的数据流。<strong>上方路径</strong>：离线流使用无标签专家视频训练进度预测网络，通过专家损失优化。<strong>下方路径</strong>：在线流通过大规模并行模拟收集智能体经验，通过对抗性推回损失对奖励函数进行正则化。两个目标结合为总损失，为策略训练产生稠密且稳定的奖励信号。</p>
+</blockquote>
+<p>核心模块包括进度感知奖励模型、对抗性精炼机制、JAX原生架构以及统一的持续学习目标。</p>
+<ol>
+<li><p><strong>进度感知奖励作为学习的势能函数</strong>：这是奖励学习的核心。一个自监督模型 (E_{\phi}) 接收观测三元组 ((o_i, o_j, o_g))（初始、当前、目标），预测一个关于进度比 (\delta = |j-i|/|g-i|) 的高斯分布。其训练损失是预测分布与目标分布 (P_{\text{target}} = \mathcal{N}(\mu=\delta, \sigma^2)) 之间的KL散度（公式2）。该模型的理论基础是基于势能的奖励塑形：将预测均值视为状态势能 (\Phi_{\phi}(o_t))，则每一步的奖励定义为 (r_t = \gamma \Phi_{\phi}(o_t) - \Phi_{\phi}(o_{t-1}))（公式3）。这保证了策略最优性不变，同时提供了与专家行为对齐的、单调的稠密奖励信号，加速策略收敛。</p>
+</li>
+<li><p><strong>对抗性精炼以实现鲁棒探索</strong>：为了解决在线探索时产生的分布外状态导致奖励模型过自信预测的问题，引入了对抗性推回损失。该损失将智能体轨迹数据上的预测分布 (E_{\phi}(o_i, o_j, o_g)) 推向一个低置信度的先验分布 (P_{\text{prior}} = \mathcal{N}(0, \sigma^2_{\text{prior}}))（公式4）。这抑制了模型对非专家状态产生高奖励的倾向，增强了奖励在探索阶段的鲁棒性。最终的奖励模型损失是专家损失与推回损失的加权和（公式5）。</p>
+</li>
+<li><p><strong>JAX原生高通量学习架构</strong>：为实现上述复杂流程的高效运行，整个系统基于JAX构建。关键设计包括：将模拟器封装为纯函数；使用<code>jax.jit</code>将整个训练循环（数据收集、奖励更新、策略优化）编译为高效的XLA内核；利用<code>jax.vmap</code>在数千个并行环境中进行向量化模拟和奖励计算。这极大地提升了数据吞吐量，使得集成后续复杂持续学习组件成为可能。</p>
+</li>
+<li><p><strong>统一的持续学习目标</strong>：得益于高效架构，策略优化采用了一个融合了PPO、经验回放和突触智能的正则化统一目标（公式6）。其中，(\mathcal{L}<em>{\text{replay}}) 从核心集 (\mathcal{M}) 中回放带优势加权的旧任务经验（公式7），(\mathcal{L}</em>{\text{SI}}) 则根据参数重要性 (\Omega_k) 对关键参数的变动进行二次惩罚（公式8）。该目标显式地权衡了当前任务优化与历史知识保留。</p>
+</li>
+</ol>
+<p>与现有方法相比，ProgAgent的创新点在于：1）<strong>算法层面</strong>：将无监督进度学习与对抗性正则化结合，产生了鲁棒且稠密的奖励；2）<strong>系统层面</strong>：通过JAX原生设计，首次将这种复杂的奖励学习机制与高级持续学习方法（SI、核心集）无缝集成在一个高效编译的循环中，解决了算法与系统间的割裂问题。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验主要在持续学习基准<strong>ContinualBench</strong>上进行，选择了按钮按压（button-press）、开门（door-open）和关窗（window-close）三个具有显著动态和目标分布变化的机器人操作任务。对比的基线方法广泛涵盖了持续学习、模仿学习和奖励学习领域，包括：<strong>Fine-tuning</strong>（无遗忘缓解）、<strong>SI</strong>（正则化）、<strong>Coreset</strong>（回放）、<strong>TCN</strong>、<strong>Rank2Reward</strong>、<strong>GAIL</strong>（奖励/模仿学习）、<strong>Perfect Memory</strong>（理想上界，在所有历史数据上重训练）以及<strong>OA</strong>（一个基于模型的持续RL智能体）。评估指标包括最终成功率（Success Rate）、评估奖励（Eval Reward）、平均性能（AP，衡量知识保留）和遗憾值（Regret，衡量学习效率）。</p>
+<p><img src="https://arxiv.org/html/2603.07784v1/2603.07784v1/x1.png" alt="定性对比"></p>
+<blockquote>
+<p><strong>图3</strong>：在ContinualBench的按钮按压任务上的策略定性对比。从上至下分别为：标准微调智能体、在线智能体（OA）和ProgAgent。ProgAgent学会了直接且稳定的完成任务策略，而基线方法表现出次优或失败行为。</p>
+</blockquote>
+<p>关键定量结果如下：在ContinualBench的三个任务上，ProgAgent在最终成功率、平均性能和遗憾值上均超越了所有基线方法。如表1所示，ProgAgent在按钮按压任务上的成功率达到98.8% ± 0.4%，显著高于OA的98.5% ± 0.8%和Perfect Memory的75.3% ± 3.1%。其平均性能（AP）为74.1% ± 1.5%，也优于所有其他方法。这表明ProgAgent在快速学习新任务的同时，能更有效地保留旧任务知识。</p>
+<p><img src="https://arxiv.org/html/2603.07784v1/2603.07784v1/x2.png" alt="奖励对比"></p>
+<blockquote>
+<p><strong>图4</strong>：在三个任务序列训练后，最终评估奖励的对比。ProgAgent在所有任务上均一致地优于其他方法。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.07784v1/2603.07784v1/x3.png" alt="学习曲线"></p>
+<blockquote>
+<p><strong>图5</strong>：在ContinualBench上，奖励随训练步数的学习曲线。ProgAgent（红色实线）展示了更快的学习速度和更高的渐近性能。</p>
+</blockquote>
+<p>消融实验验证了各核心组件的贡献。移除对抗性精炼模块（即仅使用专家损失）会导致在分布外状态上奖励预测不稳定，学习曲线波动更大且最终性能下降。移除持续学习组件（SI或核心集）则会导致明显的灾难性遗忘，在序列任务后期旧任务性能显著下滑。JAX编译带来的系统加速使得在相同时间内可以进行更多轮次的迭代和更大批量的并行采样，直接贡献于样本效率和整体性能的提升。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1）提出了一种<strong>进度感知的奖励模型</strong>，它从无标签专家视频中学习一个状态势能函数，产生理论上有保证、与专家行为对齐的稠密奖励，避免了手工设计奖励和动作标注的需要；2）引入了一种<strong>对抗性精炼机制</strong>，通过正则化奖励模型对非专家轨迹的预测，增强了其在在线探索分布偏移下的鲁棒性；3）设计了一个<strong>统一的JAX原生架构</strong>，通过端到端的即时编译，将上述奖励学习与先进的持续学习技术高效集成，实现了算法创新与系统效率的协同。</p>
+<p>论文自身提到的局限性包括：对抗性精炼机制中的超参数 (\beta) 需要调整以平衡专家对齐与探索谨慎；进度预测模型的有效性依赖于专家演示中隐含的单调进度假设，这在某些复杂、多模态的任务中可能不成立。</p>
+<p>这项研究对后续工作的启示在于：首先，它展示了将感知奖励学习与高性能计算框架深度结合的巨大潜力，为构建更强大的终身学习智能体提供了可行的系统蓝图。其次，对抗性正则化思想可以扩展到其他类型的奖励表示学习或世界模型中，以提高其在外推情况下的可靠性。最后，如何使进度估计模型具备更好的可解释性，或自适应地处理非单调任务进展，是未来值得探索的方向。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文提出ProgAgent，旨在解决持续强化学习中的灾难性遗忘和奖励指定难题。其核心技术是“进度感知奖励学习”，通过感知模型从未标记专家视频中推导密集奖励，并结合“对抗性推回细化”来正则化奖励模型，以稳定在线探索。系统采用JIT编译循环支持大规模并行训练。实验表明，在ContinualBench和Meta-World基准上，ProgAgent显著减少了遗忘，提升了学习速度，其性能超越了多种视觉奖励学习与持续学习基线方法，并在真实机器人任务中验证了从少量人类演示中学习复杂操作技能的有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.07784" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

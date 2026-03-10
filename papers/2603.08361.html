@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>$Δ$ VLA: Prior-Guided Vision-Language-Action Models via World Knowledge Variation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>$Δ$ VLA: Prior-Guided Vision-Language-Action Models via World Knowledge Variation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08361" target="_blank" rel="noreferrer">2603.08361</a></span>
+        <span>作者: Zitong Yu Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作（VLA）模型的主流方法采用预测范式，通过建模未来视觉状态（如图像）或未来世界知识（如语义、几何属性）来指导动作生成。然而，这些方法侧重于预测未来的绝对状态，而非推理导致状态变化的过程，而后者对于决定如何行动至关重要。具体而言，现有方法存在两个关键局限性：其一，缺乏对当前世界知识的显式建模作为因果锚点，使得模型难以区分在指令下哪些部分应该改变、哪些应保持不变，可能导致无先验的想象和错误的归因；其二，即使预测变化，连续的“差值”表示高度依赖于场景和指令，难以作为策略学习稳定、紧凑的条件接口。</p>
+<p>本文针对上述痛点，提出了“先验引导的世界知识变分建模”新视角。其核心思路是：首先显式构建当前世界知识先验，然后预测相对于该先验的、离散化的世界知识变化，而非直接回归未来的绝对世界状态，从而将学习重心从“世界未来是什么样”转移到“世界应如何变化”。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ΔVLA框架的整体流程如图2所示。给定当前视觉观测 $O_t$ 和任务指令 $I$，模型首先通过<strong>先验引导的世界知识提取器（PWKE）</strong> 提取当前世界知识先验 $W_t$；然后，<strong>潜在世界变分量化（LWVQ）</strong> 模块学习一个离散的潜在空间，用于编码从 $W_t$ 到未来世界知识 $W_{t+n}$ 的变化 $\Delta W_{t \rightarrow t+n}$；最后，在大型语言模型（LLM）中进行统一推理，通过<strong>条件变分注意力（CV-Atten）</strong> 机制，基于先验 $W_t$、指令 $I$ 和离散变分表示 $\Delta W_{t \rightarrow t+n}$，生成对应的 $n$ 步动作序列 $A_{t:t+n-1}$。</p>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/framework.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ΔVLA框架总览。首先通过PWKE从SigLIP和DINOv2编码器中提取语义、区域和深度线索，构建统一的世界先验。这些表示与变分令牌拼接，并通过CV-Atten进行结构化的感知-变分推理。LWVQ模块学习一个表示世界知识变化的离散码本，为变分令牌学习和一致的动作生成提供因果指导。</p>
+</blockquote>
+<p><strong>核心模块一：先验引导的世界知识提取器（PWKE）</strong>。该模块旨在从视觉输入中构建一个明确的、去冗余的当前世界知识先验。它利用SigLIP（擅长语义理解）和DINOv2（擅长几何感知）的互补优势。具体流程如图3所示，引入两组可学习令牌：区域令牌 $\mathbf{T}_r$ 和世界令牌 $\mathbf{T}_w$。$\mathbf{T}_r$ 用于定位最可能被操纵的区域，$\mathbf{T}<em>w$ 在SigLIP和DINOv2中分别对应语义和深度线索。这些令牌与观测令牌 $O_t$ 拼接后输入视觉编码器块。通过设计注意力掩码 $\mathbf{M}$，阻止区域令牌关注世界令牌，以保持其对原始视觉观测的关注。随后，模型使用两个专家前馈网络（FFN）分支处理区域和世界令牌流。对于区域分支，进一步引入FiLM调制机制，根据指令 $I$ 聚合任务相关的可操纵区域信息。为了显式指导令牌学习其对应的知识类型，模型使用辅助解码器头和伪标签进行监督：利用CoTracker从帧间运动生成可操纵区域标签，利用Depth-Anything v2和SAM分别生成深度和语义伪标签，并采用均方误差（MSE）损失 $\mathcal{L}</em>{cur}$ 进行优化。</p>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/PWKE.png" alt="PWKE示意图"></p>
+<blockquote>
+<p><strong>图3</strong>：PWKE模块示意图。世界令牌在不同编码器中含义不同：在SigLIP中对应语义令牌，在DINOv2中对应深度令牌。虚线框中的辅助头仅用于训练监督。</p>
+</blockquote>
+<p><strong>核心模块二：潜在世界变分量化（LWVQ）</strong>。在获得当前世界知识 $W_t = [\tilde{\mathbf{T}}<em>r‘， \tilde{\mathbf{T}}<em>s’， \tilde{\mathbf{T}}<em>d‘]$ 后，LWVQ模块负责学习世界知识变化的离散表示。它采用VQ-VAE的编码器-解码器架构。在训练时，编码器接收当前和未来帧的世界知识 $W_t$ 和 $W</em>{t+n}$，将其差异编码为连续的潜在变分，随后通过一个可学习的<strong>世界知识变分码本</strong>进行向量量化，得到离散的变分表示 $\Delta W</em>{t \rightarrow t+n}$。解码器则基于 $W_t$ 和 $\Delta W</em>{t \rightarrow t+n}$ 重构 $W_{t+n}$。该过程通过VQ-VAE目标函数进行无监督训练。训练完成后，LWVQ的编码器用于为后续变分建模提供监督信号。这种设计将连续、场景依赖的变化转化为紧凑的离散令牌，为动作生成提供了更稳定的条件接口。</p>
+<p><strong>核心模块三：条件变分注意力（CV-Atten）</strong>。在动作生成阶段，模型将当前世界知识 $W_t$、指令 $I$、一组可学习的变分令牌 $\mathbf{T}<em>{var}$ 和初始化的动作令牌 $\mathbf{T}</em>{act}$ 拼接，输入LLM进行推理。为了减少跨模态干扰并强制进行类型特定的变分建模，引入了CV-Atten机制，其结构化注意力掩码策略如图4所示。该掩码确保每个变分令牌（如语义变分）只能关注其对应的世界知识先验（如语义先验），而不能关注其他类型的先验（如深度或区域先验）。这促进了跨模态的解耦学习。在训练时，对LLM输出的变分表示 $\tilde{\mathbf{T}}<em>{var}’$ 附加辅助监督头，使用从LWVQ获得的真实变分 $\Delta W</em>{t \rightarrow t+n}$ 计算变分重构损失 $\mathcal{L}<em>{var}$。动作序列的预测则使用L1损失 $\mathcal{L}</em>{act}$。</p>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/mask.png" alt="CV-Atten示意图"></p>
+<blockquote>
+<p><strong>图4</strong>：CV-Atten示意图。红色虚线框中，每个变分令牌只关注其对应的世界先验，确保类型特定的建模并最小化跨模态泄漏。</p>
+</blockquote>
+<p><strong>创新点总结</strong>：1) <strong>显式先验锚定</strong>：通过PWKE显式构建当前世界知识，为推理提供因果参考。2) <strong>先验基础的变分推理</strong>：建模相对于当前先验的变化，而非绝对未来状态，聚焦于任务相关的改变。3) <strong>离散、策略可用的变分接口</strong>：通过LWVQ将变化量化为离散令牌，提供稳定、紧凑的条件信号。4) <strong>解耦的变分学习</strong>：通过CV-Atten机制隔离不同知识类型的变化建模，减少干扰。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在模拟环境LIBERO（包含90个长视野任务）和RoboTwin 2.0（包含6个现实家庭操作任务）基准上进行了评估，并进行了真实世界机器人操作实验。使用平均成功率作为主要评估指标，并比较了推理效率（FPS）。</p>
+<p><strong>对比方法</strong>：与多种先进的VLA基线方法进行了对比，包括：直接预测未来图像的CoT-VLA；预测未来世界状态的UP-VLA；以及RT-2、Octo、OpenVLA等通用VLA模型。</p>
+<p><strong>关键实验结果</strong>：如图1(d)所示，ΔVLA在两个模拟基准上都达到了最先进的成功率，同时保持了更高的效率。具体而言，在LIBERO上，ΔVLA的平均成功率为77.9%，显著高于UP-VLA（70.1%）和CoT-VLA（70.5%）。在RoboTwin 2.0上，ΔVLA的成功率为73.5%，同样优于UP-VLA（68.1%）和CoT-VLA（66.6%）。在推理速度上，ΔVLA也优于UP-VLA和CoT-VLA。</p>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/intro.png" alt="性能与效率对比"></p>
+<blockquote>
+<p>**图1(d)**：与先前方法的性能和效率对比。ΔVLA在LIBERO和RoboTwin 2.0基准上均取得了最高的成功率，同时保持了优越的推理效率（FPS）。</p>
+</blockquote>
+<p><strong>消融实验</strong>：论文进行了系统的消融研究，验证了各核心组件的贡献。1) <strong>移除PWKE的显式监督</strong>：导致性能显著下降，证明了使用伪标签监督提取明确世界先验的必要性。2) <strong>将离散变分（LWVQ）替换为连续变分预测</strong>：性能下降，验证了离散化对于提供稳定条件接口的重要性。3) <strong>移除CV-Atten（使用全注意力）</strong>：性能降低，表明强制变分令牌与对应先验对齐的解耦机制能有效提升建模效果。4) <strong>移除整个变分建模，改为直接预测未来世界状态</strong>：性能下降最明显，这直接证明了先验引导的变分建模范式的优越性。</p>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/vis_knowledge.png" alt="知识可视化"></p>
+<blockquote>
+<p><strong>图6</strong>：PWKE提取的世界知识先验可视化示例。展示了模型成功定位的可操纵区域（红色框）、深度估计和语义分割，验证了其构建有效世界先验的能力。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08361v1/2603.08361v1/Fig/add_vis_real.png" alt="真实世界实验"></p>
+<blockquote>
+<p><strong>图8</strong>：真实世界机器人操作任务的定性结果。ΔVLA能够成功完成“打开抽屉”、“将香蕉放入碗中”等复杂的长视野操作任务。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：1) 提出了ΔVLA，这是一个先验引导的VLA框架，通过建模相对于显式当前世界知识先验的<strong>离散世界知识变化</strong>来生成动作，开创了VLA中变分建模的新范式。2) 设计了<strong>PWKE模块</strong>，利用互补的视觉编码器和伪标签监督，显式构建当前世界知识作为因果锚点。3) 提出了<strong>LWVQ模块</strong>和<strong>CV-Atten机制</strong>，分别用于学习离散、可转移的变分表示，以及促进解耦的变分学习，共同为策略提供了稳定、紧凑的条件接口。</p>
+<p><strong>局限性</strong>：论文提到其方法依赖于外部模型（如CoTracker， SAM）生成的伪标签质量，这可能会限制其上限性能。此外，PWKE和LWVQ模块需要额外的训练阶段。</p>
+<p><strong>研究启示</strong>：本文工作表明，在VLA中，从预测“绝对未来状态”转向推理“相对于当前先验的变化”是更有效的路径。这强调了<strong>显式环境表示</strong>和<strong>结构化变化建模</strong>在机器人推理中的重要性。同时，将连续变化<strong>离散化</strong>为符号化表示，为连接高层推理与底层控制提供了一个有前景的接口，可能启发未来更多关于如何构建更高效、更可解释的中间表征的研究。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对现有视觉-语言-行动（VLA）模型侧重于预测未来状态，而忽视对世界知识变化过程进行推理的核心问题，提出ΔVLA框架。其关键技术包括：1) PWKE提取当前世界知识先验（如可操作区域与空间关系）；2) LWVQ将世界知识变化编码至离散潜在空间；3) CV-Atten通过解耦学习减少干扰。在模拟与真实机器人任务上的实验表明，ΔVLA取得了最先进的性能，并提升了效率。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08361" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

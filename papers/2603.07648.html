@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AtomicVLA: Unlocking the Potential of Atomic Skill Learning in Robots - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>AtomicVLA: Unlocking the Potential of Atomic Skill Learning in Robots</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.07648" target="_blank" rel="noreferrer">2603.07648</a></span>
+        <span>作者: Xiaodan Liang Team</span>
+        <span>日期: 2026-03-08</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作（VLA）模型通过在大规模多模态数据上微调视觉语言模型（VLM），在机器人操作任务上展现出潜力。然而，现实世界的机器人任务通常是长视野、多步骤的，并需要持续学习新技能，这对现有VLA模型构成了挑战。主流方法通常采用单一动作解码器，在聚合数据上训练，导致模型可扩展性差。当需要学习新技能时，通常需要微调整个模型，这不仅消耗大量计算资源，还容易与已学技能发生干扰，导致灾难性遗忘。此外，一些方法采用规划器与控制器的两阶段架构，这可能导致规划与执行之间缺乏相互感知，产生次优协调或过时指令。</p>
+<p>本文针对VLA模型在长视野任务规划和持续技能扩展方面的局限性，提出了一种新视角：将复杂的任务分解为可复用、可组合的原子技能，并构建一个可动态扩展的原子技能专家库。核心思路是提出一个名为AtomicVLA的端到端框架，它通过一个技能引导的专家混合（SG-MoE）架构，将任务规划与动作执行统一起来，实现技能的模块化学习与组合，从而提升模型在长视野任务和持续学习场景下的性能与可扩展性。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>AtomicVLA的整体框架是一个集成了“思考”与“执行”模态的统一策略。其目标是设计一个能根据当前状态自主决定输出模态（自然语言指令或潜在动作）的机器人策略。</p>
+<p><img src="https://arxiv.org/html/2603.07648v1/2603.07648v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：AtomicVLA 整体框架。(a) 统一任务规划与执行的流程。VLM自适应地预测原子技能抽象和潜在动作。SG-MoE架构中的动作解码器接收潜在动作和新推断出的原子技能抽象，生成细粒度的电机动作。(b) 技能引导的专家混合（SG-MoE）。包含技能路由器、共享专家和多个原子技能专家。路由器根据原子技能选择顶级技能专家，动作令牌由被激活的技能专家和共享专家共同处理。(c) 技能扩展的持续学习。仅通过训练新专家和扩展路由器来添加新技能。(d) 基于主轴线分析的任务规划具身数据生成流程。</p>
+</blockquote>
+<p><strong>统一任务规划与动作执行</strong>：模型输入为多摄像头观测 (O_t^{1:n}) 和语言指令 (\ell)。框架引入了两个特殊的输出令牌 <code>[think]</code> 和 <code>[act]</code> 来实现自适应切换。推理流程如算法1所示：模型首先预测标识符，若为 <code>[think]</code>，则进入思考模式，输出高层任务链 (C_{0-k})、当前执行进度 (C_t) 以及要执行的原子技能抽象 (\sigma)。此模式通常在任务初始化或子技能转换时触发。若为 <code>[act]</code>，则进入执行模式，基于最近一次 <code>[think]</code> 步骤获得的原子技能抽象 (\sigma) 和当前本体感知状态 (S_t)，生成低层动作块 (A_t)。</p>
+<p><strong>技能引导的专家混合架构</strong>：这是方法的核心创新。AtomicVLA在预训练的 (\pi_0) VLA基础模型上扩展，构建了一个可扩展的原子技能库，包含三个关键组件：</p>
+<ol>
+<li><strong>技能路由器</strong>：根据原子技能抽象选择专家。</li>
+<li><strong>共享专家</strong>：保持 (\pi_0) 预训练的动作生成能力。</li>
+<li><strong>多个原子技能专家</strong>：每个专家专精于执行一个特定的原子技能。</li>
+</ol>
+<p><strong>原子技能抽象嵌入</strong>：为了增强原子技能间的表征区分度，采用了一种受扩散去噪模型中噪声调度启发的编码策略。每个原子技能抽象被映射到一个标量噪声水平 (\sigma \in [0, 100])，然后嵌入为高维向量 (Z_\sigma)，形成一个连续且结构化的嵌入空间，便于语义分离和路由。</p>
+<p><strong>技能引导的动态路由</strong>：从思考流程获得原子动作抽象后，将其确定性地映射到固定的嵌入 (Z_\sigma)，作为路由器的条件信号。路由器计算专家概率分布 (w_k = \text{Router}(Z_\sigma))，并采用稀疏激活策略：仅选择得分最高的专家。最终动作块 (A_t) 是共享专家与被选原子技能专家的加权组合：(F_{out} = (1-w_k) \cdot F_{share}(x_t) + w_k \cdot F_k(x_t))，其中 (x_t) 为当前多模态输入 ([O_t^{1:n}, \ell, s_t])。此架构使系统既能保持 (\pi_0) 的强大泛化能力，又能通过专用专家实现特定技能的高保真执行。</p>
+<p><strong>技能扩展的持续学习</strong>：当遇到训练中未见过的新原子技能时，AtomicVLA采用模块化技能专家机制实现技能库的持续扩展。每个新技能对应一个新的专家模块，并扩展路由网络。扩展后的路由器通过复制原始路由器权重进行初始化，新的路由分支则以小的随机值初始化。这种设计使得仅需训练新专家和相关的路由参数，而现有专家保持不变，从而有效防止灾难性遗忘，实现高效、无干扰的终身技能增长。</p>
+<p><strong>任务规划具身数据生成</strong>：为了获得高质量的任务规划数据，论文提出了一种基于主轴线分析的轨迹原子分解方法。该方法分析末端执行器轨迹的关键运动维度（平移、旋转）和夹爪状态，实现原子动作的粗粒度但语义上有意义的分割。例如，z坐标持续下降伴随夹爪闭合被归类为“抓取”动作。基于此分割，利用InternVideo2.5模型对视频片段进行语义解释，自动修正和丰富原子动作标注，最终构建包含已执行原子动作序列和后续步骤高层计划的结构化推理链。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在LIBERO和CALVIN两个广泛使用的机器人操作基准上评估AtomicVLA。在LIBERO上评估所有四个任务套件；在CALVIN上使用ABC-D分割来检验长视野规划和组合泛化能力。模型基于预训练的 (\pi_0) 和 (\pi_0.5) 基础模型构建。在LIBERO和真实机器人实验中使用5个技能专家，在CALVIN中使用8个。真实世界实验使用Franka机械臂，包含3个长视野任务和5类短任务。</p>
+<p><strong>基线方法</strong>：对比了包括Octo、OpenVLA、SpatialVLA、CoT-VLA、(\pi_0)、(\pi_0.5)在内的多种先进VLA模型。</p>
+<p><strong>仿真实验结果</strong>：<br>在LIBERO基准上（表1），AtomicVLA在四个套件上的平均成功率为96.6%，比强基线(\pi_0)高出2.4%。在最具挑战性的LIBERO-LONG套件上，AtomicVLA取得了95.2%的成功率，比(\pi_0)提高了10%。基于(\pi_0.5)的AtomicVLA*性能更强，平均成功率达97.8%，在LIBERO-LONG上达到96.2%。</p>
+<p><img src="https://arxiv.org/html/2603.07648v1/2603.07648v1/x2.png" alt="推理示例"></p>
+<blockquote>
+<p><strong>图3</strong>：AtomicVLA在LIBERO-LONG两个任务上的推理示例。顶部显示任务进程，底部显示模型推断输出。灰色块表示思考，彩色块表示执行，颜色对应激活的技能专家。左列显示初始任务状态（上）和推理过程中的技能专家激活情况（下）。</p>
+</blockquote>
+<p>在CALVIN基准上（表2），评估指标为连续成功完成任务的平均长度。AtomicVLA平均任务长度为4.09，优于(\pi_0)基线0.22；AtomicVLA<em>达到4.27，优于(\pi_0.5)基线0.25。AtomicVLA</em>在评估序列的最后三个阶段显示出相对5.8%、6.2%和6.6%的改进。</p>
+<p><strong>真实世界实验结果</strong>：<br>在长视野多任务实验中（表3），AtomicVLA和AtomicVLA*在三个长视野任务上的平均成功率分别比基线模型高出20%和18.3%。</p>
+<p><img src="https://arxiv.org/html/2603.07648v1/2603.07648v1/x4.png" alt="执行过程对比"></p>
+<blockquote>
+<p><strong>图5</strong>：展示了AtomicVLA<em>（第二行）与基线(\pi_0.5)（第一行）的执行过程对比。AtomicVLA</em>能可靠完成基线失败的任务配置，在涉及关门等操作的任务中优势更明显。</p>
+</blockquote>
+<p>在持续学习实验中（表4），将“打开抽屉”作为新技能引入。基线模型(\pi_0.5)在学习新技能后，在四个基础任务上的平均性能下降了15.0%。而AtomicVLA*仅下降了1.3%，同时新技能的成功率达到70%，显著缓解了灾难性遗忘。</p>
+<p><img src="https://arxiv.org/html/2603.07648v1/2603.07648v1/x3.png" alt="错误恢复与技能干扰"></p>
+<blockquote>
+<p><strong>图4</strong>：错误恢复能力演示。当遇到技能执行失败时，AtomicVLA自动评估进度并重新执行当前技能。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.07648v1/2603.07648v1/x5.png" alt="混合训练干扰"></p>
+<blockquote>
+<p><strong>图6</strong>：混合训练技能干扰与持续学习性能下降示意图。上两行展示长视野任务中的技能干扰；下两行展示持续学习后的性能退化。红绿框标出了关键差异。</p>
+</blockquote>
+<p><strong>消融实验与组件贡献</strong>：论文通过构建显式的原子技能库，有效缓解了异构任务混合训练时的相互干扰（如图6所示）。每个技能精确激活其对应专家执行所需操作，显著减轻了技能间干扰，克服了混合多任务训练的性能瓶颈。SG-MoE架构和可扩展路由器的设计是实现高效持续学习（性能下降仅1.3%）的关键。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了AtomicVLA，一个将任务规划与动作执行统一起来的端到端框架，用于处理长视野任务和持续技能扩展；2）设计了一种技能引导的专家混合架构（SG-MoE）和可扩展技能路由器，用于构建原子技能库，实现了技能的模块化与组合性；3）通过大量仿真与真实机器人实验验证了该框架在长视野任务规划、错误恢复以及持续学习方面的有效性。</p>
+<p>论文自身提到的局限性主要在于对高质量标注数据的依赖。所提出的基于主轴线分析的数据生成管道虽然减少了人工修正，但仍需要可靠的轨迹和视频数据来生成原子技能标注。</p>
+<p>本文工作对后续研究的启示包括：首先，将复杂任务分解为原子技能并构建专家库的思路，为机器人终身学习提供了一个可扩展、可组合的架构范式。其次，统一的“思考-执行”框架避免了模块化方法中规划与执行的割裂，为实现更鲁棒、自适应的高层推理与低层控制闭环提供了新路径。最后，如何自动发现、定义和编码原子技能，以及如何更高效地利用未标注数据来扩展技能库，是未来值得探索的方向。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>论文针对现有视觉-语言-动作模型在机器人长时程任务和持续技能学习中可扩展性差的问题，提出了AtomicVLA统一规划与执行框架。其核心技术是技能引导的混合专家模型，构建可扩展原子技能库，每个专家专精于通用原子技能，并通过灵活编码器实现持续学习。实验表明，在仿真任务LIBERO上性能超越基线2.4%，在真实世界长时程任务和持续学习中分别超过基线18.3%和21%，验证了原子技能抽象与动态专家组合的有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.07648" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
