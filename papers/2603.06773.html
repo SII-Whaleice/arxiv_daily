@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Stability-Guided Exploration for Diverse Motion Generation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Stability-Guided Exploration for Diverse Motion Generation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.06773" target="_blank" rel="noreferrer">2603.06773</a></span>
+        <span>作者: Marc Toussaint Team</span>
+        <span>日期: 2026-03-06</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人学习领域依赖于大规模、多样化的数据集，但数据收集是主要瓶颈。获取人类演示数据费时费力，且通常局限于特定任务，无法充分探索机器人可行的全部状态空间。合成数据生成是潜在的解决方案，但现有技术（如基于采样的模型预测控制MPC）主要依赖控制空间的局部探索，容易陷入局部最优，难以发现多样化的运动轨迹。同时，基于采样的运动规划器（如RRT）虽能进行状态空间的全局探索，但在处理涉及复杂接触交互的动力学问题时面临挑战。</p>
+<p>本文针对“如何自动生成多样化、长时程、接触丰富的机器人操作动作”这一痛点，提出将基于采样的MPC与RRT风格搜索相结合的新视角，并引入稳定性引导机制。核心思路是：首先在稳定状态流形上采样目标点，然后利用改进的动力学RRT在状态空间中生长树以连接这些点，引导探索朝向稳定配置，但不限制树必须停留在稳定流形内，从而能够发现包含动态、非抓取操作的多样化策略。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>方法整体框架分为两个阶段。第一阶段，从稳定状态流形中采样一组固定的稳定状态。第二阶段，使用一种改进的动力学RRT算法，以这些采样得到的稳定状态作为引导目标，在状态空间中生长一棵树，并最终从树中提取多样化的路径。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法示意图"></p>
+<blockquote>
+<p><strong>图1</strong>：方法示意图。对于每个起始节点（红色），我们朝着稳定状态流形（蓝色点云）引导树的生长，但并不将树约束在该流形内。</p>
+</blockquote>
+<p>核心模块一：<strong>稳定状态采样</strong>。目标是从稳定状态流形 𝒞_𝑠𝑡𝑎𝑏𝑙𝑒 中采样状态点集 𝒞_𝑠。该方法基于约束采样，通过求解一个非线性规划问题来生成满足物理稳定性的状态。具体而言，首先随机采样接触变量，指定场景中哪些物体框架处于接触状态；然后为每个活动接触添加作用点和摩擦力（约束在摩擦锥内）；最后，约束所有欠驱动物体处于准静态平衡（合力和力矩为零）且状态无碰撞。通过从随机初始状态求解一个最小化到初始状态距离的优化问题，来获得一个满足所有约束的稳定状态。对于复杂网格（如机械臂场景），该方法在施加抓取约束时成功率较低（抓取立方体成功率15.1%，抓取钩子仅1.4%），因此作者通过将接触分类并过滤，以平衡各类稳定状态的数量。</p>
+<p>核心模块二：<strong>稳定性引导的树连接（StaGE算法）</strong>。此阶段基于动力学RRT，但进行了关键改进以促进多样化探索。算法输入包括最大节点数、稳定状态数m、近邻数k、最佳动作数n等。算法首先采样m个稳定状态并随机选择一个作为树根。在每次迭代中，随机选择一个稳定状态作为目标，然后从该目标的k个最近邻树节点中随机选择一个作为扩展节点。接着，为该扩展节点采样n个最佳动作（这些动作通过模拟评估，能最大程度减少当前节点到目标状态的距离）。如果这些动作中任何一个能成功减少到任何稳定状态的距离，则扩展树；否则，将该节点标记为“死胡同”并不再尝试扩展。最后，提取所有距离任何稳定状态小于阈值ε的节点，回溯到根节点形成路径，并使用豪斯多夫距离过滤掉冗余路径。</p>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x1.png" alt="算法伪代码"></p>
+<blockquote>
+<p><strong>图2</strong>：四个实验环境。(a) SpheresRamp: 球体机器人在斜坡上操纵物体。(b) SpheresCube: 两个球体机器人操纵立方体。(c) PandaHook: 单机械臂使用钩子工具。(d) PandasCube: 双机械臂协作。</p>
+</blockquote>
+<p>与现有方法相比，创新点主要体现在：1) <strong>稳定性引导采样</strong>：从稳定状态流形采样目标，而非在整个可行状态空间均匀采样，使探索集中于有意义的区域。2) <strong>K近邻扩展</strong>：从目标状态的k个最近邻中随机选择扩展节点，而非仅选择最近节点，增加了探索的多样性。3) <strong>N最佳动作选择</strong>：保留多个能减少距离的最佳动作进行扩展，而非仅选择单一最优动作。4) <strong>节点拒绝机制</strong>：将无法成功扩展的节点标记为死胡同，避免无效探索。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在四个不同环境中评估方法（见图2）：SpheresRamp（斜坡球体推物）、SpheresCube（双球体操纵立方体）、PandaHook（机械臂使用钩子）、PandasCube（双机械臂协作）。使用MuJoCo物理引擎进行黑盒仿真。</p>
+<p><strong>对比方法</strong>：</p>
+<ul>
+<li><strong>RRT-sim</strong>：基础的动力学RRT，以20%概率偏向采样稳定状态（相当于目标偏置）。</li>
+<li><strong>StaGE变体</strong>：包括均匀采样80%状态（StaGE-uniform-80%）、无节点拒绝、无N最佳动作选择（n=1）、无K近邻选择（k=1）。</li>
+<li><strong>预测采样MPC</strong>（仅在SpheresRamp环境对比）。</li>
+</ul>
+<p><strong>评估指标</strong>：路径数量（Path Count）、覆盖率（Coverage，被至少一个节点到达的稳定状态比例）、熵（Entropy，基于Kozachenko-Leonenko估计器衡量访问状态的多样性）、平均豪斯多夫距离（Avg. Haus.，衡量通往同一终点路径的多样性）。</p>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x2.png" alt="实验结果表"></p>
+<blockquote>
+<p><strong>表I</strong>：四个环境下的实验结果。StaGE在大多数环境和指标上表现最佳（加粗），尤其在路径数量和覆盖率上优势明显。在PandasCube环境中，无节点拒绝的变体找到了更多路径，作者归因于高维动作空间使得成功动作的采样概率较低。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x3.png" alt="轨迹示例"></p>
+<blockquote>
+<p><strong>图3</strong>：StaGE生成的轨迹示例。展示了PandaHook环境中的多样化操作和工具使用（用钩子拉立方体），以及PandasCube环境中的协作（抛接立方体）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x4.png" alt="连接矩阵对比"></p>
+<blockquote>
+<p><strong>图4</strong>：SpheresRamp环境中，RRT-sim (a) 与 StaGE (b) 在26个稳定状态间发现的路径连接矩阵对比。蓝色表示未找到连接。StaGE发现了更多样化的连接（更多非蓝色格子）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x5.png" alt="参数消融研究"></p>
+<blockquote>
+<p><strong>图5</strong>：在SpheresCube环境中，参数n（最佳动作数）和k（近邻数）对覆盖率的影响消融研究。增大n和k（至16）能显著提升覆盖率。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.06773v1/2603.06773v1/x6.png" alt="稳定状态数量消融"></p>
+<blockquote>
+<p><strong>表II</strong>：稳定状态集合大小 |𝒞_𝑠| 对SpheresCube环境性能的影响。增加稳定状态数量能显著增加发现的路径数，但覆盖率会下降。</p>
+</blockquote>
+<p><strong>关键结果</strong>：</p>
+<ol>
+<li>StaGE在绝大多数情况下（除PandasCube的路径数外）在路径数量和覆盖率上均优于所有基线及消融变体。</li>
+<li><strong>N最佳动作选择</strong>被证明是最重要的扩展，将其禁用（n=1）会导致性能急剧下降（例如SpheresCube路径数从134.2降至0.3）。</li>
+<li><strong>稳定性引导至关重要</strong>：与80%均匀采样的变体相比，完全使用稳定状态引导的StaGE在所有环境的所有指标上均有显著提升。</li>
+<li>增加采样稳定状态的数量能产生更多路径，但会降低覆盖率（因为需要覆盖的目标点更多）。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了StaGE算法，一种无需运动先验、能够发现复杂多样长时程操作动作的新方法。其核心创新在于结合了稳定状态流形采样与改进的动力学RRT。</li>
+<li>引入了<strong>稳定性引导</strong>的探索策略，以及K近邻扩展、N最佳动作选择、节点拒绝等具体技术，有效提升了在接触丰富、动态场景中发现多样化路径的能力。</li>
+<li>在多个具有不同机器人形态的挑战性环境中进行了定性、定量评估，证明了该方法能自主涌现出推、抓、抛、使用工具等多种操作策略，且是任务无关的。</li>
+</ol>
+<p><strong>局限性</strong>：</p>
+<ol>
+<li>在高维动作空间（如双机械臂）中，节点拒绝策略可能过于激进，因为改善状态的成功动作采样概率较低，导致一些本可扩展的节点被过早禁用。</li>
+<li>稳定状态采样方法在处理复杂交互（如抓取）时成功率较低，需要后处理过滤来平衡类别。</li>
+</ol>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li>将基于采样的全局规划（RRT）与局部优化（MPC思想）相结合，并引入有意义的引导（如物理稳定性），是生成多样化机器人数据的一个有效范式。</li>
+<li>未来的工作可以探索更高效的动作采样方案，以改善高维空间中的探索效率；也可以集成专门的采样器（如抓取采样器）来提高稳定状态生成的成功率。</li>
+<li>该方法生成的多样化轨迹数据集，可用于训练需要丰富数据的机器人策略学习模型，为解决机器人数据稀缺问题提供了一条自动化途径。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人学习领域数据收集的瓶颈问题，提出了一种**稳定性引导的探索方法**，旨在自动生成多样化、长视野的机器人运动数据。该方法的核心是结合**RRT式搜索**与**基于采样的模型预测控制（MPC）**，并设计了一种新颖的采样策略，引导探索过程朝向稳定的构型空间。实验表明，该方法能自主发现包括推动、抓取、旋转、投掷和使用工具在内的多种操作策略，且适用于不同形态的机器人，无需任务特定指导，有效提升了运动生成的多样性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.06773" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

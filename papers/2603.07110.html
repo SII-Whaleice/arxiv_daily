@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Learning From Failures: Efficient Reinforcement Learning Control with Episodic Memory - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Learning From Failures: Efficient Reinforcement Learning Control with Episodic Memory</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.07110" target="_blank" rel="noreferrer">2603.07110</a></span>
+        <span>作者: Chenyang Miao Team</span>
+        <span>日期: 2026-03-07</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人强化学习领域，主流方法依赖于深度强化学习算法，如PPO、SAC等，并通过经验回放等技术提高数据效率。然而，在具有挑战性的探索和密集接触动力学的任务中，早期训练常常被大量因碰撞、摔倒等导致的提前终止所主导。这导致智能体收集到的多是短视界、低回报的轨迹，这些轨迹淹没了学习过程，阻碍了收敛并限制了长视界的探索。尽管这些失败轨迹本身蕴含着关于危险状态-动作模式的有价值时空结构信息，但传统的基于转移元组的经验回放破坏了轨迹内的时间依赖性，使得这些信息未被充分利用，甚至因其在早期训练中的普遍性而对学习产生负面影响。</p>
+<p>现有的情景控制方法旨在通过构建外部记忆存储和检索完整经验来提升样本效率，但它们通常是“成功中心化”的，依赖于高回报轨迹，而忽略了早期训练中产生的大量短视界、低价值的失败事件。本文针对“如何有效利用丰富的失败经验来加速学习”这一具体痛点，提出了一个“失败中心化”的新视角。</p>
+<p>本文核心思路是：构建一个失败情景记忆模块，显式地存储失败轨迹，并在交互时检索相似的失败经验，通过一个风险感知的动作选择机制引导机器人避开已知的危险区域，从而促进对长视界、高回报轨迹的探索。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的方法称为失败情景记忆警报（Failure Episodic Memory Alert, FEMA）。它是一个可插拔模块，可与多种无模型强化学习算法结合。其整体框架包含两个核心组件：失败情景记忆构建和风险感知动作选择机制。</p>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：FEMA方法整体框架。上半部分为风险感知动作选择机制，根据当前状态和策略采样候选动作，结合失败记忆检索结果进行评分并选择最终动作。下半部分为失败情景记忆构建模块，负责收集、编码和存储失败事件。</p>
+</blockquote>
+<p><strong>1. 失败情景记忆构建</strong><br>该模块负责收集和处理训练中产生的危险经验。当一个训练回合因碰撞或摔倒等意外情况提前终止时，该轨迹被标记为失败情景。对于每个失败情景，记录并存储轨迹最后K个时间步的状态转移元组 <code>(s_t, a, s_{t+1}, r)</code>，将其封装为失败事件。<br>每个失败事件会计算其状态转移元组对应的蒙特卡洛回报 <code>H_t</code>（公式1）。关键创新在于引入一个基于学习的联合状态-动作嵌入框架来构建状态-动作对的语义表示，记为 <code>φ(s, a)</code>。</p>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x2.png" alt="联合编码器"></p>
+<blockquote>
+<p><strong>图3</strong>：联合状态-动作编码器 <code>φ(s, a)</code> 的架构。包含一个状态编码器 <code>f(s)</code> 和一个动作编码器 <code>g(a)</code>，分别将原始状态和动作映射到潜在嵌入 <code>z_s</code> 和 <code>z_a</code>，再通过联合编码器 <code>j(z_s, z_a)</code> 生成统一的表示。</p>
+</blockquote>
+<p>具体而言，状态编码器 <code>f(s)</code> 和动作编码器 <code>g(a)</code> 分别将原始状态 <code>s</code> 和动作 <code>a</code> 映射为潜在嵌入 <code>z_s</code> 和 <code>z_a</code>（公式2）。联合嵌入 <code>φ(s, a) = j(z_s, z_a)</code>。此外，设计了一个风险头 <code>h(·)</code> 来估计当前状态-动作对的危险程度。使用负的、经过z-score归一化后的蒙特卡洛回报 <code>-H̃</code> 作为监督信号（公式3），通过最小化均方误差损失（公式4）进行端到端优化。该损失会反向传播至风险头和联合嵌入，使得产生低回报的危险状态-动作对被编码到一个连贯的风险感知潜在空间中。最终，失败情景记忆被组织为 <code>(z_{s_i}, a_i, φ(s_i, a_i), H_i)</code> 的形式，并定期（每收集M个新失败事件）更新。</p>
+<p><strong>2. 风险感知动作选择机制</strong><br>在策略交互的每一步，智能体首先根据当前状态 <code>s_t</code>，从带噪声的策略分布中采样N个候选动作 <code>a_i</code>（公式5，6）。接着，对当前状态编码 <code>z_{s_t}</code>，在失败记忆中使用 <code>ℓ_2</code> 距离和阈值 <code>ε</code> 检索相似的状态。在检索到的候选中，进一步选择与最低蒙特卡洛回报（即最危险经验）相关联的前O个状态-动作对。<br>然后，为每个候选动作 <code>a_i</code> 计算一个评分 <code>S_i</code>（公式7）。该评分由两部分组成：(1) 候选动作的联合嵌入 <code>φ(s_t, a_i)</code> 与从记忆中检索到的状态-动作嵌入之间的聚合 <code>ℓ_2</code> 距离 <code>D_i</code>；(2) 由训练好的风险头估计出的该状态-动作对的风险值 <code>ρ_i</code>。评分公式为 <code>S_i = D_i - λ_risk * ρ_i</code>，其中 <code>λ_risk</code> 是权重系数。最终，选择评分最高的候选动作与环境交互。该机制鼓励智能体选择与过去危险经验差异大且自身风险估计低的动作，从而主动避开已知的危险区域。</p>
+<p><strong>创新点</strong>：与现有方法相比，FEMA的创新性主要体现在：1) <strong>焦点转换</strong>：从利用高回报的成功情景记忆，转变为专门构建和利用失败情景记忆。2) <strong>主动引导</strong>：不仅将记忆用于价值估计，更通过风险感知评分机制直接、主动地干预在线动作选择，引导探索远离失败模式。3) <strong>语义嵌入</strong>：采用学习式的联合状态-动作嵌入进行记忆检索和风险评估，比随机投影等方法更能捕捉语义相似性。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：仿真实验在MuJoCo基准的四个任务上进行：Humanoid, Walker2d, Hopper, Ant（图4）。这些任务设有明确的终止条件（如摔倒）。FEMA与多种代表性无模型RL算法结合，包括PPO、SAC和CrossQ，并与经典的情景控制基线EMAC进行对比。真实世界实验在一个双足机器人爬楼梯任务中，将FEMA集成到一个广泛使用的并行化PPO训练流程中进行验证。</p>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x3.png" alt="任务示意图"></p>
+<blockquote>
+<p><strong>图4</strong>：MuJoCo评估任务示意图，包括(a)Humanoid, (b)Walker2d, (c)Hopper, (d)Ant。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>与SAC及EMAC的对比</strong>：如图5和表1所示，FEMA+SAC在所有四个任务上的收敛速度和最终性能均显著优于原始SAC和EMAC。以原始SAC的最大平均回报为参考，FEMA+SAC在Humanoid、Walker2d、Hopper和Ant任务上分别实现了33.62%、61.86%、45.00%和17.54%的样本效率提升。EMAC在所有任务上表现不佳，表明传统的情景控制方法难以处理早期学习中大量短失败情景。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x4.png" alt="SAC对比结果"></p>
+<blockquote>
+<p><strong>图5</strong>：EMAC、SAC以及SAC+FEMA在MuJoCo基准任务上的学习曲线。FEMA+SAC在所有任务上均表现出更快的收敛速度和更高的最终性能。</p>
+</blockquote>
+<ol start="2">
+<li><strong>与PPO和CrossQ的集成</strong>：如图6所示，FEMA能普遍提升PPO和CrossQ的性能。FEMA+PPO在Walker2d、Hopper任务上收敛显著加快，在Humanoid和Ant任务上获得了更高的最大平均回报。FEMA+CrossQ在Humanoid、Walker2d和Hopper任务上也带来了显著提升。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x5.png" alt="PPO与CrossQ结果"></p>
+<blockquote>
+<p><strong>图6</strong>：FEMA与PPO和CrossQ集成后在MuJoCo基准任务上的评估结果。FEMA为两种算法均带来了性能提升。</p>
+</blockquote>
+<ol start="3">
+<li><strong>对训练过程的影响</strong>：以Humanoid任务为例（图7），在早期训练阶段（20万至30万步），集成FEMA的CrossQ获得的平均回合长度达到829（上限1000），远高于原始CrossQ的431。这表明FEMA确实帮助智能体在早期收集到更长视界、更高质量的数据。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x6.png" alt="平均回合长度"></p>
+<blockquote>
+<p><strong>图7</strong>：Humanoid任务中，原始CrossQ与FEMA+CrossQ的平均回合长度对比。FEMA显著提升了早期训练中收集的轨迹长度。</p>
+</blockquote>
+<ol start="4">
+<li><strong>真实机器人实验</strong>：如图8所示，在双足机器人爬楼梯任务中，集成FEMA的并行PPO在相同训练步数内收敛到更高的奖励。训练好的策略能成功驱动机器人在约7秒内稳定爬完楼梯（图9），而原始并行PPO则无法可靠完成该任务。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x7.png" alt="真实任务学习曲线"></p>
+<blockquote>
+<p><strong>图8</strong>：在真实机器人爬楼梯任务中，集成FEMA的并行PPO与原始并行PPO的学习曲线对比。FEMA带来了更优的收敛性能。</p>
+</blockquote>
+<p><strong>消融实验</strong>：论文对FEMA的三个关键超参数和Top-O机制进行了消融研究（在Hopper任务上使用SAC+FEMA）。</p>
+<ul>
+<li><strong>相似度阈值ε</strong>（图10）：ε过小（0.01）导致早期收敛慢（指导受限）；ε过大（0.50）使策略偏向保守，最终回报降低；适中的ε（0.03）效果最佳。</li>
+<li><strong>候选动作数N</strong>（图11）：并非候选动作越多越好，需要适中数量以保证探索与引导的平衡。</li>
+<li><strong>记忆更新频率M</strong>（图12左）：对于Hopper任务，较低的更新频率（M=200, 300）导致后期学习性能下降。</li>
+<li><strong>Top-O机制</strong>（图12右）：与使用所有检索事件相比，仅使用风险最高的前O个事件进行评分能缓解过度保守的行为，提升性能。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.07110v1/2603.07110v1/x9.png" alt="超参数消融"></p>
+<blockquote>
+<p><strong>图10/11/12</strong>：分别展示了相似度阈值ε、候选动作数N、记忆更新频率M以及Top-O机制对SAC+FEMA在Hopper任务上性能影响的消融实验结果。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了FEMA，一种新颖的、以失败为中心的情景记忆技术，能够存储失败轨迹并利用其引导机器人进行更有效的探索。</li>
+<li>FEMA是一个即插即用的模块，与多种无模型RL算法兼容。在MuJoCo基准测试中，相比基线方法能带来显著的样本效率提升（平均提升33.11%）。</li>
+<li>通过将其集成到并行PPO训练框架并在真实双足机器人爬楼梯任务中验证，证明了FEMA在现实机器人控制任务中的实用潜力。</li>
+</ol>
+<p><strong>局限性</strong>：论文在实验部分指出，对于某些相对简单的任务（如Ant），原始算法通过基本探索和试错就能轻松达到最大回合长度，此时集成FEMA带来的额外增益有限。这表明FEMA在解决困难探索问题上的优势更为明显。</p>
+<p><strong>启示</strong>：本文工作表明，失败经验中蕴含的时空结构信息是加速强化学习训练的宝贵资源。未来的研究可以探索：1) 更精细的失败经验表征与检索机制；2) 将失败记忆与成功记忆结合使用的混合策略；3) 将FEMA思想扩展到更复杂的多任务、元学习或分层强化学习场景中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对强化学习在机器人控制中，早期训练因碰撞、跌倒等过早终止事件主导，导致大量短视界、低回报轨迹，阻碍收敛与长视界探索的问题，提出了失败情景记忆警报（FEMA）方法。该方法通过情景记忆模块显式存储短视界失败经验，交互时检索相似经验以预防机器人重复陷入危险状态，从而引导策略朝向高价值长视界轨迹。实验表明，FEMA在MuJoCo任务上使多种经典RL算法的样本效率提升33.11%，并在真实双足机器人任务中验证了有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.07110" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

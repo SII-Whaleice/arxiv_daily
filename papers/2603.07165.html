@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RoTri-Diff: A Spatial Robot-Object Triadic Interaction-Guided Diffusion Model for Bimanual Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>RoTri-Diff: A Spatial Robot-Object Triadic Interaction-Guided Diffusion Model for Bimanual Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.07165" target="_blank" rel="noreferrer">2603.07165</a></span>
+        <span>作者: Lin Shao Team</span>
+        <span>日期: 2026-03-07</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>双手操作是机器人执行复杂、精细化任务的核心能力。模仿学习（IL）是获取该技能的主流范式，现有方法可分为两类：机器人中心方法（直接学习机器人轨迹，包括基于关键位姿和基于连续动作的方法）和物体中心方法（引入物体运动作为辅助指导）。然而，这些方法普遍忽视了一个关键因素：双臂与被操作物体之间动态的空间几何关系。这一缺失导致系统在需要精细协调的任务中，容易出现双臂碰撞、抓取不稳定和性能下降等问题。本文针对这一痛点，提出应显式建模双手操作系统中机器人-物体三元交互（RoTri）关系，以捕获双臂与物体之间的空间三元约束，从而提升操作的稳定性和协调性。本文核心思路是：提出一种由空间机器人-物体三元交互（RoTri）引导的分层扩散模型（RoTri-Diff），通过协同整合机器人关键位姿、物体运动与RoTri关系三种指导信号，生成空间和时间一致的双臂操作轨迹。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>RoTri-Diff的整体框架是一个分层扩散模型，旨在从全局规划到细粒度执行保持一致性。其输入为语言指令和多视角RGB-D图像，输出为未来一段时长的连续动作序列。核心流程分为三个阶段：(i) 同时预测物体点流（Pointflow）和未来一段RoTri片段；(ii) 基于预测的物体点流和关键位姿时刻的RoTri，生成关键位姿动作；(iii) 整合前两步产生的所有信号，生成最终的连续动作序列。</p>
+<p><img src="https://arxiv.org/html/2603.07165v1/2603.07165v1/x1.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：RoTri-Diff整体框架。(a) 视觉感知与RoTri建模：从多视角观测中提取初始物体点云、3D语义特征和初始RoTri表示。(b) 模仿学习指导信号：三种互补的监督信号——关键位姿、物体点流和RoTri关系。(c) 分层扩散模型：模型并发地预测物体点流，并自回归地预测未来RoTri片段；这些预测随后作为动态条件，在一个协同注意力模块中引导关键位姿和连续动作的去噪与生成。</p>
+</blockquote>
+<p><strong>核心模块与技术细节：</strong></p>
+<ol>
+<li><p><strong>视觉感知与RoTri建模</strong>：首先，采用与PPI相同的方法，利用DINOv2和PointNet++从多视角图像构建包含语义和几何信息的3D场景特征。同时，通过Grounding DINO和SAM根据语言提示获取物体掩膜，并采样初始物体点云。<strong>RoTri建模</strong>是本方法的核心创新。它通过编码双臂末端执行器与物体之间的相对6D位姿（位置+四元数），构建一个紧凑的21维向量：$R_0 = [p^{0}<em>{\text{left}\to\text{right}},;p^{0}</em>{\text{left}\to\text{obj}},;p^{0}_{\text{right}\to\text{obj}}]\in\mathbb{R}^{21}$。这个表示在专家轨迹的每一步都进行计算，作为监督真值。对于多物体任务，使用一个置换不变（permutation-invariant）的Transformer编码器来聚合与各物体的三元交互，最终投影回固定维度的RoTri向量。</p>
+</li>
+<li><p><strong>模仿学习指导信号</strong>：除了从专家轨迹中提取的关键位姿和物体点流（通过物体6D位姿变换初始点云得到）信号外，本文引入了<strong>RoTri关系</strong>作为第三类指导信号。为了更鲁棒地学习其动态演化，模型并不直接预测完整的RoTri轨迹，而是学习预测其变化量$\Delta R_t$，并通过累积$R_t = R_{t-1} + \Delta R_t$得到当前RoTri状态，这使模型专注于捕捉相对交互动态。</p>
+</li>
+<li><p><strong>分层扩散模型用于动作预测</strong>：模型基于Transformer架构，采用带旋转位置编码的相对自注意力来利用3D空间信息。其创新性的<strong>分层自回归预测机制</strong>如下：在去噪过程的每一步，模型首先通过一个一次性过程预测未来关键位姿时刻的物体点流。同时，启动一个<strong>自回归的RoTri预测</strong>过程：以前一关键步的RoTri状态（初始为$R_0$）为条件，逐步预测未来H个时间步的RoTri片段${R_{t:t+H}}$。预测出的RoTri片段随即作为动态条件，用于指导关键位姿动作的生成（关键位姿动作令牌需关注物体点流、场景特征及对应关键时刻的RoTri令牌）。最后，连续动作令牌再关注所有前述特征（包括新生成的关键位姿和完整的RoTri片段）以生成最终的连续动作序列。预测出的RoTri片段的最终状态$R_{t+H}$将作为下一轮预测的初始条件，形成自回归链。</p>
+</li>
+</ol>
+<p><strong>创新点</strong>：与现有方法（如表I所示）相比，RoTri-Diff是首个将机器人关键位姿、物体运动与<strong>机器人-物体三元交互（RoTri）</strong> 三者协同整合的双手操作模仿学习框架。其核心创新在于提出了RoTri表示来显式建模双臂与物体间的空间三角几何约束，并设计了一个分层扩散模型，通过自回归预测RoTri片段并将其作为动态条件，实现了从全局交互关系到局部动作的连贯、稳定生成。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在仿真环境中，使用RLBench2基准测试中的11个代表性任务进行评估，这些任务涵盖对称协调、同步协调和异步协调三种类型。对比的基线方法包括：ACT（连续动作）、DP3（连续动作）、PerAct2（关键位姿）、AnyBimanual（关键位姿）、3D Diffuser Actor（关键位姿+连续动作）和PPI（关键位姿+物体运动）。在真实世界中，部署了四个具有挑战性的双手操作任务进行验证。评估指标为成功率（%），仿真中每个任务进行100次rollout。</p>
+<p><img src="https://arxiv.org/html/2603.07165v1/2603.07165v1/x2.png" alt="RLBench2任务可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：RLBench2中使用的11个双手操作任务的可视化，涵盖了对称、同步和异步三种协调类型。</p>
+</blockquote>
+<p><strong>关键实验结果</strong>：如表II所示，RoTri-Diff在11个任务上的平均成功率达到**80.9%<strong>，比之前的最佳方法PPI（70.7%）提升了</strong>10.2%**。在需要精细异步协调的任务上优势尤为明显，例如在“pick plate”任务上，PPI完全失败（0.0%），而RoTri-Diff达到了40.7%；在“handover item (hard)”和“put item into drawer”任务上，RoTri-Diff也分别以52.3% vs 37.3%和87.0% vs 79.7%显著优于PPI。这验证了显式建模空间三元交互关系对于复杂协调任务的有效性。</p>
+<p><img src="https://arxiv.org/html/2603.07165v1/2603.07165v1/figs/ablation_rotri_sparse.png" alt="消融实验：RoTri的应用方式"></p>
+<blockquote>
+<p><strong>图4</strong>：RoTri引导方式的消融研究。比较了仅用于关键位姿生成、仅用于连续动作生成以及完整RoTri-Diff（两者结合）的性能。结果表明，将RoTri同时用于引导关键位姿和连续动作的协同策略（即完整方法）至关重要，尤其是在“pick plate”这类困难任务上，性能远超单一应用方式。</p>
+</blockquote>
+<p><strong>消融实验</strong>：如表III和图4所示，研究探索了RoTri的不同应用方式。将RoTri仅用于指导关键位姿生成（RoTri-Keypose Only）或仅用于指导连续动作生成（RoTri-Continuous Only），其性能均低于完整的RoTri-Diff。这表明，<strong>将RoTri同时整合到分层生成过程的关键位姿和连续动作两个阶段，实现协同引导，对于性能提升最为关键</strong>。</p>
+<p><img src="https://arxiv.org/html/2603.07165v1/2603.07165v1/x3.png" alt="真实世界实验：任务1"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界双手操作任务示例（任务一：打开药瓶）。序列展示了机器人成功执行这个需要精细、顺序协调动作的任务。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.07165v1/2603.07165v1/x4.png" alt="真实世界实验：任务2-4"></p>
+<blockquote>
+<p><strong>图6</strong>：真实世界双手操作任务示例（任务二：叠放杯子；任务三：操作卡扣箱；任务四：双手持锅倒水）。这些任务对空间协调和动作约束有极高要求，RoTri-Diff均能稳定完成。</p>
+</blockquote>
+<p><strong>真实世界验证</strong>：如图5和图6所示，RoTri-Diff在四个具有挑战性的真实世界任务（打开药瓶、叠放杯子、操作卡扣箱、双手持锅倒水）中展示了鲁棒且稳定的性能，证明了其从仿真到现实的泛化能力。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：1. 提出了用于双手操作的<strong>机器人-物体三元交互（RoTri）</strong> 表示，显式编码双臂与物体间的空间关系，为稳定操作建立了连续的三角几何约束。2. 提出了<strong>RoTri-Diff</strong>，一个分层扩散模型，创新性地将机器人关键位姿、物体动力学和RoTri约束协同整合，生成空间和时间一致的动作轨迹。3. 在仿真和真实世界中进行了广泛验证，在RLBench2的11个任务上取得了领先性能，并在需要精确协调的真实任务中表现稳定。</p>
+<p><strong>局限性</strong>：论文指出，对于涉及多个被操作物体的任务，当前通过Transformer编码器聚合多个RoTri向量的方法虽然有效，但如何更优雅地处理可变数量的交互对象仍是一个值得探索的方向。此外，方法依赖于初始物体点云和RoTri的准确获取。</p>
+<p><strong>研究启示</strong>：本工作强调了在机器人操作策略中显式建模多实体（如双臂、多指、多物体）间<strong>空间几何关系</strong>的重要性。RoTri的思想可推广至更复杂的多智能体协作或灵巧手操作场景。其分层扩散框架中，<strong>自回归预测高级交互状态（RoTri）并作为条件指导低级动作生成</strong>的范式，为构建兼具长程规划能力和细粒度控制能力的机器人策略提供了新思路。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对双手操作中现有模仿学习方法忽视双臂与物体间动态几何关系，导致碰撞和性能下降的问题，提出RoTri表示与RoTri-Diff框架。RoTri通过编码相对6D姿态捕获空间三元关系，建立三角形几何约束；RoTri-Diff是基于扩散的分层模仿学习框架，结合该约束与机器人关键姿态、物体运动，生成稳定协调轨迹。实验显示，该方法在11个RLBench2任务上性能优于基线10.2%，并在4个真实世界任务中实现稳定执行。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.07165" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
