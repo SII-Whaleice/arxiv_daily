@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Agentic Critical Training - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Agentic Critical Training</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08706" target="_blank" rel="noreferrer">2603.08706</a></span>
+        <span>作者: Furong Huang Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>训练大型语言模型作为自主智能体通常从模仿学习开始，该方法通过监督微调学习复制专家演示的行为。然而，模仿学习存在一个根本性局限：它只教会智能体“做什么”，而不理解“为什么”要做。智能体从未将成功动作与次优替代方案进行对比，因此缺乏对动作质量的认知。近期研究尝试通过引入基于专家动作与替代动作对比的自我反思监督来解决此问题，例如“早期经验”方法。但该方法的训练范式本质上仍是模仿学习：模型模仿预先构建的反思文本，而非学习自主推理。本文针对“模仿学习无法培养自主推理能力”这一痛点，提出了Agentic Critical Training（ACT），一种强化学习范式，通过训练智能体从备选动作中识别出更好的动作，驱动模型自主发展关于动作质量的推理，产生真正的自我反思而非模仿。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ACT旨在将学习目标从“模仿专家动作”转变为“识别更好的动作”，使模型发展对动作质量的判别性理解。其整体流程分为数据构建与训练两个阶段。</p>
+<p><img src="https://arxiv.org/html/2603.08706v1/2603.08706v1/x1.png" alt="方法总览图"></p>
+<blockquote>
+<p><strong>图2</strong>：ACT + RL 训练流程总览。第一阶段（数据构建）：给定专家演示轨迹，提取状态-动作对，并从初始策略π_θ0中为每个状态采样替代动作。将专家动作与模型生成的替代动作配对，构建对比训练样本。第二阶段（Agentic Critical Training）：使用GRPO训练模型从随机排序的候选动作中识别更好的动作，通过可验证的奖励内化对动作质量的理解。第三阶段（RL动作训练）：利用ACT增强的模型，通过RL进一步训练直接生成动作，利用其改进的批判性推理基础实现更高的任务成功率。</p>
+</blockquote>
+<p><strong>数据构建</strong>：对于专家数据集中的每个状态-动作对 (s_i， a_i)， ACT构建对比样本的过程如下：1) 从初始策略 π_θ0(·|s_i) 中采样K个候选动作；2) 过滤掉与专家动作完全相同的候选；3) 将专家动作 a_i^+ = a_i 与每个过滤后的替代动作 a_i^- 配对，形成对比样本，构成ACT数据集 D_critic。其核心假设是初始策略生成的动作平均而言劣于专家动作。</p>
+<p><strong>训练流程</strong>：训练分为两个连续的RL阶段，均使用Group Relative Policy Optimization (GRPO) 进行优化。</p>
+<ol>
+<li><strong>Agentic Critical Training</strong>：模型首先在 D_critic 上训练，以识别两个候选动作中更好的一个。提示模板包含任务描述、历史观察-动作对、当前观察、可行动作集以及两个随机排序的候选动作（Action 1, Action 2），要求模型思考后输出选择。GRPO从当前策略中采样一组G个响应（包含模型的推理和动作选择），并计算奖励。关键在于，由于ACT通过RL而非模仿学习进行训练，模型必须自主发现能导致正确动作选择的思维链推理。奖励设计仅基于选择是否正确，这驱动了批判性思维的自发涌现。</li>
+<li><strong>RL Action Training</strong>：ACT增强后的模型随后在专家轨迹上使用GRPO进行直接动作生成的进一步训练。给定每个上下文 s_i， GRPO采样一组G个响应，并奖励那些与专家动作 a_i^+ 匹配的响应。此阶段建立在ACT获得的批判性推理基础上，利用其对动作质量的改进理解实现更有效的策略优化。</li>
+</ol>
+<p><strong>奖励设计</strong>：两个阶段共享一个复合奖励函数：R(s， y) = R_acc(a, a^+) + R_adm(a, A_admissible) + R_fmt(y)。其中，若提取的动作a与专家动作a^+完全匹配，则R_acc=1；若a是可行动作但不匹配a^+，则R_adm=0.1（为有效动作提供部分奖励）；若完整响应y缺少正确的<code>&lt;action&gt;</code>标签，则R_fmt=-0.5。</p>
+<p><strong>创新点</strong>：与现有方法相比，ACT的核心创新在于其训练范式。相较于“早期经验”等方法通过知识蒸馏注入反思能力（即模型模仿预生成的反思文本），ACT通过RL直接训练模型进行动作质量判断，奖励仅基于判断正确与否，迫使模型必须自主发展内部推理过程，从而内化真正的批判性评估能力，而非模仿固定的文本模式。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在三个涵盖不同能力的智能体基准上进行评估：ALFWorld（具身家庭任务）、WebShop（基于网络的购物任务）和ScienceWorld（科学推理任务）。对比方法包括：无/有思维链的提示、仅ACT、模仿学习（IL）、“早期经验”（自我反思）、RL，以及ACT与IL或RL结合的变体（IL w/ ACT， RL w/ ACT）。所有方法均基于相同的专家轨迹数据训练。</p>
+<p><strong>关键结果</strong>：</p>
+<ul>
+<li><strong>ACT带来正向迁移</strong>：单独使用ACT训练优于提示基线，但不如直接的动作生成方法（IL或RL）。然而，当作为IL或RL的前置阶段时，ACT能一致提升所有基准上的性能。具体而言，IL w/ ACT比IL平均提升5.07个百分点，RL w/ ACT比RL平均提升4.62个百分点，表明ACT阶段学习的批判性推理有益于后续的动作生成训练。</li>
+<li><strong>ACT优于早期经验</strong>：IL w/ ACT在所有基准上均优于“早期经验”方法，平均领先2.42个百分点。这表明通过RL训练模型自主推理动作质量，比在IL框架内模仿预生成的反思文本更有效。</li>
+<li><strong>ACT提升OOD泛化</strong>：在ALFWorld的分布外（OOD）任务上，添加ACT能同时提升IL和RL的性能。RL w/ ACT获得了最佳的OOD性能。此外，ACT在RL基础上带来的性能增益在OOD任务上（3.73pp）大于在分布内任务上（2.15pp），表明通过ACT获得的推理能力能够泛化到未见过的任务配置。</li>
+</ul>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="主要结果表"></p>
+<blockquote>
+<p><strong>表1</strong>：在Qwen3-8B上的主要结果（%）。ACT与IL或RL结合的方法（IL w/ ACT， RL w/ ACT）在ALFWorld（ID和OOD）、WebShop和ScienceWorld上均取得了最佳或接近最佳的性能，显著超越了纯模仿学习、纯RL以及“早期经验”基线。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08706v1/2603.08706v1/x2.png" alt="失败恢复案例"></p>
+<blockquote>
+<p><strong>图3</strong>：ALFWorld上的失败恢复案例。左图：IL模型陷入无限循环，重复失败动作超过30步直至任务终止。右图：ACT模型遇到相同类型的失败，但利用其内部推理诊断出根本原因（错误的位置），打破循环并发出正确的导航指令。这直观展示了ACT赋予模型的自我批判与恢复能力。</p>
+</blockquote>
+<p><strong>跨模型尺寸数据可转移性</strong>：实验将Qwen3-8B收集的ACT数据直接用于训练Qwen3-4B，无需重新收集。结果显示，ACT增强方法在Qwen3-4B上同样优于其非ACT对应方法，且OOD任务上的增益同样更大。这验证了ACT数据的有效性可以跨模型尺寸迁移，从而分摊数据收集成本。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="跨尺寸结果表"></p>
+<blockquote>
+<p><strong>表2</strong>：ALFWorld上跨模型尺寸的结果。使用来自Qwen3-8B的ACT数据训练的Qwen3-4B模型，其ACT增强版本（IL w/ ACT， RL w/ ACT）在ID和OOD任务上均优于对应的非ACT版本，证明了ACT数据的可复用性。</p>
+</blockquote>
+<p><strong>向通用推理基准的泛化</strong>：研究进一步测试了仅在ALFWorld智能体数据上训练的模型在通用推理基准（MATH-500和GPQA-Diamond）上的表现，未使用任何推理专用训练数据。</p>
+<ul>
+<li><strong>结果对比</strong>：基于下一词预测的IL和“早期经验”方法未能通过智能体训练提升通用推理能力，IL甚至在GPQA-Diamond上导致性能下降（相比思维链提示基线下降6.91pp）。RL大致保持了原始模型的性能。而ACT在两个基准上都取得了最高分，在GPQA-Diamond上比思维链提示基线提升了1.85pp。</li>
+</ul>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="通用推理结果表"></p>
+<blockquote>
+<p><strong>表3</strong>：在通用推理基准上的性能。所有模型仅使用ALFWorld智能体数据训练。ACT在MATH-500和GPQA-Diamond上均取得了最佳性能，表明其习得的批判性推理能力能够迁移到与训练任务无关的通用推理问题上。</p>
+</blockquote>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="自我验证行为案例"></p>
+<blockquote>
+<p><strong>图4</strong>：ACT在GPQA-Diamond上观察到的自我验证行为案例。在完成初始推导后，ACT模型将每个答案选项代回能量守恒方程进行验证，系统地排除不一致的选项。这种行为模式可能解释了其推理能力提升的原因。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了Agentic Critical Training（ACT），一种通过强化学习训练智能体判断动作优劣的新范式。它驱动模型自主发展批判性推理，而非模仿预定义的反思文本，从而内化了真正的自我反思能力。</li>
+<li>在三个具有挑战性的智能体基准上验证了ACT的有效性，表明其能一致提升模仿学习和强化学习的性能，并优于通过知识蒸馏注入反思的“早期经验”方法，同时展现出更强的分布外泛化能力。</li>
+<li>发现了ACT能力的可迁移性：一方面，其训练数据可跨不同尺寸的模型复用；另一方面，仅在智能体数据上训练的ACT模型，其批判性推理能力能够泛化至数学和科学推理等通用领域，为通过智能体环境提升通用推理能力提供了一条新路径。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，ACT需要从策略中收集替代动作以构建对比对，这可能带来一定的数据收集成本。不过，跨模型尺寸的实验表明该成本可通过数据复用来分摊。</p>
+<p><strong>研究启示</strong>：</p>
+<ul>
+<li><strong>范式转变</strong>：ACT的成功表明，对于培养高级认知能力（如反思、批判），基于结果的强化学习可能比基于文本模仿的监督学习更有效。这为训练具备深度理解与决策能力的AI智能体提供了新方向。</li>
+<li><strong>能力迁移</strong>：在特定领域（如序列决策）学习的“批判性评估”技能，可能是一种通用的元认知能力，能够迁移至看似不相关的其他推理任务。这启发了未来研究可以探索更多元技能的训练与迁移。</li>
+<li><strong>数据效率</strong>：ACT展示了利用相对简单的二元奖励信号（动作选择对错）来引导复杂推理过程的可能性，这为在缺乏详尽标注或高质量演示的领域进行高效学习提供了思路。</li>
+</ul>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对训练大型语言模型（LLM）代理时，模仿学习仅教动作而缺乏对动作质量理解和自主推理的问题，提出Agentic Critical Training（ACT）方法。ACT采用强化学习范式，通过奖励模型正确判断替代动作中的更优动作，驱动其自主发展推理能力，而非模仿预构建反思。实验表明，在三个代理基准测试中，ACT平均比模仿学习提升5.07点，比强化学习提升4.62点，比知识蒸馏方法提升2.42点，并展现出优秀的泛化性能。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08706" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>APPLV: Adaptive Planner Parameter Learning from Vision-Language-Action Model - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>APPLV: Adaptive Planner Parameter Learning from Vision-Language-Action Model</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08862" target="_blank" rel="noreferrer">2603.08862</a></span>
+        <span>作者: Xuesu Xiao Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在高度受限环境（如狭窄通道、密集障碍物）中实现自主导航对移动机器人而言仍具挑战。当前主流方法分为两类：一是需要大量专家经验进行环境特异性参数调优的传统导航系统，虽能提供安全保障但缺乏适应性；二是端到端学习方法，虽避免了参数调优，但牺牲了传统系统的可解释性与安全性保障，且在受限空间中的精确控制与泛化能力不足。作为折中，自适应规划器参数学习范式旨在自动调整规划器参数以保留传统系统的安全性，但其泛化到未知环境的能力仍有局限。同时，新兴的视觉-语言-动作模型展现出强大的场景理解能力，但直接用于导航时面临控制精度不足和推理延迟高的问题。本文针对上述痛点，提出了一种新视角：不直接使用VLA模型输出动作，而是利用其强大的感知与推理能力来预测底层传统导航规划器的参数。核心思路是，通过微调预训练的视觉-语言模型，使其能够根据环境观测动态预测最优的规划器参数配置，从而在继承传统规划器安全性的同时，实现对环境的高度自适应。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>APPLV的整体框架是一个基于视觉-语言-动作模型的参数预测系统。其输入是机器人的状态（包括自定义的环境图像、历史帧序列、当前速度等），输出是用于配置经典导航规划器（如DWA， TEB）的一组参数（如速度限制、成本权重等）。这些参数随后被输入到经典规划器中，由规划器生成最终的运动控制指令。</p>
+<p>核心模块包括：</p>
+<ol>
+<li><strong>视觉-语言主干网络</strong>：采用Qwen2.5-VL-3B模型。它接收一张自定义的RGB图像（以俯视图形式呈现局部环境：灰色背景、红色激光扫描障碍物、蓝色全局路径和机器人标记）和一个描述机器人当前速度状态的文本提示。模型被冻结，仅使用LoRA进行参数高效微调。我们从其最后四层Transformer中提取多层隐藏状态作为视觉语义特征。</li>
+<li><strong>历史编码器</strong>：一个轻量级模块，用于处理过去K帧的历史图像，以捕捉时序上下文。它使用卷积网络提取每帧的空间特征，然后通过一个时序Transformer编码器建模帧间的依赖关系。</li>
+<li><strong>DPT回归头</strong>：作为“动作专家”，它负责融合来自VLA的多层特征和来自历史编码器的时序上下文特征。其结构借鉴了密集预测Transformer，通过残差卷积块逐步融合不同层级的特征，最后通过注意力加权池化得到一个全局特征向量，再经由一个MLP回归出规划器参数向量。</li>
+<li><strong>经典导航规划器</strong>：接收APPLV预测的参数，进行配置后，基于当前机器人状态和感知信息生成安全的、动力学可行的运动控制命令。</li>
+</ol>
+<p>与现有方法相比，APPLV的创新点在于：1) <strong>范式创新</strong>：首次将VLA模型用于预测规划器参数，而非直接预测动作，结合了基础模型的强大感知与传统规划器的可靠控制。2) <strong>训练策略</strong>：提出了两阶段训练策略，即先在演示数据上进行监督学习微调，再通过强化学习进一步优化导航性能。3) <strong>设计</strong>：引入了历史编码器和DPT回归头，以有效利用时空信息并进行精细的特征融合，提升参数预测的准确性。</p>
+<p><img src="https://arxiv.org/html/2603.08862v1/2603.08862v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：APPLV整体框架。它实例化了APPL范式，利用VLA模型根据从模拟中收集的数据，动态调整经典导航规划器的参数。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08862v1/2603.08862v1/x2.png" alt="架构图"></p>
+<blockquote>
+<p><strong>图2</strong>：APPLV架构图。VLA模型处理当前状态和历史状态以预测规划器参数，这些参数配置经典导航规划器以生成运动控制命令。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在模拟的BARN挑战数据集和真实的Clearpath Jackal机器人平台上进行。</p>
+<ul>
+<li><strong>Benchmark/数据集</strong>：使用了包含300个高度受限环境的BARN挑战基准数据集进行训练和测试。</li>
+<li><strong>实验平台</strong>：模拟实验在ROS Noetic/Gazebo中进行，物理实验使用Clearpath Jackal机器人。</li>
+<li><strong>对比的Baseline方法</strong>：<ol>
+<li><strong>Heuristic Expert</strong>：基于专家手工规则的参数配置方法。</li>
+<li><strong>APPLR</strong>：一种基于强化学习直接从激光观测映射到参数的APPL家族方法。</li>
+<li><strong>Transformer BC</strong>：与APPLV-SL结构参数量相当、但从头开始训练的Transformer模型，用于对比验证VLM预训练的价值。</li>
+<li><strong>Zero-Shot VLM</strong>：使用GPT-4o进行零样本推理，直接根据图像和提示词输出参数，用于验证任务特定微调的必要性。</li>
+</ol>
+</li>
+<li><strong>评估的规划器</strong>：DWA, TEB, MPPI, DDP 四种经典局部规划器。</li>
+</ul>
+<p><strong>关键实验结果</strong>：<br>在300个未见过的BARN测试环境中，APPLV方法在几乎所有指标上均优于基线。</p>
+<ul>
+<li><strong>导航成功率</strong>：APPLV-RLFT在DDP规划器上取得了最高的94.34%成功率，相较于Heuristic Expert的89.50%和APPLR的85.35%有显著提升。</li>
+<li><strong>平均导航时间</strong>：APPLV-RLFT在所有规划器上都实现了最短的平均时间（例如TEB规划器为12.51秒，优于基线的16.64-20.35秒）。</li>
+<li><strong>综合导航分数</strong>：APPLV-RLFT同样获得了最高的分数（例如DDP规划器为0.463，高于基线的0.404-0.418）。</li>
+<li><strong>泛化能力</strong>：在物理机器人于真实杂乱环境中的测试表明，APPLV能够成功导航通过狭窄通道和密集障碍物区域。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.08862v1/2603.08862v1/x3.png" alt="训练与部署流程"></p>
+<blockquote>
+<p><strong>图3</strong>：APPLV训练与部署流程。左：通过演示数据进行监督学习的数据收集与采样。中：包含VLA模型和经典规划器的APPLV架构。右：使用TD3进行强化学习微调。底部：在自然杂乱环境中的物理部署。</p>
+</blockquote>
+<p><strong>消融与对比分析</strong>：</p>
+<ul>
+<li><strong>监督学习 vs. 强化学习微调</strong>：APPLV-RLFT在所有指标上均一致优于APPLV-SL，证明了RLFT能进一步优化策略以获得更好的导航性能。</li>
+<li><strong>预训练的价值</strong>：APPLV-SL显著优于使用相同数据但从头训练的Transformer BC，这验证了利用视觉-语言基础模型进行预训练的有效性。</li>
+<li><strong>微调的必要性</strong>：APPLV-SL的性能远超Zero-Shot VLM（GPT-4o），表明尽管基础模型具备空间推理能力，但针对导航任务进行微调至关重要。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.08862v1/2603.08862v1/x4.png" alt="物理实验"></p>
+<blockquote>
+<p><strong>图4</strong>：物理部署实验。展示了在两种BARN挑战环境中的真实机器人测试场景。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) <strong>提出了APPLV新范式</strong>：创新性地利用视觉-语言-动作模型来预测传统导航规划器的参数，在保留规划器安全性与可解释性的同时，赋予了其基于视觉场景的自适应能力。2) <strong>设计了两阶段训练策略</strong>：结合了监督学习的行为克隆和强化学习微调，有效利用了演示数据并进一步优化了导航目标。3) <strong>实现了卓越的泛化性能</strong>：在多个不同的经典规划器上均取得了优于现有方法的表现，并在模拟和真实世界中验证了其有效性。</p>
+<p>论文提到的局限性主要在于<strong>推理延迟</strong>。尽管APPLV的推理频率低于直接输出动作的VLA模型，但其在RTX 5070 Ti GPU上的单次预测延迟约为0.41秒，对于需要极高频率控制的应用仍是一个挑战。</p>
+<p>本研究对后续工作的启示在于，它成功展示了将<strong>大规模视觉-语言基础模型的能力与传统机器人系统的可靠性相结合</strong>的有效路径。未来工作可以探索更轻量化的模型架构以减少延迟，或将此范式扩展到更广泛的机器人决策与控制任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对传统路径规划器需手动调参且泛化性差，以及端到端视觉-语言-动作模型控制不精确的问题，提出APPLV方法。该方法创新地利用预训练视觉-语言模型，通过一个回归头来动态预测传统规划器的参数，而非直接输出动作，并采用监督学习与强化学习两种策略进行微调。实验表明，APPLV在模拟和真实机器人导航任务中，其性能与泛化到未见环境的能力均优于现有方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08862" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

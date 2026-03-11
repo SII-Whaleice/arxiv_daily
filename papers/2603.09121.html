@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DexHiL: A Human-in-the-Loop Framework for Vision-Language-Action Model Post-Training in Dexterous Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DexHiL: A Human-in-the-Loop Framework for Vision-Language-Action Model Post-Training in Dexterous Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09121" target="_blank" rel="noreferrer">2603.09121</a></span>
+        <span>作者: Wenzhao Lian Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型在机器人操作中展现出泛化潜力，但将其应用于高自由度的灵巧手操作任务时，面临后训练和下游适应的巨大挑战。主流方法依赖于在离线数据集上进行监督微调。然而，这种方法存在关键局限性：首先，硬件层面存在运动学错配，传统的遥操作系统难以将人手动作精确映射到机器人灵巧手的复杂关节构型，导致高质量、细粒度的示范数据难以获取。其次，算法层面存在三大系统性挑战：高维动作空间中的收敛困难、离线数据样本效率低下（数据多由重复的成功轨迹主导），以及实际执行中的协变量偏移和误差累积问题，使得开环策略容易进入分布外状态而失败。</p>
+<p>本文针对灵巧操作VLA模型后训练中数据质量差、样本效率低、难以从错误中恢复的具体痛点，提出了将人机协同范式扩展到灵巧手-臂协同操作的新视角。核心思路是构建一个集成的人机协同框架，通过在线的人类干预提供高质量的纠正数据，并利用一种干预感知的数据采样策略来优先学习这些纠正片段，从而高效地提升策略在接触密集型任务中的鲁棒性。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DexHiL框架旨在解决灵巧VLA模型的高维控制和数据低效问题，包含两个协同组件：1) 支持灵巧操作的交互式人机协同遥操作系统；2) 人机协同后训练流程。</p>
+<p><img src="https://arxiv.org/html/2603.09121v1/2603.09121v1/x1.png" alt="DexHiL框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：DexHiL框架总览。展示了从数据采集系统、人机协同干预范式、灵巧操作VLA模型结构到离线-在线训练流程的完整框架。</p>
+</blockquote>
+<p><strong>整体框架与流程</strong>：如框架图所示，系统首先通过遥操作收集离线数据集用于预热训练，得到一个初始策略。随后进入在线交互学习循环：部署当前策略，人类在检测到即将失败时进行干预，生成在线干预数据集。通过数据集聚合与干预感知加权机制，结合离线与在线数据对策略进行更新。此过程迭代进行，逐步提升策略性能。</p>
+<p><strong>核心模块一：交互式人机协同遥操作系统</strong><br>该系统为灵巧手-臂协同操作与实时干预提供了统一接口。它采用双路径映射：一条路径控制手臂运动，另一条路径重定向手指关节。</p>
+<ol>
+<li><strong>手部关节重定向</strong>：为了克服单网络五指重定向易导致抓握退化为捏取姿态的问题，本文提出两阶段方案。第一阶段，仅优化食指、中指、无名指和小指，通过损失函数 ℒ_vec 监督机器人指尖向量与缩放后的人手指尖方向向量对齐，以获得稳定的四指运动流形。第二阶段，冻结非拇指手指的参数，仅优化拇指的残差映射。此阶段采用一组几何正则化器（方向保持、工作空间覆盖、平坦性、捏取保持损失）以及一个指尖间运动学项 ℒ_kin，以匹配人手与机器人手指间的几何关系。</li>
+<li><strong>手臂姿态映射</strong>：使用单目相机实时跟踪手持的ArUco标记立方体的6D位姿。当人类触发干预时，系统记录当前机器人末端执行器位姿 <strong>T_EE0</strong> 和立方体位姿 <strong>T_M0</strong> 作为锚点。随后，立方体的相对运动通过公式 <strong>T_EE = T_EE0 (T_robot^cube)^{-1} T_M0^{-1} T_M T_robot^cube</strong> 被映射到机器人末端，再通过逆运动学求解关节角。</li>
+<li><strong>异步多线程控制与干预</strong>：系统采用多线程架构，自主策略推理（20Hz）、人类引导的手臂遥操作（30Hz）和手部遥操作（90Hz）并发运行。人类在监测到任务即将失败时接管整个机器人系统的执行。数据集记录为 **𝒟 = {(o_t, q_arm,t, q_hand,t, I_t)}**，其中 <strong>I_t</strong> 为二元干预指示器。</li>
+</ol>
+<p><strong>核心模块二：人机协同后训练流程</strong><br>该流程基于上述遥操作系统，包含策略精炼机制和干预感知加权训练策略。</p>
+<ol>
+<li><strong>干预感知加权机制</strong>：为提升稀疏但高价值的干预样本的利用率，该机制通过重要性采样原理调整训练样本权重。设类别c的原始经验分布为 **P(c)**，目标分布为 *<em>P</em>(c)**，则样本权重 *<em>w(o,a,c) = P</em>(c)/P(c)**。在实现中，设定 <em><em>P</em>(intervention)=0.5</em>*，以此作为正则化机制，在不损害基础能力的情况下弥合分布偏移。</li>
+<li><strong>策略更新机制</strong>：<ul>
+<li><strong>预热阶段</strong>：在初始离线数据集 <strong>𝒟^0</strong> 上对VLA模型进行全参数微调，得到初始策略 <strong>π_0</strong>。</li>
+<li><strong>在线训练阶段</strong>：进行n轮迭代。每轮迭代i中，部署策略 **π_{i-1}**，人类干预产生在线数据集 **𝒟^{i,‘}**。聚合数据集 **𝒟^{i} = 𝒟^{i-1} ∪ 𝒟^{i,‘}**。以前一轮参数 <strong>θ^{(i-1)}</strong> 为起点，在 <strong>𝒟^{i}</strong> 上优化加权模仿目标 <strong>ℒ^{(i)}</strong> 来更新策略。本文以Being-H0.5模型为例，其动作头采用流匹配目标 <strong>ℓ_IL</strong>。</li>
+</ul>
+</li>
+<li><strong>数据过滤策略</strong>：为提升在线优化效率，仅保留从最后一次干预开始到任务完成的轨迹段，而丢弃最后一次接管之前的所有轨迹段。这有助于模型学习“渐进式错误纠正”范式，避免因不一致数据导致策略振荡或多模态分布冲突。</li>
+</ol>
+<p>与现有方法相比，DexHiL的创新点在于首次为灵巧操作VLA模型提供了一个集成的、支持手-臂协同实时干预的在线后训练框架，并通过两阶段重定向、干预感知加权和终端恢复段过滤等具体技术，系统性地解决了高维灵巧操作中的数据质量与效率瓶颈。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>任务</strong>：1) 毛绒玩具抓取：评估端到端策略性能和手的抓取能力；2) 纸巾抽取：评估精细的灵巧重定向能力，要求可靠地抽取薄而可形变的纸巾。</li>
+<li><strong>平台</strong>：Franka Research 3机械臂搭载DexHand021灵巧手。</li>
+<li><strong>训练</strong>：使用8块NVIDIA H100 GPU对Being-H0.5进行全参数微调，然后在人机交互数据上使用单块H100进行微调。</li>
+<li><strong>基线方法</strong>：设计了数据量匹配的对比基线。<ul>
+<li>Offline-40/50/60：分别使用与DexHiL在第1/2/3轮迭代中总数据量相匹配的纯离线轨迹进行训练。</li>
+<li>DAgger*：在线训练但不使用干预感知加权机制。</li>
+</ul>
+</li>
+</ul>
+<p><strong>关键实验结果</strong>：<br>实验进行了三轮迭代，每轮为每个任务增加10条新轨迹（DexHiL为在线干预收集，基线从剩余离线池中抽取）。每个任务进行20次独立试验，以成功率作为主要指标。</p>
+<p><img src="https://arxiv.org/html/2603.09121v1/2603.09121v1/figures/results.png" alt="定量性能与训练损失分析"></p>
+<blockquote>
+<p><strong>图5</strong>：定量性能与训练损失分析。（左）两个任务在三轮连续训练中的成功率。（右）DexHiL和DAgger*在第10步的初始训练损失。加入人类纠正轨迹后，损失显著增加。</p>
+</blockquote>
+<p>表I和图5（左）展示了关键结果。在<strong>纸巾抽取</strong>任务中，DexHiL在第三轮达到95%的成功率，显著优于DAgger<em>（80%）和离线基线（75%）。在更具挑战性的<strong>毛绒玩具抓取</strong>任务中，DexHiL在第三轮达到65%的成功率，而DAgger</em>和离线基线仅分别为20%和35%。这表明干预感知机制通过人类纠正有效促进了策略精炼。此外，DexHiL效率更高：每段干预仅需3秒（离线轨迹需10秒），到第三轮总人力减少35%（13分钟 vs. 20分钟），证明其能优先处理高价值的纠正信号。</p>
+<p><strong>TABLE I : Success Rates ( n / 20 )</strong></p>
+<table>
+<thead>
+<tr>
+<th align="left">Method</th>
+<th align="center">Warm-up</th>
+<th align="center">Round 1</th>
+<th align="center">Round 2</th>
+<th align="center">Round 3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>Task 1: Tissue Extraction</strong></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">DexHiL (Ours)</td>
+<td align="center">2/20</td>
+<td align="center">10/20</td>
+<td align="center">15/20</td>
+<td align="center"><strong>19/20</strong></td>
+</tr>
+<tr>
+<td align="left">DAgger*</td>
+<td align="center">2/20</td>
+<td align="center">7/20</td>
+<td align="center">9/20</td>
+<td align="center">16/20</td>
+</tr>
+<tr>
+<td align="left">Baseline</td>
+<td align="center">2/20</td>
+<td align="center">8/20</td>
+<td align="center">11/20</td>
+<td align="center">15/20</td>
+</tr>
+<tr>
+<td align="left"><strong>Task 2: Plush Toy Grasping</strong></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+<tr>
+<td align="left">DexHiL (Ours)</td>
+<td align="center">0/20</td>
+<td align="center">4/20</td>
+<td align="center">6/20</td>
+<td align="center"><strong>13/20</strong></td>
+</tr>
+<tr>
+<td align="left">DAgger*</td>
+<td align="center">0/20</td>
+<td align="center">2/20</td>
+<td align="center">3/20</td>
+<td align="center">4/20</td>
+</tr>
+<tr>
+<td align="left">Baseline</td>
+<td align="center">0/20</td>
+<td align="center">0/20</td>
+<td align="center">3/20</td>
+<td align="center">7/20</td>
+</tr>
+</tbody></table>
+<p><strong>消融实验与贡献分析</strong>：<br>图5（右）的训练损失曲线显示，引入人类纠正轨迹后，训练损失显著上升，打破了之前0.002-0.008之间的平台期，表明模型正在从更具挑战性的纠正数据中学习，这是性能提升的关键。论文还通过对比实验（DAgger* vs. DexHiL）验证了干预感知加权机制的核心作用。此外，重定向算法的有效性通过与其他方法（Dex-retargeting, GeoRT）的定性对比（图4）得以展示，本文方法能生成更准确、平滑、协调的手部姿态。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1) 提出了一种基于学习的、两阶段的人手到灵巧手机器人运动重定向方法，克服了传统优化方法在精确控制上的不足；2) 设计了一个集成的、支持人机协同的遥操作系统，实现了对高自由度灵巧手-臂系统的无缝实时干预；3) 提出了DexHiL，一种用于灵巧VLA模型的迭代式人机协同后训练流程，其核心是干预感知数据采样策略，能优先利用纠正片段，显著提升样本效率和策略鲁棒性。</p>
+<p>论文自身提到了一个关键局限性：<strong>干预时机是关键瓶颈</strong>。实验识别了两种主导的失败模式（次优的接触密集型操作和错误的接触后调整），这些都需要人类及时干预，对操作员提出了较高要求。</p>
+<p>本研究对后续工作的启示在于：首先，它证明了将人机协同范式从平行夹爪-臂系统成功扩展到灵巧手-臂系统的可行性，为复杂操作任务的高效学习开辟了新路径。其次，干预感知加权和终端恢复段过滤等策略，为解决模仿学习中数据不平衡和错误累积问题提供了具体技术思路。未来工作可以探索如何自动化或半自动化地决定干预时机，或者如何从干预数据中更高效地提取可泛化的恢复技能。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作（VLA）模型在灵巧操作任务中后训练效果有限、适应性不足的问题，提出了首个集成手臂-手部的人机协作框架DexHiL。其核心技术包括：1）干预感知数据采样策略，优先选取纠正片段用于后训练；2）轻量级遥操作接口，支持执行中即时人工修正。真实机器人实验表明，该框架作为高效的后训练方法，相比纯离线微调基线，在不同任务上的平均成功率显著提升25%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09121" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

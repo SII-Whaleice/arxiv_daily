@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>CORAL: Scalable Multi-Task Robot Learning via LoRA Experts - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>CORAL: Scalable Multi-Task Robot Learning via LoRA Experts</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09298" target="_blank" rel="noreferrer">2603.09298</a></span>
+        <span>作者: Zhenguo Li Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，将视觉-语言-动作模型部署到真实世界机器人中面临一个核心的多任务学习挑战：如何调和任务间的干扰。主流方法通常对单个模型进行多任务联合微调，但来自不同任务的梯度可能发生冲突，导致负迁移并降低每个任务的性能。而另一种极端——为每个任务保存一个完整的模型检查点——则在存储和部署上成本高昂。本文针对这一困境，提出了CORAL框架。其核心思路是：冻结一个预训练的VLA主干，为每个任务附加一个轻量级的LoRA专家模块，并通过一个动态推理管理器根据语言指令确定性地路由到对应专家，从而实现参数隔离，避免任务间干扰，并以极低的存储开销支持新任务的持续学习。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>CORAL采用两阶段学习范式，将通用的体现感知学习与任务特定的专业化解耦。整个流程与具体的VLA主干和机器人体现形式无关。</p>
+<p><strong>第一阶段：体现感知的通用预训练</strong>。首先，在涵盖所有可用初始任务 𝒯 的多样化数据上训练或微调基础策略模型。此阶段旨在让模型深刻理解机器人的通用控制模式、运动学以及环境的视觉-语言结构。训练完成后，得到的基础模型 θ_base 被永久冻结。</p>
+<p><strong>第二阶段：轻量级任务特定LoRA专家训练</strong>。随后，对于初始任务集 𝒯 以及后续出现的新任务 𝒯_new 中的每一个任务，独立训练一个轻量级的低秩适应专家模块 {θ_k}。每个LoRA专家的训练被有意限制得非常短暂（例如，仅几个优化周期），作为一种温和的隐式正则化，防止过拟合，确保专家在提升任务特定成功率的同时，不损害从基础模型继承的广泛泛化能力。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：CORAL方法整体框架。左侧展示了训练阶段：一个冻结的预训练VLA主干，为每个任务独立训练一个轻量级的LoRA专家。右侧展示了部署阶段：CORAL管理器根据输入的语言指令，动态地在冻结主干上加载、切换相应的LoRA专家以执行推理。</p>
+</blockquote>
+<p>在推理时，动态推理引擎——<strong>CORAL管理器</strong>——负责在运行时协调这些紧凑专家的加载、切换和卸载。其关键洞察在于：在具身操作中，每个语言指令本身就标识了其目标任务。因此，管理器可以根据指令直接、确定性地路由到相应的LoRA专家，完全避免了学习复杂的门控网络。具体执行逻辑如算法1所示：当接收到新指令和图像时，管理器通过路由函数确定所需专家索引k；若k与当前活跃专家不同，则触发切换过程：首先从缓存的RAM状态字典中恢复纯净的基础模型权重，然后从磁盘加载所需的LoRA适配器θ_k，并将其低秩矩阵直接合并到基础权重中。这种显式的合并保证了后续推理相比原始基础模型具有零额外的FLOPs或延迟。整个切换过程在100毫秒内完成。</p>
+<p>在技术细节上，CORAL假设基础模型遵循通用的“VLM编码器+动作头”范式。对于每个新任务k，我们以秩r和缩放因子α初始化一个LoRA适配器θ_k。在任务特定适应期间，基础模型θ_base被冻结，仅优化θ_k。目标权重矩阵W的更新规则为 W&#39; = W + (α/r)BA，其中B和A是可训练的低秩矩阵。CORAL采用<strong>双目标注入策略</strong>，将LoRA模块同时插入VLM编码器和动作头的注意力层中，这使得专家能够同时适应视觉-语言特征提取和针对目标场景的低层控制策略。由于基础模型完全冻结，且在优化θ_k时不加载任何其他适配器θ_j (j≠k)，该过程强制执行了<strong>严格的参数隔离</strong>，从本质上防止了持续学习中的参数覆盖，从而缓解了任务间干扰。每个专家都非常轻量：对于一个典型的0.8B参数VLA基础模型，一个秩为16的专家仅占用约26 MB，相比完整检查点实现了约100倍的压缩。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在标准仿真基准和真实机器人设置上全面评估了CORAL，旨在回答四个核心问题。</p>
+<p><strong>使用的Benchmark与基线方法</strong>：</p>
+<ul>
+<li><strong>仿真基准</strong>：LIBERO（4个套件共40个任务）、WidowX Robot Tasks、Google Robot Tasks。</li>
+<li><strong>真实世界平台</strong>：Galaxea R1 Lite双臂移动操作器。</li>
+<li><strong>基础模型</strong>：为展示主干无关性，使用了SimVLA (0.8B参数) 和 π_0.5 (3B参数)。</li>
+<li><strong>对比基线</strong>：包括π_0、PD-VLA、UniVLA、FLOWER、DD-VLA、MemoryVLA、OpenVLA-OFT、VLA-Adapter、X-VLA、GR00T-N1、RT-2-X等前沿VLA模型，以及独立全微调和联合全微调。</li>
+</ul>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li>**仿真基准性能 (Q1 &amp; Q2)**：在LIBERO基准上，CORAL_SimVLA取得了99.3%的平均成功率，创造了新的SOTA。当应用于π_0.5时，CORAL_π_0.5达到了98.4%，相比标准π_0.5基线有+1.5%的绝对提升，在最难的LIBERO-Long套件上更是取得了+3.4%的大幅增益。在WidowX和Google Robot任务上，CORAL_SimVLA也分别以97.9%和84.9%的平均成功率显著超越了所有基线。</li>
+<li><strong>系统效率</strong>：训练40个LIBERO任务仅需为每个独立LoRA专家训练50步。存储上，40个专家仅需约1 GB，约为单个完整微调检查点（~3 GB）的三分之一。专家切换在单GPU上可在100毫秒内完成，且推理零开销。</li>
+<li><strong>真实世界评估</strong>：<ul>
+<li>**跨场景零样本泛化 (Q1)**：在8个复杂的双手灵巧操作任务上，CORAL通过激活任务特定LoRA专家，显著提升了基础模型在未见场景中的鲁棒性，缓解了仅依赖单一预训练策略时常见的多任务干扰。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09298v1/2603.09298v1/zero_shot_generalization.png" alt="跨场景零样本泛化结果"></p>
+<blockquote>
+<p><strong>图2</strong>：在8个复杂真实世界任务（于未见环境中测试）上的成功率。展示了基础模型与CORAL激活任务专家后的性能对比，CORAL显著提升了跨场景鲁棒性。</p>
+</blockquote>
+<pre><code>*   **新能力获取与遗忘分析 (Q3 &amp; Q4)**：在“开门”和“按电梯按钮”这两个全新技能套件上，CORAL取得了与资源密集型的**独立全微调**基线相媲美的性能。而**联合全微调**则因严重的多任务干扰和梯度冲突，平均成功率暴跌至24.5%。更重要的是，顺序的全微调会导致对先前任务的**完全灾难性遗忘**（成功率降至0%）。CORAL通过将任务学习隔离到完全独立的轻量级LoRA专家中，无需任何数据重放就避免了参数覆盖和灾难性遗忘。
+</code></pre>
+<p><img src="https://arxiv.org/html/2603.09298v1/2603.09298v1/x1.png" alt="新能力获取结果"></p>
+<blockquote>
+<p><strong>图3</strong>：在完全未见、域外任务上的成功率（左）和存储占用对比（右）。CORAL在性能上匹配独立全微调，同时存储占用极低，并避免了联合全微调的性能崩溃。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09298v1/2603.09298v1/real.png" alt="真实世界评估任务"></p>
+<blockquote>
+<p><strong>图4</strong>：在新能力获取过程中，由CORAL_SimVLA成功执行的实时推理轨迹示例。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一种通过<strong>参数隔离</strong>解决多任务干扰和灾难性遗忘的可扩展系统，将每个任务的知识封装在独立的LoRA专家中；2) 利用语言指令的<strong>确定性路由</strong>，实现了零推理开销的动态专家切换，省去了复杂的门控网络；3) 实现了极高的<strong>存储效率</strong>，支持终身学习，单个专家仅为完整模型的约1/100大小。</p>
+<p>论文自身提到的局限性包括：其有效性依赖于语言指令能够明确指定任务，对于高度抽象或模糊的指令可能需要更复杂的路由机制；同时，系统的整体性能上限仍受限于基础预训练VLA模型的泛化能力。</p>
+<p>这项工作为机器人终身学习提供了一个简洁而强大的框架范式。其启示在于：将系统设计（确定性的、基于指令的路由）与参数高效的适应技术（LoRA）相结合，可以优雅地解决多任务学习中的固有冲突。未来研究可以探索如何将CORAL的思想扩展到指令边界不清晰的任务，或者如何动态地合并或分解专家以处理复合任务。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对多任务机器人学习中任务干扰导致负迁移、降低性能的核心问题，提出CORAL框架。该框架冻结预训练视觉-语言-动作骨干模型，为每个任务附加轻量级LoRA专家，通过CORAL管理器动态路由语言指令实现零开销专家切换，以参数隔离避免干扰并支持任务扩展。在Galaxea R1真实机器人和LIBERO等三个模拟基准上的实验表明，CORAL有效克服细粒度指令模糊性，性能显著优于联合训练。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09298" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

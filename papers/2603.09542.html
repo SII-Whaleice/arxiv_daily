@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>NS-VLA: Towards Neuro-Symbolic Vision-Language-Action Models - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>NS-VLA: Towards Neuro-Symbolic Vision-Language-Action Models</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09542" target="_blank" rel="noreferrer">2603.09542</a></span>
+        <span>作者: Haoran Luo Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作（VLA）模型通常采用端到端范式，将预训练的多模态大模型（如VLMs）微调以直接生成机器人动作序列。尽管取得了进展，这类方法仍面临三个关键挑战：第一，缺乏结构感知。机器人操作由可重用的基本技能（Primitives）组成，但端到端方法直接回归动作序列，难以捕获任务内部的结构化关联，导致泛化能力差。第二，严重依赖大规模演示数据和复杂模型架构。第三，局限于模仿专家演示，与环境交互有限，探索能力不足。</p>
+<p>本文针对这些痛点，提出了一种新的神经符号（Neuro-Symbolic）VLA框架。其核心思路是引入符号化表示和推理，将任务分解为结构化的基本技能序列，并利用在线强化学习（RL）进行优化，从而实现结构感知、高数据效率以及超越演示数据的主动探索。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>NS-VLA的整体框架是一个通过在线RL优化的分层策略，如图4所示。它接收语言指令 <code>x</code> 和当前视觉观测 <code>o_t</code> 作为输入，输出连续动作。流程分为三步：首先，神经符号编码模块将输入映射为离散的符号化基本技能（Primitive）序列（计划）和紧凑的状态表示；其次，符号求解器将当前激活的基本技能转化为高效、实时的动作块；最后，在线RL策略在部分可观测和稀疏奖励下，联合优化可训练模块以提高任务成功率。</p>
+<p><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x3.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图4</strong>：NS-VLA框架概览。这是一个用于机器人操作的RL优化神经符号策略，智能体分层协调视觉基础、符号化基本技能推理和连续动作分块生成。</p>
+</blockquote>
+<p><strong>1. 神经符号编码与嵌入</strong><br>该模块包含一个神经符号编码器和一个符号分类器。首先，一个冻结的预训练VLM编码器将指令 <code>x</code> 和观测 <code>o_t</code> 编码为令牌级特征 <code>ψ_t</code>。在每一轮（episode）开始时，VLM根据初始观测和指令生成一个结构化的基本技能计划 <code>p = (u^(1), ..., u^(M))</code>，其中每个 <code>u^(m)</code> 属于预定义的基本技能集合 <code>𝒰</code>。计划在整个轮次中保持不变以确保时序一致性。</p>
+<p>符号分类器 <code>g_φ</code> 是一个MLP，它将池化后的VLM特征 <code>ψ̄_t</code> 映射到对计划中各个基本技能的概率分布 <code>p_φ(u|ψ_t)</code>。为了稳定执行并减少切换抖动，系统引入了一个单调计划指针 <code>m_t</code> 及其约束：<code>m_t ∈ {m_{t-1}, min(m_{t-1}+1, M)}</code>。分类器的决策被限制在符合该指针先验的允许索引集 <code>𝒦(m_{t-1})</code> 内，通过一个掩码分布 <code>π_φ(k|ψ_t, m_{t-1})</code> 来选择下一个指针 <code>m̂_t</code>，当前执行的基本技能即为 <code>û_t = u^(m̂_t)</code>。分类器使用聚焦于基本技能转换边界帧的加权交叉熵损失进行优化。</p>
+<p><strong>2. 符号求解器</strong><br>该模块将预测出的神经符号 <code>û_t</code> 转换为连续动作。为了提升效率，它包含视觉令牌稀疏化和动作生成器。</p>
+<ul>
+<li><strong>视觉令牌稀疏化</strong>：为了减少VLM输出的密集令牌 <code>ψ_t</code> 的计算冗余，该方法使用一个查询驱动的注意力层来筛选与当前基本技能相关的视觉区块。首先，将预测的基本技能 <code>û_t</code> 嵌入为查询向量 <code>q_t</code>。然后计算查询与每个视觉令牌的相关性分数 <code>α_{t,i}</code>。在训练时，使用可微的Soft Top-K门控机制；在推理时，直接选择相关性最高的K个令牌索引 <code>ℐ_t</code>。最后，通过加权聚合选中的令牌得到一个紧凑的上下文向量 <code>c_t</code>。</li>
+<li><strong>动作生成器</strong>：一个因果Transformer模型将稀疏的视觉上下文 <code>c_t</code>、基本技能嵌入和本体感知状态 <code>S_t</code> 拼接为令牌 <code>e_t</code>，并以此生成一个长度为 <code>H</code> 的开环动作块 <code>A_t = (a_t, ..., a_{t+H-1})</code>。</li>
+</ul>
+<p><strong>3. 在线强化学习优化</strong><br>在线学习阶段被建模为一个部分可观测马尔可夫决策过程（POMDP），并优化一个分层策略 <code>π_Θ(u_t, A_t | H_t)</code>，该策略联合了基本技能分类和动作生成。</p>
+<ul>
+<li><strong>奖励设计</strong>：奖励 <code>r_t</code> 由稀疏任务奖励 <code>r_t^{task}</code>、分段里程碑奖励 <code>r_t^{seg}</code> 和段内进度奖励 <code>r_t^{prog}</code> 组成。分段里程碑奖励在检测到基本技能切换时（<code>b_t=1</code>）发放。段内进度奖励基于一个潜在空间中的“进展”度量：为每个基本技能索引 <code>σ</code> 维护一组从成功片段中构建的原型 <code>{μ_{σ,c}}</code>，计算当前观测的潜在编码 <code>ℓ_t</code> 与最近原型的负距离作为势能 <code>Φ_t</code>，进度奖励定义为 <code>r_t^{prog} = γΦ_{t+1} - Φ_t</code>，这鼓励智能体向成功的状态前进。</li>
+<li><strong>优化策略</strong>：采用分组相对策略优化（GRPO）并引入KL正则化来防止策略崩溃。优化目标 <code>J_GRPO(Θ)</code> 在最大化分组归一化优势函数的同时，惩罚策略 <code>π_Θ</code> 与行为克隆参考策略 <code>π_BC</code> 之间的KL散度，从而在稀疏奖励下实现稳定更新。</li>
+</ul>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：实验在三个机器人操作数据集上进行：LIBERO、LIBERO-Plus（包含光照、纹理、空间布局等扰动的更具挑战性版本）和CALVIN。采用低资源设置，在LIBERO上进行单样本（1-shot，每个任务仅一条演示轨迹）和全量演示训练，并评估其在LIBERO和LIBERO-Plus上的泛化能力。主要对比方法包括OpenVLA、π0、OpenVLA-OFT、UniVLA、VLA-Adapter等。评估指标为成功率（SR）。</p>
+<p><strong>主要结果</strong>：<br>如表1和图2所示，NS-VLA在各项测试中均表现优异。</p>
+<ol>
+<li><strong>单样本训练</strong>：在LIBERO的1-shot设置下，NS-VLA取得了69.1%的平均成功率，显著优于所有基线方法（次优的VLA-Adapter为65.3%）。更重要的是，与自身在全量数据上训练的性能相比，NS-VLA的性能下降幅度最小（平均下降29.5%），显示出卓越的数据效率。</li>
+<li><strong>泛化至扰动环境</strong>：在LIBERO-Plus的扰动测试集上（使用全量LIBERO数据训练），NS-VLA取得了79.4%的平均成功率，同样领先于所有基线，并且其性能下降幅度（19.2%）也是所有方法中最小的，证明了其对环境变化的强鲁棒性。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x1.png" alt="成功率对比"></p>
+<blockquote>
+<p><strong>图2</strong>：三种训练设置下的成功率对比。NS-VLA在单样本训练和面对LIBERO-Plus扰动时，均能保持较高的成功率且性能下降最小，而基线方法在低数据或泛化任务上性能骤降。</p>
+</blockquote>
+<p><strong>消融实验与分析</strong>：<br>如图5(a)所示，移除任何核心组件（基本技能分类器P.C.、视觉提取器V.E.、动作生成器A.G.或强化学习R.L.）都会导致性能下降，验证了各模块的必要性。具体地：</p>
+<ul>
+<li>移除基本技能分类器（P.C.）或动作生成器（A.G.）在扰动环境下性能下降尤为明显（图5(b)），说明符号化结构对于对抗分布偏移至关重要。</li>
+<li>视觉提取器（V.E.）能有效聚焦于与任务相关的视觉区域（图5(c)），过滤背景干扰，提升对视觉扰动的鲁棒性。</li>
+<li>提出的GRPO优化目标相比基线GRPO能实现更稳定和高效的收敛（图5(d)）。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x4.png" alt="消融实验与组件分析"></p>
+<blockquote>
+<p><strong>图5</strong>：(a) NS-VLA各模块的消融研究结果。(b) 在环境扰动下的鲁棒性分析，显示P.C.和A.G.是关键。(c) 注意力热图可视化，验证视觉提取器聚焦相关区域。(d) 与GRPO基线的训练曲线对比，显示所提优化策略更稳定高效。</p>
+</blockquote>
+<p><strong>数据效率与泛化性分析</strong>：<br>如图6所示，NS-VLA在不同大小的VLM骨干网络下都能保持高成功率，表明其神经符号解耦的有效性。同时，其学习曲线（图6(b)）显示在单样本设置下能快速收敛。如图7所示，在CALVIN数据集ABC→D的零样本泛化测试中，NS-VLA的5任务连续成功率达到91.2%，平均序列长度达4.72，显著优于基线。</p>
+<p><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x5.png" alt="效率与泛化分析"></p>
+<blockquote>
+<p><strong>图6</strong>：(a) 预训练VLM参数量对成功率和基本技能准确率的影响。(b) 不同训练数据量下的学习曲线，显示NS-VLA在低数据下快速收敛。<br><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x6.png" alt="泛化性能"><br><strong>图7</strong>：(a) 在CALVIN ABC→D分割上的零样本泛化性能。(b) 在LIBERO-Plus扰动下的性能对比，NS-VLA保持领先。</p>
+</blockquote>
+<p><strong>探索空间分析</strong>：<br>如图8所示，与端到端VLA、扩散模型和流匹配等方法相比，NS-VLA通过在线RL优化，能够覆盖更广阔的探索空间，生成更多样化和有效的轨迹，超越了单纯模仿演示数据的局限。</p>
+<p><img src="https://arxiv.org/html/2603.09542v1/2603.09542v1/x7.png" alt="探索空间对比"></p>
+<blockquote>
+<p><strong>图8</strong>：(a) 轨迹生成的对比案例研究：端到端VLA方法 vs. NS-VLA。(b) 不同VLA范式的探索空间覆盖可视化，NS-VLA覆盖更广。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）提出了一个统一的神经符号VLA框架（NS-VLA），通过符号化基本技能计划、分类和执行，增强了模型的结构感知与泛化能力；2）设计了一个轻量级符号求解器，通过查询驱动的视觉令牌稀疏化和动作分块生成，实现了高效、鲁棒的动作生成；3）引入了一种基于分段里程碑和进度奖励的在线RL优化方法，结合KL正则化，使模型能够进行超越演示数据的主动探索，并在稀疏奖励下稳定训练。</p>
+<p>论文提到的局限性包括：方法依赖于预训练的VLM来生成初始符号化计划，并且符号化基本技能集合需要预先定义或从数据中标注。这些因素可能限制其在全新、未见过的基础技能上的应用。</p>
+<p>这项工作为构建下一代神经符号具身智能体奠定了基础。它对后续研究的启示在于：将符号化结构与神经网络的表示学习相结合，是提升VLA模型数据效率、鲁棒性和探索能力的有效途径。未来可以探索如何自动化地发现或学习符号化基本技能，以及如何将这种框架扩展到更复杂的长期任务和动态环境中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作（VLA）模型缺乏结构意识、依赖大规模数据和探索受限的核心问题，提出神经符号VLA（NS-VLA）框架。该框架引入符号编码器提取结构化原语，利用符号求解器实现数据高效的动作序列生成，并通过在线强化学习优化探索。实验表明，NS-VLA在一次性训练和数据扰动设置中性能优于基线方法，成功率高且零样本泛化能力强，同时具备高数据效率。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09542" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Provably Safe Trajectory Generation for Manipulators Under Motion and Environmental Uncertainties - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Provably Safe Trajectory Generation for Manipulators Under Motion and Environmental Uncertainties</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09083" target="_blank" rel="noreferrer">2603.09083</a></span>
+        <span>作者: Max Q. -H. Meng Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人机械臂在不确定、非凸环境中的安全运动规划是一个长期挑战。现有方法，如机会约束运动规划器，在处理复杂几何形状和非高斯不确定性时，往往难以同时保证规划效率并提供形式化认证的碰撞风险保证。许多现有工作要么假设不确定性为高斯分布，要么假设障碍物为凸形，这限制了其在现实杂乱环境中的应用。虽然已有方法开始考虑非高斯不确定性和非凸障碍物，但它们通常局限于近似为单个凸刚体的移动机器人，且碰撞风险检查计算量大。另一方面，基于采样的模型预测控制（如MPPI）在高维机械臂规划中表现出色，但其性能在存在显著关节空间跟踪误差时会下降。</p>
+<p>本文针对不确定机械臂在具有概率几何、尺寸和位置的非凸障碍物环境中，进行风险有界轨迹生成的未满足需求。核心思路是：结合一个刚体机械臂深度随机Koopman算子（RM-DeSKO）模型来鲁棒地预测运动不确定性下的状态分布，并设计一个分层验证方法，融合并行物理仿真与平方和（SOS）规划，对碰撞风险进行高效、形式化认证，最终嵌入到MPPI控制器中生成安全轨迹。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架是一个集成了学习、规划与验证的闭环系统。其输入为当前带噪声的机器人状态 $x_t$、目标区域以及风险容忍度 $\Delta$，输出为可证明满足风险约束的控制指令 $u^*$。</p>
+<p><img src="https://arxiv.org/html/2603.09083v1/2603.09083v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：不确定环境下机械臂的风险有界运动规划框架。它结合了预测状态 $X_{N,H}$ 和成本 $\hat{C}_{N,H}$ 的RM-DeSKO神经网络模型，以及优化控制输入 $u^{<em>}$ 的MPPI控制器。监督逻辑通过在仿真中计算基于接触力的碰撞成本，并在执行前检查下一个预测状态的有界碰撞风险来强制执行环境安全。带噪声的状态 $x_t$ 闭合了感知-行动循环。新的成本函数 $\hat{c}(x_t, u^{</em>})$ 在确保风险约束的同时快速引导随机优化。</p>
+</blockquote>
+<p>框架包含三个核心模块：</p>
+<ol>
+<li><p><strong>刚体机械臂深度随机Koopman算子（RM-DeSKO）模型</strong>：用于在MPPI中替代理想动力学模型进行前向滚动预测。给定一批 $N$ 个相同的当前状态 $x_{n,t}$，该模型通过编码器网络 $\lambda_{\theta_1}$ 和 $\sigma_{\theta_2}$ 将带噪声的状态提升到可观测量的概率分布空间（假设为高斯分布），得到 $\psi_t$。随后，一个无偏置的仿射线性变换网络（Koopman矩阵 $A$ 和控制矩阵 $B$）在该线性空间中迭代传播分布：$\psi_{t+k} = A\psi_{t+k-1} + Bu_{t+k-1}$。最后，解码器网络 $C_{\theta_3}$ 将未来的可观测量 $\psi_{t+k}$ 转换回预测的状态 $\bar{x}_{t+k}$。该模型通过最小化多步均方误差损失进行训练，能更准确地预测存在跟踪误差时的机器人状态。</p>
+</li>
+<li><p><strong>基于MPPI的采样模型预测控制器</strong>：控制器在每个规划周期采样 $N$ 条长度为 $H$ 的控制序列。利用RM-DeSKO模型并行滚动预测对应的未来状态序列 $X_{N,H}$，并在IsaacGym仿真环境中高效计算对应的批量成本 $\hat{C}_{N,H}$（包含碰撞、目标接近等项）。MPPI根据加权成本更新其高斯策略的参数（均值 $\mu_t$ 和协方差 $\Sigma_t$），并输出优化后的控制序列均值 $u^*$。</p>
+</li>
+<li><p><strong>分层碰撞风险验证方法</strong>：这是保证形式化安全的关键。首先，<strong>快速仿真验证</strong>：在MPPI内部，利用IsaacGym的接触力信息快速计算碰撞成本 $c_{col} = \alpha \sum F_{contact}$，以高效地引导优化远离碰撞。其次，<strong>精细SOS认证</strong>：在MPPI输出待执行的最优控制 $u^*$ 后，使用RM-DeSKO模型预测下一步状态 $x_{t+1}$。为了处理非凸、概率几何的障碍物，论文将机械臂的每个连杆用椭球体 $\mathcal{E}_j(q_t)$ 包裹。基于<strong>定理1</strong>，通过平方和（SOS）规划验证每个椭球体是否位于风险有界区域 $\hat{\mathcal{C}}_r^{\Delta}$ 内。该定理将碰撞概率约束转化为关于障碍物多项式矩的SOS可行性问题。如果验证失败（即碰撞风险超过 $\Delta$），则更新成本函数并触发MPPI重新优化（算法1第9-13行）。</p>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09083v1/2603.09083v1/x2.png" alt="状态预测"></p>
+<blockquote>
+<p><strong>图2</strong>：在RM-DeSKO模型下，MPPI中前向动力学传播的示意图，展示了在 horizon $H$ 内对 $N$ 条采样轨迹的关键方程。</p>
+</blockquote>
+<p>创新点体现在：1) <strong>模型创新</strong>：将深度随机Koopman算子应用于刚体机械臂，在提升的线性空间中传播状态分布，以更鲁棒地处理运动不确定性。2) <strong>验证创新</strong>：提出了结合快速物理仿真（用于高效引导）和形式化SOS认证（用于最终保证）的分层风险验证策略，兼顾了效率与安全保证。3) <strong>框架集成</strong>：将学习模型、采样优化与形式化验证无缝集成，使MPPI能够利用SOS验证产生的二进制碰撞信息来更新其策略。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：研究在仿真和实物中验证了所提框架。使用了两个典型机械臂平台：Franka Emika Panda（7自由度）和UR5e（6自由度）。对比的基线方法是原始的采样MPC方法。评估环境包含具有不确定尺寸、位置和几何形状的非凸障碍物。风险容忍度 $\Delta$ 设置为0.1。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>状态预测精度对比</strong>：在Franka机械臂上比较了RM-DeSKO与DKU、LSTM、MLP、Transformer等模型的多步状态预测误差。论文指出，RM-DeSKO及其变体在预测存在不确定性的机械臂状态方面表现最佳。</li>
+<li><strong>仿真性能</strong>：在100次随机初始化和目标位置的试验中，对比方法（原始MPC）的成功率为68%，而本文方法达到了100%的成功率。本文方法生成的轨迹平均长度更短（1.63m vs 1.71m），且平均单步计算时间相当（约0.16秒），证明了其高效性。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09083v1/2603.09083v1/figures/sim_result.png" alt="仿真结果"></p>
+<blockquote>
+<p><strong>图6</strong>：仿真实验结果对比。左图显示了两种方法在100次试验中的成功率（本文方法100% vs 基线68%）。右图比较了成功轨迹的长度和计算时间，本文方法在保证安全的同时生成了更短的轨迹。</p>
+</blockquote>
+<ol start="3">
+<li><strong>实物实验与消融研究</strong>：在一个具有挑战性的人机协作场景（机械臂需绕过不确定的障碍物到达目标）中进行了测试。完整方法（RM-DeSKO + 分层验证）实现了100%的成功率（10/10）。消融实验表明，仅使用RM-DeSKO（无SOS验证）时，由于仿真中的接触力计算无法完全表征真实世界的复杂不确定性，成功率降至80%。而仅使用SOS验证（无RM-DeSKO）时，由于状态预测不准确导致规划性能下降，成功率仅为40%。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09083v1/2603.09083v1/figures/phy_result1.png" alt="实物结果"></p>
+<blockquote>
+<p><strong>图7</strong>：实物实验与消融研究结果。展示了完整方法、仅使用RM-DeSKO、仅使用SOS验证三种配置在10次实物试验中的成功率。完整框架取得了100%的成功率，验证了各组件协同工作的必要性。</p>
+</blockquote>
+<ol start="4">
+<li><strong>SOS验证效率</strong>：论文指出，直接对MPPI滚动时域中的所有样本进行SOS验证是不可行的（验证一条长度为15的轨迹上的6个椭球体约需3.8秒）。而本文的分层方法仅在每步执行前对单个预测状态进行验证，将额外的SOS认证开销降至可接受水平，从而实现了6Hz的重新规划频率。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>首次系统性地提出并解决了机械臂在面临具有概率几何的非凸障碍物时的风险有界运动规划问题。</li>
+<li>开发了RM-DeSKO模型来预测高维机械臂在运动不确定性下的状态，并设计了一种结合风险轮廓图与形式化认证的高效分层碰撞风险验证方法。</li>
+<li>通过大量实验验证了框架效率，并成功在复杂的人机协作场景中实现了从仿真到实物（Sim-to-Real）的策略迁移。</li>
+</ol>
+<p><strong>局限性</strong>：论文自身指出，该方法需要为每个起点-目标对提供一条示例轨迹（用于训练RM-DeSKO模型）以及障碍物的多项式方程描述，这增加了设置成本。此外，SOS验证的计算速度仍有提升空间，以支持更快的重新规划。</p>
+<p><strong>后续启示</strong>：本研究为在不确定、非结构化环境中实现具有可证明安全保证的机器人运动规划提供了新范式。未来工作可集中于：1) 减少对示例轨迹和障碍物解析模型的依赖，例如通过在线学习或感知；2) 进一步优化SOS验证的计算效率，或开发更轻量的形式化验证替代方法；3) 将框架扩展到更复杂的任务，如动态障碍物避障或多机器人协作。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机械臂在不确定非凸环境中安全轨迹规划的挑战，提出可证明安全的风险有界运动规划框架。核心技术包括：RM-DeSKO模型预测运动不确定性下的状态分布；分层验证方法结合可并行物理仿真与SOS规划，实现细粒度碰撞风险形式化认证；MPPI控制器利用SOS信息优化策略。实验表明，系统以6 Hz频率重规划，在模拟和真实人机协作场景中有效生成安全高效轨迹，验证了框架的实用性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09083" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

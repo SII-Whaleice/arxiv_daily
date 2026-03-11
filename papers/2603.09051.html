@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Cutting the Cord: System Architecture for Low-Cost, GPU-Accelerated Bimanual Mobile Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Cutting the Cord: System Architecture for Low-Cost, GPU-Accelerated Bimanual Mobile Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09051" target="_blank" rel="noreferrer">2603.09051</a></span>
+        <span>作者: Nikolaus Correll Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前机器人研究与教育领域存在一系列低成本、开源平台，如XLeRobot，其参考配置以低于700美元的零件成本提供了有线连接的双臂移动操作系统，是目前最易获取的系统之一。然而，实现低成本移动操作器的实用化、无绳部署仍然充满挑战。这些挑战主要源于系统集成问题：3D打印部件的结构刚度不足、高瞬态电机负载下的电压不稳定性、功率分配限制以及嵌入式计算单元的热限制。这些问题相互交织，可能导致难以调试的故障，如伺服电机、控制板或机载计算的意外复位，有效负载能力降低以及执行器过早磨损。本文针对这些实际但至关重要的集成挑战，旨在提供一个经过严格表征、可实现无绳操作的XLeRobot平台演进版本。其核心思路是：通过优化的机械拓扑、创新的三总线电源架构以及集成的嵌入式自主软件栈，在约1300美元的总成本内，构建一个完全自主、无外部依赖的低成本双臂移动操作平台。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的系统是对开源XLeRobot平台的演进，整体框架集成了定制化的机械结构、电源管理系统和嵌入式自主软件栈。平台基于IKEA RÅSKOG钢制推车底盘，集成了LeKiwi全向移动底盘、两个SO-101操作臂（每个5+1自由度）、一个2自由度颈部，并搭载了NVIDIA Jetson Orin Nano作为机载计算机和Intel RealSense D435深度相机，总高度1.20米。</p>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/FIRST.png" alt="平台外观"></p>
+<blockquote>
+<p><strong>图1</strong>：演进后的XLeRobot平台，一个用于教育和研究的低成本双臂平台，正在通过拆卸螺丝协助工业机器人进行电动汽车电池操作。</p>
+</blockquote>
+<p>核心模块包含以下三个创新点：</p>
+<ol>
+<li><strong>优化结构拓扑</strong>：针对标准FDM打印（2层壁，15%填充）在扭转负载下过度柔顺的问题，采用了功能梯度拓扑策略。对承受主要载荷的部件（如机械臂连杆）采用“高外壳”拓扑（4层壁，15%填充），以最大化截面惯性矩，为执行器提供刚性支撑，防止电机错位。对于需要装配柔性的部件（如关节皮带稳定器），则使用“基线”拓扑（2层壁，15%填充）。这种设计旨在最小化结构变形δ，将电机扭矩更有效地转化为末端执行器力，从而实现1公斤的有效负载能力。机械手爪采用基于Fin Ray效应的柔性几何结构（TPU材料打印），利用被动的形态计算实现自适应抓取。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/arm.png" alt="机械臂结构与测试"></p>
+<blockquote>
+<p><strong>图3</strong>：机械臂结构组成与运动学：（左）采用4层壁（黑色）/2层壁（青色）拓扑的机械臂；（右）悬臂实验设置。</p>
+</blockquote>
+<ol start="2">
+<li><strong>三总线电源拓扑</strong>：为解决电机同时高扭矩运动产生的电压瞬变导致计算单元掉电或系统复位的问题，设计了Tri-Bus电源架构。系统使用Anker SOLIX C300（288Wh/300W）供电单元（PDU），其提供三个USB-C端口和一个12V DC车载输出口。架构将高功耗的双操作臂负载整合到10A DC车载输出口（Bus B）；将轮子和颈部执行器总线（Bus A）连接到一个高功率USB-C端口；而Jetson Orin Nano则被隔离在另一个独立的USB-C端口上。这种物理隔离将高瞬态电机负载与计算域解耦。此外，在固件层面建立了基于电流模型的安全操作包络（SOE），根据PDU每个端口的电流限值IL和该总线上的活跃执行器数量Na，通过公式τ ≤ ((IL/Na - 0.18 - D(α)) / 2.52) × 1000 计算并限制最大扭矩τ，充当“虚拟保险丝”，防止PDU因过载而关机。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/combined.png" alt="电源系统架构"></p>
+<blockquote>
+<p><strong>图4</strong>：电源系统架构。（a）逻辑电源示意图显示了从Anker SOLIX C300到不同电机总线及NVIDIA Jetson控制器的电力分配。（b）硬件集成图显示了移动操作器底盘内电源线的物理布线。</p>
+</blockquote>
+<ol start="3">
+<li><strong>嵌入式自主软件栈</strong>：平台采用基于ROS 2的分层控制栈，集成了机载感知、运动规划、SLAM导航和遥操作。感知与操作流水线始于从RealSense D435获取RGB-D帧，通过基于HSV阈值和连通分量分析的色彩检测器识别目标物体，计算其在相机光学坐标系中的3D质心。该目标点通过机器人的MuJoco MJCF运动学模型转换到机械臂基座坐标系。任务级的逆运动学（IK）通过pink库求解，它将IK问题表述为一个带约束的二次规划（QP），在100Hz频率下生成关节空间轨迹，同时最小化末端执行器位置误差并应用姿态正则化以避免极端构型。导航栈使用RTAB-Map进行视觉里程计和SLAM，结合轮式里程计产生稳定的位姿估计，并使用ROS 2 Nav2进行全局路径规划和闭环执行控制。此外，系统实现了基于Open-TeleVision架构的VR遥操作系统，支持裸手跟踪和标准VR控制器输入，能够以高达60Hz的频率进行低延迟逆运动学解算，并将机器人摄像头画面投影到头戴式显示器中，用于数据采集和直观控制。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/ik/grid.png" alt="感知驱动操作流水线"></p>
+<blockquote>
+<p><strong>图5</strong>：感知驱动的操作流水线。（a）在相机光学坐标系中进行基于颜色的分割和质心检测。（b）环境的3D地图与表示。（c）逆运动学规划后对目标物体的最终抓取执行。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验评估在四个层面展开：结构性能与操作能力、计算基准测试、系统压力测试以及全栈功能验证。</p>
+<ol>
+<li><strong>结构刚度与负载能力分析</strong>：比较了三种3D打印策略（基线：2层壁/15%填充；高填充：2层壁/50%填充；高外壳：4层壁/15%填充）。在悬臂测试中，高外壳配置与高填充配置的挠度相同（2.0mm），但总质量减少了15.8%（838g）。负载测试表明，高外壳设计的平均系统屈服力为18.49 ± 2.15 N，比基线设计（11.06 ± 0.63 N）提高了67.1%，验证了其约1公斤的有效负载能力。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/cantilever.png" alt="结构性能表征"></p>
+<blockquote>
+<p><strong>图7</strong>：结构性能表征。比较不同链接拓扑在刚度（上表）和极限负载能力（下图，n=5）上的表现。</p>
+</blockquote>
+<ol start="2">
+<li><strong>抓取可靠性验证</strong>：对五种不同尺寸和重量（17-858克）的物体进行了75次抓放试验。系统取得了98.7%的成功率。柔顺的Fin Ray机械结构对刚性物体（立方体、瓶子）实现了100%的成功率。858克的电钻可以被抓取，但在快速加速时因惯性大和表面摩擦系数低而出现滑动。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/cube.jpg" alt="抓取性能与可靠性"></p>
+<blockquote>
+<p><strong>图8</strong>：抓取性能与可靠性。（a-c）柔顺机械适应。（d）实验结果显示成功率为98.7%。（注：此处使用论文描述中图8d的代表性图片替代）</p>
+</blockquote>
+<ol start="3">
+<li><p><strong>计算基准测试</strong>：在Jetson Orin Nano（MAXN SUPER模式）上对三种先进的操作模型进行了端到端延迟基准测试。ACT模型的延迟为36.0 ± 0.9 ms，对应理论最大重规划频率为27.8 Hz；Diffusion Policy延迟为539.6 ± 0.1 ms（1.8 Hz）；SmolVLA延迟为713.8 ± 9.3 ms（1.4 Hz）。结果表明，边缘设备上的主要计算瓶颈来自于迭代动作专家和所需的去噪步骤，而视觉语义处理带来的开销相对较小。</p>
+</li>
+<li><p><strong>系统压力测试</strong>：在模拟高占空比并发多轴运动的压力测试中，原始共享总线设计会导致电流激增和电压崩溃（从12.2V降至306mV），而改进后的三总线架构在相同条件下保持了电压稳定（均值12.0V，方差≤0.1V），消除了瞬变和掉电现象。热测试表明，在峰值推理负载下连续运行30分钟后，Jetson未出现降频（最高GPU温度54.62°C）。机器人满负载运行30分钟仅消耗5%的电量。</p>
+</li>
+<li><p><strong>遥操作灵巧性评估</strong>：通过高精度的“销-孔”插入任务评估了三种遥操作模态（VR控制器、手部追踪、Xbox手柄基线）。VR控制器将平均任务完成时间减少了80.6%（48.22秒），而手部追踪减少了72.5%（68.30秒），但失败率更高。两者相比基线（248.73秒）均有超过70%的时间缩减。</p>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09051v1/2603.09051v1/pictures/VR/Chen_using.jpg" alt="VR遥操作设置"></p>
+<blockquote>
+<p><strong>图9</strong>：VR遥操作设置：（左）操作员与系统交互；（右）ManipulationNet销-孔板的特写视图。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：第一，提出并实现了一个总成本约1200美元、完全无绳且具备GPU加速计算能力的双臂移动操作机器人系统架构，为研究和教育提供了新的低成本基线。第二，针对低成本系统集成中的关键痛点（结构刚度、电源稳定性），提供了经过实验验证的工程解决方案，即优化结构拓扑和三总线电源架构。第三，提供了完整、开源的CAD、电气原理图、表征数据和文档，确保了设计的可复现性。</p>
+<p>论文提到的局限性包括：Jetson Orin Nano有限的CUDA核心限制了高频多模态Transformer模型的部署；业余级舵机存在机械敏感性，升级工业级舵机会大幅增加成本；当前配置更适合桌面任务，增加垂直线性轴可扩展工作空间。</p>
+<p>这项工作启示后续研究，一个经过精心设计、充分表征的低成本硬件平台能够有效支持从经典控制到现代模仿学习与VLA模型的研究与教学，降低机器人学习领域的入门门槛，并促使社区更多关注系统级集成挑战的解决。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对低成本双手机器人移动操作平台在实际无缆部署中遇到的结构柔顺、电压瞬变及嵌入式计算受限等系统集成挑战，提出了一套完整解决方案。核心技术包括：优化机械设计以提升刚度重量比；采用Tri-Bus电源拓扑隔离计算单元与电机负载；以及基于NVIDIA Jetson Orin Nano的嵌入式自主系统。最终实现的平台总成本低于1300美元，具备完全无缆的遥操作、自主导航与视觉操作能力，为机器人研究与教育提供了低成本、高性能的硬件基础。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09051" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

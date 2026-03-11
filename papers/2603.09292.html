@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>See, Plan, Rewind: Progress-Aware Vision-Language-Action Models for Robust Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>See, Plan, Rewind: Progress-Aware Vision-Language-Action Models for Robust Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09292" target="_blank" rel="noreferrer">2603.09292</a></span>
+        <span>作者: Xiaojun Chang Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，基于视觉-语言-动作（VLA）模型的机器人操作研究已能实现基本任务执行和灵活行为。然而，为了实现鲁棒性能，智能体不仅需要感知和行动，还需对任务进度保持一种具身化、可量化的感知能力，即“进度感知”——根据一系列具体且可执行的里程碑来衡量任务执行的能力。现有方法在实现进度感知和错误恢复方面存在关键局限：一方面，如ECOT等方法产生的进度信号通常是抽象的语言概念或二进制标志，缺乏对机器人动作有明确指导意义的空间基础；另一方面，失败恢复方法如FailSafe依赖于大量额外的失败数据收集，成本高昂，而REFLECT等方法则严重依赖预定义的大语言模型提示，在未见场景中适应性有限。</p>
+<p>本文针对现有方法中进度信号抽象、恢复机制依赖外部数据或模型的问题，提出了一个统一框架，旨在提供机器人可解释的、空间基础化的进度规划，并内嵌一个数据高效的恢复机制。核心思路是：通过“看-计划-回退”（See, Plan, Rewind, SPR）的闭环框架，将语言指令动态地基础化为一系列空间子目标，并通过监控针对预期序列的进度，在失败时回退到可恢复状态，从而实现无需额外训练数据或辅助模型的鲁棒错误纠正。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>SPR框架通过一个持续的核心循环运行：模型首先“看”（See）当前状态和即将到来的里程碑，然后“计划”（Plan）一条到达下一个2D路径点的轨迹，最后在通过监控进度检测到失败时“回退”（Rewind）到一个可恢复状态。</p>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：SPR框架概览。左侧：模型接收任务描述和观察后，执行See-Plan推理（第3.1节），识别带2D空间坐标的剩余子任务（See）并规划到下一个子目标路径点的夹爪轨迹（Plan），然后输出动作令牌执行。每个推理步骤还更新状态记录器，其中$S_N$表示当前时间步预测的子任务计数，$T_N$表示计划的2D轨迹。右侧：Rewind机制（第3.2节）在每个步骤后检查状态记录器：若未检测到异常，则保留原始任务描述；若检测到持续异常，则将任务描述切换为回退指令执行$N$步，然后恢复正常执行。数据生成过程见第3.2节。</p>
+</blockquote>
+<p><strong>1. 细粒度空间子任务规划（See-Plan）</strong><br>该模块使VLA模型具备类似人类的进度感知推理能力。给定RGB观察$I$和语言指令$T$，模型以自回归方式顺序生成五个令牌流：<br>(i) 深度感知令牌$d$；(ii) 剩余子任务计数$n$；(iii) 子任务规范$s=(s_1,...,s_n)$，其中每个$s_i$包含语义描述$\text{sem}_i$和2D完成坐标$\text{coord}_i$；(iv) 从当前夹爪位置到下一个子目标路径点的轨迹令牌$\tau$；(v) 具有$D$自由度的动作令牌$a=(a_1,...,a_D)$。其概率分解为：$p(a,d,n,s,\tau|I,T)=p(d)·p(n)·p(s)·p(\tau)·p(a)$。与直接规划到最终目标的基线方法不同，SPR的“下一个子任务”规划为长视野任务提供了更鲁棒的引导。</p>
+<p><strong>2. 数据构建管道</strong><br>该管道从现有演示数据中自动提取所有监督信号，无需额外的人工标注或辅助视觉语言模型。</p>
+<ul>
+<li><strong>子任务分割与描述</strong>：对于抓放任务，直接从夹爪状态（开/闭）转换中识别子任务边界；对于其他任务（如推动、关闭橱柜），使用Gemini-3生成包含起始/结束帧索引和语义描述的注释。对于LIBERO数据集（主要是抓放任务），采用基于夹爪的分割，并提示DeepSeek-R1生成每个片段的语义描述。</li>
+<li><strong>夹爪轨迹提取</strong>：结合DINOv3和SAM进行鲁棒的夹爪检测。使用DINOv3的patch级特征进行粗定位，再以该位置作为点提示输入SAM进行精细分割。最终坐标结合了两者的优势：$x$坐标取自SAM边界框中心（精确的水平边界），$y$坐标取自DINOv3检测（精确的垂直端点定位）。所有2D坐标离散化为[0, 255]。通过检测并插值异常移动点，并应用小时间窗口的中值滤波器来平滑轨迹，同时保留子任务边界。子目标路径点即为边界帧处的夹爪位置。</li>
+</ul>
+<p><strong>3. 基于进度感知的回退错误恢复（Rewind）</strong></p>
+<ul>
+<li><strong>回退数据构建</strong>：通过反转成功的前向演示轨迹来构建回退数据，包括：(i) 帧序列的时间反转；(ii) 动作令牌值的取反（反转末端执行器的增量运动）；(iii) 将任务指令设置为“返回初始位置”。其他监督信号自动从数据构建管道继承。</li>
+<li><strong>基于进度的异常检测</strong>：维护一个状态记录器（一个先进先出队列），持续跟踪最近4个时间步的预测子任务计数和最近8个时间步的计划2D轨迹。通过两个标准检测异常：<ol>
+<li><strong>子任务计数异常</strong>：正常执行下，计数应保持不变或单调递减。若计数在队列的当前和前一窗口中都持续增加，则表明持续的执行失败。</li>
+<li><strong>进度停滞</strong>：如果计划的2D轨迹在所有8个记录的时间步内保持相同，则判定机器人因碰撞、错位等环境约束而陷入分布外状态，无法生成有效动作。</li>
+</ol>
+</li>
+<li><strong>回退执行策略</strong>：通过对前向演示和构建的回退数据进行联合训练，模型学会在接收到“返回初始位置”指令时回退。检测到异常后，系统将原始任务指令替换为该回退指令，执行固定的$N=3$步，使机器人回溯到起始配置附近，然后恢复原始指令继续任务。</li>
+</ul>
+<p><strong>创新点</strong>：与现有方法相比，SPR的创新在于：(1) 用一系列具体的、可验证的2D空间子目标取代抽象的进度计划，实现了细粒度、机器人可执行的进度跟踪；(2) 将进度监控本身制定为一个可执行的恢复策略，通过联合训练从成功演示中合成的回退数据，实现了无需额外失败数据或辅助模型的内置错误恢复。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：</p>
+<ul>
+<li><strong>基准测试</strong>：在LIBERO基准（包含Spatial, Object, Goal, Long四个子集）和更具挑战性的分布外基准LIBERO-Plus（包含Background, Robot, Language, Layout, Light五种扰动类型）上进行评估。</li>
+<li><strong>真实机器人任务</strong>：包括基本抓放任务（Pick up the Object）、长视野多物体整理任务（Tidy up the Table）以及连续接触推动任务（Push-T）。</li>
+<li><strong>对比方法</strong>：包括MolmoAct、OpenVLA(-OFT)、π0(-fast)、WorldVLA、Nora、UniVLA等强基线。</li>
+<li><strong>评估指标</strong>：任务成功率。</li>
+</ul>
+<p><strong>关键实验结果</strong>：<br>在LIBERO基准上，SPR（分别训练）取得了90.6%的平均成功率，比MolmoAct基线（86.8%）高出3.8%。在更具挑战性的Long子集上，SPR取得了82.8%的成功率，比MolmoAct（77.2%）高出5.6%。当在所有子集上联合训练时（Ours*），SPR取得了91.8%的平均成功率，进一步提升了1.2%。</p>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x2.png" alt="LIBERO-Plus结果"></p>
+<blockquote>
+<p><strong>表1</strong>：LIBERO-Plus基准上的分布外鲁棒性评估。SPR取得了最高的平均成功率（71.8%）和最小的平均性能下降（18.8%），尤其在Language、Light和Robot扰动上表现出最强的鲁棒性（下降幅度分别为12.1%、5.6%、42.9%），展示了卓越的泛化能力。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x3.png" alt="LIBERO结果"></p>
+<blockquote>
+<p><strong>表2</strong>：LIBERO基准上的性能。SPR在分别训练和联合训练配置下均超越了所有基线方法，在Long子集上提升显著。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x4.png" alt="真实机器人结果"></p>
+<blockquote>
+<p><strong>表3</strong>：真实机器人任务性能。在三个任务上，SPR均优于MolmoAct基线，在挑战性的整理和推动任务上（基线成功率为0%），SPR分别取得了30%和40%的成功率。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x5.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图4</strong>：在LIBERO-Long和LIBERO-Plus变体上的组件消融研究。性能从仅使用空间坐标（w/o Rewind &amp; Semantics），到使用空间+语义（w/o Rewind），再到完整的SPR（Ours）逐步提升，验证了每个组件的贡献。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09292v1/2603.09292v1/x6.png" alt="消融研究表"></p>
+<blockquote>
+<p><strong>表4</strong>：LIBERO基准上的消融研究。具备See-Plan能力（w/o Rewind）和完整的SPR框架（Ours）在所有子集上都优于MolmoAct基线，证明了空间子任务规划和Rewind机制的有效性。</p>
+</blockquote>
+<p><strong>消融实验总结</strong>：消融实验（图4，表4）表明，仅使用空间坐标（无Rewind和语义）相比基线已有提升；加入语义描述（无Rewind）能进一步提升性能；完整的SPR框架（包含Rewind机制）带来了最大的性能增益，尤其是在长视野和分布外任务上。这验证了空间基础、语义关联和错误恢复机制各自的重要性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>提出了基于空间子任务的进度感知新范式</strong>：通过将任务分解为一系列2D空间子目标，用具体的、可验证的路径点替代抽象计划，实现了无需辅助模型的细粒度、机器人可执行的进度跟踪。</li>
+<li><strong>提出了进度驱动的错误恢复机制</strong>：将进度监控制定为一个可执行的恢复策略，通过检测进度异常并触发回退到初始状态，实现了无需额外失败数据的内置、数据高效的错误恢复。</li>
+<li><strong>验证了卓越的有效性和分布外鲁棒性</strong>：在LIBERO和LIBERO-Plus基准上超越了现有方法，特别是在面对未见扰动时表现出最小的性能下降，在真实机器人复杂任务上也展现了强大的泛化能力。</li>
+</ol>
+<p><strong>局限性</strong>：论文指出，当前的Rewind机制主要设计用于可逆的抓放类操作。对于涉及不可逆状态改变的任务（如倾倒液体），简单的回退可能不适用，需要更复杂的恢复策略。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>更通用的进度监控</strong>：可以探索超越2D坐标的、更丰富的进度表示形式（如3D姿态、力觉反馈），以适用于更广泛的机器人任务。</li>
+<li><strong>自适应恢复策略</strong>：未来的工作可以研究根据失败类型动态调整恢复行为（如局部调整而非全局回退），以处理不可逆操作或更复杂的失败模式。</li>
+<li><strong>基础模型的集成</strong>：可以进一步利用更强大的视觉和语言基础模型来自动化数据构建和理解更复杂的任务结构，减少对特定任务启发式规则的依赖。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人在执行复杂操作任务时缺乏**进度感知**能力，导致难以检测和从失败中恢复的问题，提出了**SPR（See-Plan-Rewind）框架**。其核心技术是通过**“See-Plan-Rewind”的闭环机制**，将语言指令动态分解为一系列**空间里程碑（子目标）**，并持续监控任务进展。当进度停滞时，系统能**自动回退（Rewind）**到上一个可恢复状态，实现无需额外数据或模型的错误恢复。实验表明，该框架显著提升了鲁棒性，在LIBERO基准上性能超越基线5%，并在更具挑战性的LIBERO-Plus基准上取得了最优的分布外泛化能力。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09292" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

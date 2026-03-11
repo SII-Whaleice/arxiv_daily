@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ReTac-ACT: A State-Gated Vision-Tactile Fusion Transformer for Precision Assembly - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ReTac-ACT: A State-Gated Vision-Tactile Fusion Transformer for Precision Assembly</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09565" target="_blank" rel="noreferrer">2603.09565</a></span>
+        <span>作者: Bin Fang Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人精密装配领域，模仿学习（IL）方法，如ACT、Diffusion Policy等，在通用操作任务中表现出色。然而，这些纯视觉方法在面临“最后几毫米”的接触密集型区域时存在根本性局限：末端执行器和工件造成的严重视觉遮挡，使得视觉反馈失效，无法提供执行亚毫米级修正所需的关键信息。</p>
+<p>本文针对纯视觉策略在精密、遮挡场景下鲁棒性不足这一具体痛点，提出了一种新的视角：将高维触觉感知与视觉感知进行深度融合，并动态调整对两种模态的依赖程度。核心思路是扩展ACT架构，通过引入双向跨模态注意力、基于本体感觉的门控网络以及辅助的触觉重建目标，构建一个能够根据任务阶段自适应融合视觉与触觉信息的策略，从而在自由空间运动阶段依赖视觉，在接触插入阶段依赖触觉。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ReTac-ACT的整体框架基于Action Chunking with Transformers (ACT) 构建，并扩展为原生处理触觉输入。其pipeline包含三个核心模块：多模态编码器、状态门控跨模态动态融合模块以及基于CVAE的动作生成器。输入为时间步t的本体感觉状态xt、视觉观测Itv（来自多视角RGB相机）和触觉观测Itt（来自光学触觉传感器）；输出为未来k步的动作块{at, ..., at+k-1}。</p>
+<p><img src="https://arxiv.org/html/2603.09565v1/2603.09565v1/figures/method_architecture.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ReTac-ACT架构概览。(a) 多模态编码器：视觉和触觉输入分别由独立的骨干网络处理为特征令牌。(b) 跨模态动态融合：一个基于本体感觉的门控网络动态权衡模态权重，并通过双向交叉注意力进行特征增强。(c) 动作生成器：一个基于CVAE的Transformer解码器预测时序动作块。</p>
+</blockquote>
+<p><strong>核心模块一：多模态编码器</strong>。视觉编码器使用在ImageNet上预训练的ResNet-18从三个RGB相机提取多尺度特征，并投影为视觉令牌V。触觉编码器则采用一个专用的5层CNN（通道数逐层递增为{32,64,128,256,512}）来处理四个触觉接触图像，输出触觉令牌T。为了避免预训练的视觉骨干网络因领域差距而忽略对插入至关重要的高频接触形变，触觉编码器在训练时通过一个辅助的重建目标进行正则化。</p>
+<p><img src="https://arxiv.org/html/2603.09565v1/2603.09565v1/figures/tactile_recon.png" alt="触觉重建"></p>
+<blockquote>
+<p><strong>图3</strong>：通过辅助重建进行触觉表征学习。训练时，图像重建目标对触觉编码器进行正则化，强制其捕捉细粒度的接触几何形状，防止特征坍缩。</p>
+</blockquote>
+<p><strong>核心模块二：跨模态动态融合模块</strong>。这是方法的核心创新点，包含两个阶段。首先，<strong>双向跨模态注意力</strong>使视觉和触觉令牌能够相互增强：触觉令牌通过交叉注意力查询视觉上下文得到T̃，视觉令牌通过交叉注意力查询触觉信息得到Ṽ。其次，<strong>基于本体感觉的门控机制</strong>根据机器人状态xt，通过一个3层MLP g(·)计算一个标量门控值αt ∈ (0,1)，其中包含一个可学习的温度参数τg来控制模态切换的锐度。αt ≈ 0时策略偏向视觉（自由空间），αt ≈ 1时偏向触觉（接触阶段）。最后，进行<strong>互逆融合</strong>：V⋆ = (1-αt)V + αtṼ， T⋆ = αtT + (1-αt)T̃。这种设计形成了一个信息瓶颈，增加对一种模态的依赖会成比例地降低对另一种模态的权重，迫使策略学习有意义的模态切换行为。</p>
+<p><strong>核心模块三：动作生成器</strong>。沿用ACT的CVAE-Transformer设计。融合后的令牌[V⋆; T⋆]与本体感觉嵌入拼接后，由一个4层Transformer编码器处理。一个1层Transformer解码器在编码器输出和潜在变量z的条件下预测动作块。训练时，z由真实动作块编码得到；推理时，从先验均值采样。</p>
+<p><strong>损失函数</strong>。总损失L包含动作预测的L1损失Lℓ1、VAE的KL散度损失LKL，以及两个辅助损失：触觉重建损失Lrec（L2损失）和视觉-触觉对比对齐损失Lcon（InfoNCE风格）。总损失为：L = Lℓ1 + λKLLKL + λrecLrec + λconLcon，其中λKL=10，λrec=0.5，λcon=0.1。</p>
+<p>与现有方法相比，创新点具体体现在：1) <strong>双向特征增强</strong>：通过交叉注意力在融合前实现视觉与触觉信息的互惠增强，而非简单拼接或早期融合。2) <strong>动态模态门控</strong>：基于本体感觉（而非启发式规则）自适应调整融合权重，实现从“视觉主导”到“触觉主导”的平滑过渡。3) <strong>触觉表征学习</strong>：通过重建目标迫使触觉编码器学习与操作相关的接触几何信息，而非通用的视觉纹理。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在标准化的NIST装配任务板（ATB）M1基准上进行评估，任务是将圆柱形销插入孔中，包含三个间隙等级：Level 1（3 mm）、Level 2（1 mm）和Level 3（0.1 mm）。硬件平台为双Realman RM75-6F-V机械臂，配备平行夹爪和四个Xense光学触觉传感器，视觉由两个腕部相机和一个第三人称相机提供。</p>
+<p><strong>对比方法</strong>：与三种基线方法对比：1) <strong>ACT</strong>：纯视觉的ACT方法。2) **Diffusion Policy (DP)**：基于扩散模型的视觉策略。3) <strong>pi05</strong>：基于预训练VLM的通用视觉语言动作模型。</p>
+<p><strong>关键定量结果</strong>：在3 mm间隙（Level 1）的销孔插入任务中，ReTac-ACT取得了90%的成功率，显著优于所有基线（ACT: 40%， DP: 20%， pi05: 20%）。在抓取阶段，ReTac-ACT实现了0%的抓取失败率和100%的抓取成功率，而基线方法抓取失败率较高（ACT 40%， DP 70%， pi05 55%）。</p>
+<p><img src="https://arxiv.org/html/2603.09565v1/2603.09565v1/figures/hardware.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>表II</strong>：ReTac-ACT关键组件的消融研究。完整模型在插入阶段成功率高达90%。移除任何单一组件（互逆融合、交叉注意力、触觉重建TacRecon、状态门控StateGate）都会导致性能急剧下降，证明了每个组件的不可或缺性。</p>
+</blockquote>
+<p><strong>消融实验分析</strong>：系统性的消融实验（表II）验证了每个组件的贡献。1) <strong>移除双向交叉注意力或互逆融合</strong>：插入成功率从90%骤降至5%，表明超越简单拼接的双向信息交换对接触密集型操作至关重要。2) **移除触觉重建(TacRecon)**：插入成功率降至15%，表明重建目标对于学习与操作相关的触觉几何表征至关重要。3) **移除状态门控(StateGate)**：插入成功率降至35%，表明静态融合无法在插入阶段（视觉遮挡严重时）充分地将依赖切换到触觉模态。动态门控机制带来了55个百分点的性能提升。</p>
+<p><img src="https://arxiv.org/html/2603.09565v1/2603.09565v1/figures/Attention-heatmap-experiment.png" alt="鲁棒性"></p>
+<blockquote>
+<p><strong>图5</strong>：对更小间隙的鲁棒性。随着间隙从3 mm收紧至0.1 mm，ReTac-ACT性能仅下降11%（90%→80%），而ACT下降62.5%（40%→15%），Diffusion Policy则完全失败（20%→0%）。虚线突出了性能下降趋势。</p>
+</blockquote>
+<p><strong>鲁棒性测试</strong>：在不同间隙等级下的测试（图5）显示，ReTac-ACT在工业级0.1 mm间隙下仍能保持80%的成功率。随着间隙收紧，纯视觉方法性能急剧下降（ACT从40%降至15%），而ReTac-ACT仅从90%降至80%（相对下降11%），凸显了触觉感知在精密装配中的不可或缺性。</p>
+<p><img src="https://arxiv.org/html/2603.09565v1/2603.09565v1/figures/Attention-heatmap-experiment.png" alt="注意力与门控"></p>
+<blockquote>
+<p><strong>图6</strong>：视觉注意力热图对比与参数演化。(a)-(c) ACT、DP和ReTac-ACT在三个任务阶段的注意力热图对比，ReTac-ACT的注意力更集中于目标区域。(d) 门控值αt在任务过程中的演化，显示在接触插入阶段（阶段III）αt升高，策略转向触觉主导。</p>
+</blockquote>
+<p><strong>定性分析</strong>：注意力热图可视化（图6a-c）显示，与ACT和DP相比，ReTac-ACT的视觉注意力更集中地关注目标销和孔区域，而非背景。门控值αt的演化曲线（图6d）直观展示了策略行为的可解释性：在自由空间接近（阶段I）和抓取后保持（阶段II）时，αt接近0（视觉主导）；在接触插入阶段（阶段III），αt迅速上升至接近1（触觉主导），与设计预期相符。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1) 提出了<strong>ReTac-ACT</strong>，一个状态门控的视觉-触觉动作分块Transformer，通过基于本体感觉的动态门控机制自适应融合双模态信息。2) 引入了<strong>触觉重建学习方案</strong>，通过辅助重建目标迫使触觉编码器学习对操作敏感的接触几何表征，而非通用纹理。3) 发布了基于NIST ATB M1的大规模<strong>视觉-触觉精密装配数据集</strong>与完整代码库，以支持可复现研究。</p>
+<p>论文自身提到的局限性主要隐含在硬件和数据依赖上：方法依赖于高质量的光学触觉传感器（如Xense）来获取高分辨率触觉图像，且需要精确时间同步的多模态演示数据。</p>
+<p>本研究对后续工作的启示在于：1) <strong>动态多模态融合范式</strong>：为其他需要根据场景动态调整感知权重的机器人任务（如灵巧操作、非结构化环境探索）提供了可借鉴的架构。2) <strong>触觉表征学习</strong>：表明通过特定的自监督任务（如重建）可以有效地从高维触觉信号中提取与任务强相关的特征，这可以推广到其他触觉感知任务中。3) <strong>标准化基准的重要性</strong>：在NIST ATB等标准化基准上的严格评估，为领域内公平、有意义的性能比较树立了榜样。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对精密装配中视觉遮挡导致“最后一毫米”区域反馈失效的问题，提出ReTac-ACT视觉-触觉模仿学习策略。该方法采用双向交叉注意力实现模态特征增强、本体感知条件门控网络动态提升触觉依赖度，并引入触觉重建目标学习操作相关接触信息。在NIST ATB M1基准测试中，该方法取得90%的peg-in-hole成功率，在工业级0.1毫米间隙下仍保持80%成功率，显著优于纯视觉基线。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09565" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

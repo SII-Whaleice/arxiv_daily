@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Quality over Quantity: Demonstration Curation via Influence Functions for Data-Centric Robot Learning - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Quality over Quantity: Demonstration Curation via Influence Functions for Data-Centric Robot Learning</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09056" target="_blank" rel="noreferrer">2603.09056</a></span>
+        <span>作者: Kimin Lee Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，从演示中学习已成为端到端机器人控制的一个有前景的范式，尤其是在使用多样化和大规模数据集时。然而，通常通过人类遥操作收集的演示数据质量，是影响数据驱动机器人学习效果的关键瓶颈。人类错误、操作限制和操作员技能差异会引入噪声和次优行为，使得数据筛选至关重要，但目前的方法大多是手动且基于启发式的。现有方法尝试使用代理指标来解决此问题，例如与专家演示的相似性，或状态与动作分布之间的互信息。但这些指标往往无法捕捉哪些训练数据真正有助于提升策略性能。</p>
+<p>本文针对“如何定义和识别对策略性能有真正贡献的高质量演示数据”这一具体痛点，提出了一个基于影响函数的新视角。本文将数据质量定义为：每个训练样本对减少验证集损失（即提升策略在期望行为上的泛化能力）的贡献。核心思路是：利用影响函数量化单个训练样本对模型性能的影响，并针对机器人演示序列的特点，提出了最大影响评分和轨迹级筛选两项关键技术，以系统性地筛选出高质量数据。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>QoQ方法的整体流程是：给定一个训练数据集 $\mathcal{D}<em>{\tt tr}$ 和一个已训练的行为克隆策略模型 $\pi</em>{\theta_{\tt tr}}$，以及一个代表期望行为的小型验证数据集 $\mathcal{D}_{\tt val}$，通过两个步骤筛选高质量数据：1）贡献估计：计算每个训练状态-动作对对于减少验证损失的贡献分数；2）轨迹级筛选：聚合同一轨迹内所有状态-动作对的分数，并基于聚合分数选择得分最高的若干条完整轨迹。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架示意图"></p>
+<blockquote>
+<p><strong>图1</strong>：高质量数据示意图。QoQ基于数据对策略性能的直接贡献进行筛选。通过计算验证数据（蓝色）与训练数据梯度之间的相似性来衡量贡献；更高的相似性（绿色）意味着包含该训练数据点能有效降低验证损失。</p>
+</blockquote>
+<p>该方法的核心模块是贡献估计。具体技术细节如下：首先，对于每个训练状态-动作对 $(s, a)$，计算其策略对数似然的归一化梯度：$g(s,a):=\nabla_{\theta}\log\pi_{\theta_{\tt tr}}(a|s) / |\nabla_{\theta}\log\pi_{\theta_{\tt tr}}(a|s)|$。然后，计算其QoQ分数，该分数基于影响函数的一阶近似，但进行了关键改进：<br>$$\texttt{QoQ-score}(s,a):=\max_{(s^{\prime},a^{\prime})\in\mathcal{D}_{\tt val}} g(s^{\prime},a^{\prime})^{\top} g(s,a).$$<br>这个公式被称为<strong>最大影响评分</strong>。与原始影响函数对所有验证样本梯度进行平均不同，QoQ取与所有验证样本梯度点积的最大值。这是因为验证轨迹中的每个状态-动作对可能代表不同的行为阶段（如“抓取”和“放置”），取最大值可以聚焦于与当前训练样本最相关的那个验证样本，从而减少噪声，获得更可靠的影响估计。</p>
+<p>另一个核心模块是<strong>轨迹级筛选</strong>。在获得每个状态-动作对的QoQ分数后，QoQ计算每条轨迹 $\tau$ 的平均分数：$\frac{1}{|\tau|}\sum_{(s,a)\in\tau}\texttt{QoQ-score}(s,a)$，然后选择平均分数最高的前 $N$ 条轨迹。这是为了克服单纯选择高分状态-动作对所带来的问题，例如选择冗余的片段（如反复抓取的瞬间）而导致状态覆盖度差，丢失完整、多样的成功行为序列。</p>
+<p>与现有方法（如基于VAE特征相似性的检索方法）相比，QoQ的创新点在于：1）将数据质量直接与策略性能的泛化能力（验证损失）挂钩，提供了一个更基础、更系统的定义；2）针对机器人演示的序列特性，设计了最大影响评分和轨迹级筛选，使影响函数能稳定、有效地应用于该领域。此外，为应对大规模模型梯度计算和存储的挑战，QoQ采用了仅计算部分网络层（如排除参数密集的视觉编码器）的梯度，并使用OPORP技术压缩梯度向量以提高效率。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验使用了多个基准和数据集：1）<strong>仿真环境</strong>：Robomimic基准测试中的“放置可乐罐”任务。2）<strong>真实机器人环境</strong>：Franka机械臂执行的三个任务：香蕉抓取、多物体拾放、开柜门。3）<strong>野外数据集</strong>：DROID数据集中的“笔/铅笔”拾放任务。</p>
+<p>对比的基线方法包括：使用所有原始数据的“All Data”、基于状态-动作对在VAE隐空间相似性的“Behavior Retrieval”、以及基于光流序列在VAE隐空间相似性的“Flow Retrieval”。</p>
+<p>关键实验结果如下：在仿真和真实机器人（香蕉抓取）的单任务筛选中，QoQ的筛选准确率（即筛选出的数据中来自成功轨迹的样本比例）远超基线。在仿真中达到99.4% ± 0.3%，在真实机器人中达到83.6% ± 0.8%，分别比最佳基线高出31.6%和16.3%。</p>
+<p><img src="https://arxiv.org/html/2603.09056v1/2603.09056v1/x1.png" alt="仿真与真实机器人实验的成功率"></p>
+<blockquote>
+<p><strong>图2</strong>：仿真与真实机器人实验的成功率。QoQ在仿真和真实机器人实验中均优于所有基线方法。数据点为5次（仿真）和3次（真实）运行的平均值及标准差。</p>
+</blockquote>
+<p>基于筛选后的数据集训练策略，QoQ在仿真中取得了99.2%的成功率，显著优于最佳基线Flow Retrieval的76.0%。在真实机器人香蕉抓取任务中，QoQ策略成功率为86.7%，而最佳基线Behavior Retrieval为56.7%。在多物体拾放（从包含桃子、芒果等物体的数据中筛选对香蕉任务有帮助的数据）实验中，QoQ筛选数据训练的策略成功率达到93.3%，而Behavior Retrieval完全失败（20%）。</p>
+<p><img src="https://arxiv.org/html/2603.09056v1/2603.09056v1/x2.png" alt="实验环境可视化"></p>
+<blockquote>
+<p><strong>图3</strong>：仿真和真实机器人设置的实验环境可视化，包括香蕉抓取、多物体拾放和开柜门任务。</p>
+</blockquote>
+<p>在更具挑战性的DROID野外数据集上，QoQ同样保持了最高的筛选准确率。</p>
+<p><img src="https://arxiv.org/html/2603.09056v1/2603.09056v1/x3.png" alt="DROID数据集筛选准确率"></p>
+<blockquote>
+<p><strong>图4</strong>：DROID数据集筛选准确率（%）。与基线相比，QoQ在由不同领域和物体位置组成的DROID数据集中保持了高筛选准确率。</p>
+</blockquote>
+<p>此外，实验验证了QoQ可以使用策略 rollout（包含成功和失败轨迹）作为验证集。通过使用成功轨迹的QoQ分数减去失败轨迹的QoQ分数（并按验证集大小加权）作为最终分数，在开柜门任务中，该方法取得了与使用纯成功验证集相当的性能。</p>
+<p><img src="https://arxiv.org/html/2603.09056v1/2603.09056v1/x4.png" alt="开柜门策略成功率"></p>
+<blockquote>
+<p><strong>图5</strong>：开柜门策略成功率。使用策略rollout（混合成功与失败轨迹）作为验证集进行筛选，QoQ仍能有效提升策略性能。</p>
+</blockquote>
+<p>消融实验总结了每个组件的贡献：1）<strong>最大影响评分 vs. 平均影响评分</strong>：最大影响评分比平均影响评分能更可靠地估计影响，带来更高的筛选准确率和策略成功率。2）<strong>轨迹级筛选 vs. 状态-动作级筛选</strong>：轨迹级筛选能确保更好的状态空间覆盖，避免选择冗余片段，从而获得更高的策略成功率。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了一个基于数据对策略性能直接贡献（通过影响函数衡量）的、基础性的机器人数据质量定义。2）针对机器人演示数据，设计了最大影响评分和轨迹级筛选两项关键技术，使影响函数能稳定、高效地应用于数据筛选。3）在仿真、真实机器人和野外数据集上的广泛实验表明，QoQ能有效筛选高质量数据，显著提升下游策略性能，并优于基于相似性的启发式方法。</p>
+<p>论文自身提到的局限性包括：计算影响分数需要对模型进行梯度计算，对于超大规模模型可能带来计算负担（尽管文中采用了梯度计算和压缩策略进行缓解）。此外，方法依赖于一个小的、代表期望行为的验证集，其质量会影响筛选效果。</p>
+<p>本文对后续研究的启示包括：为数据中心的机器人学习提供了一个可解释、可计算的数据价值评估框架；展示了将理论工具（影响函数）与领域知识（序列数据特性）结合以解决实际问题的有效性；启发了未来工作可以探索更高效的影响估计方法，或将此框架扩展到在线学习、多任务学习等场景。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对从演示学习机器人控制中，因人类遥操作引入噪声和次优行为导致数据质量低的核心问题，提出QoQ方法。该方法基于影响函数量化训练样本对验证损失的贡献，并引入最大影响选择和轨迹内影响聚合两个关键技术，以高效筛选高质量演示数据。实验在模拟和真实环境中表明，QoQ能一致提升策略性能，优于现有数据选择方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09056" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
