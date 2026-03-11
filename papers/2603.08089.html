@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Adaptive Vision-Based Control of Redundant Robots with Null-Space Interaction for Human-Robot Collaboration - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Adaptive Vision-Based Control of Redundant Robots with Null-Space Interaction for Human-Robot Collaboration</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.08089" target="_blank" rel="noreferrer">2603.08089</a></span>
+        <span>作者: Xiang Li Team</span>
+        <span>日期: 2026-03-09</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前人机协作（HRC）旨在结合人类的认知、灵巧性与机器人的高精度、高重复性优势。主流方法包括直接接触、间接接触（通过第三方物体）和遥操作框架。然而，这些方法通常预先设定了人机角色分工，在面对任务过程中的突发变化（如突然出现的障碍物）时缺乏灵活性，可能无法有效响应甚至失败。此外，机器人常在未校准环境（如手术室、杂乱车间）中工作，需处理模型不确定性。已有许多针对机器人手眼未校准的自适应视觉控制研究，但这些方法多针对孤立机器人，人类参与可能干扰参数自适应过程，降低控制性能。另一方面，现有协作框架多聚焦于机器人末端执行器的任务，但在某些操作任务中，特别是在未校准环境下，需要控制机器人本体以适应非结构化表面、狭窄空间或避障。机器人感知有限，难以即时响应，此时利用人类知识和经验处理此类问题成为有效方案。</p>
+<p>本文针对上述两个关键痛点：1) 在未校准视觉环境下实现精确的末端控制；2) 在突发情况下允许人类动态介入而不中断主任务。提出了一种新的视角：利用冗余机器人的零空间特性，将任务空间（末端控制）与零空间（人机交互）解耦。核心思路是：在任务空间设计自适应视觉控制器以处理未知相机参数，确保末端定位；同时在零空间设计阻尼模型，允许人类通过多种接口输入控制量来调整机器人构型，且不影响末端主任务的执行。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>本文提出的自适应视觉控制方案整体框架由任务空间控制项和零空间交互项叠加构成，控制输入直接作用于关节速度。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：所提控制方案的框图。在存在未校准相机的情况下，图像雅可比矩阵的精确信息未知，记为 𝑱̂ _s (𝒓)。在视觉空间，控制机器人末端执行器移动到期望位置（即 𝒙 → 𝒙_𝑑）；在零空间，在期望阻尼模型下控制冗余关节以适应人类意图，即 𝑐_𝑑 𝒒̇ = 𝒅，其中 𝑐_𝑑 为正常数，𝒅 表示人类的控制努力。</p>
+</blockquote>
+<p>整体控制律为：<br>𝒖 = 𝒖_𝑇 + 𝒖_𝑁 = −𝑧̂ (𝒒) 𝑱⁺(𝒒) 𝑱̂ _𝑠⁺(𝒓) 𝑲_𝑝 (𝒙 − 𝒙_𝑑) + 𝑵(𝒒) (𝑐_𝑑⁻¹ 𝒅)</p>
+<p>其中，𝒖_𝑇 为任务空间控制项，𝒖_𝑁 为零空间交互项。</p>
+<p><strong>核心模块一：自适应视觉空间控制</strong><br>该模块旨在驱动末端特征点从当前位置 𝒙 收敛到视觉空间中的期望位置 𝒙_𝑑。关键挑战在于相机未校准，即深度 𝑧(𝒒) 和图像雅可比矩阵 𝑱_𝑠(𝒓) 未知。控制器使用其估计值 𝑧̂ (𝒒) 和 𝑱̂ _𝑠(𝒓)。为在线估计这些未知参数，设计了基于视觉空间误差 𝒙 − 𝒙_𝑑 驱动的自适应律：<br>𝜽̂̇ _𝑧 = −𝑧̂ ⁻¹(𝒒) 𝑳_𝑧 𝒀_𝑧^𝑇 (𝒙̇, 𝒒) (𝒙 − 𝒙_𝑑)<br>𝜽̂̇ _𝑘 = 𝑧̂ ⁻¹(𝒒) 𝑳_𝑘 𝒀_𝑘^𝑇 (𝒓̇, 𝒓) (𝒙 − 𝒙_𝑑)<br>其中，𝜽_𝑧 和 𝜽_𝑘 是未知参数向量，𝜽̂ _𝑧 和 𝜽̂ _𝑘 是其估计值，𝑳_𝑧 和 𝑳_𝑘 是正定对角增益矩阵。这些自适应律能确保在存在参数误差的情况下，任务空间误差最终收敛到零。</p>
+<p><strong>核心模块二：零空间交互控制</strong><br>该模块旨在实现期望的阻尼模型：𝑵(𝒒)(𝑐_𝑑 𝒒̇ − 𝒅) = 𝟎。其中 𝑐_𝑑 &gt; 0 为期望阻尼系数，𝒅 为表征人类意图的控制输入向量。零空间矩阵 𝑵(𝒒) = 𝑰_𝑛 − 𝑱⁺(𝒒)𝑱(𝒒) 能将任何输入 𝒅 投影到机器人的零空间运动上，从而保证末端执行器的运动不受影响。对应的控制项为 𝒖_𝑁 = 𝑵(𝒒) (𝑐_𝑑⁻¹ 𝒅)。人类输入 𝒅 可以来自多种接口，如直接接触的力/力矩、操纵杆或AR设备的指令。</p>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/bd_2021_9_10.png" alt="交互接口"></p>
+<blockquote>
+<p><strong>图2</strong>：人类可通过各种接口（如头戴式显示器、触觉设备或触觉传感器）输入，以调整冗余构型而不影响机器人末端执行器。</p>
+</blockquote>
+<p><strong>创新点</strong>：与现有方法相比，本文的创新点在于将<strong>自适应视觉控制</strong>与<strong>零空间交互</strong>有机结合。1) 在任务空间，通过在线参数估计解决了相机未校准问题，使机器人能在未知环境中自主执行视觉伺服任务。2) 在零空间，通过阻尼模型将冗余关节构型的控制权“被动地”开放给人类，允许其在任何时候介入以处理突发状况（如避障、调整姿态以适应环境），且这种介入与末端任务完全解耦。3) 整个闭环系统的稳定性（包括任务空间误差收敛和零空间阻尼模型实现）通过李雅普诺夫方法得到了严格证明。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验平台包括：运行于Ubuntu 18.04 LTS和ROS的算法模块、6自由度UR5机器人（末端装有ArUco标记）、分辨率1440×1080的Basler ace相机（固定于工作空间但未校准）、以及部署在Microsoft HoloLens 2上的人机交互界面。界面包含用于定义人类意图 𝒅 的滑块和一个用于可视化真实机械臂构型的全尺寸虚拟模型。</p>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/externalImpedance_2021_9_10.png" alt="实验设置"></p>
+<blockquote>
+<p><strong>图3</strong>：(a) AR引导的机器人操纵器实验设置。(b) 部署在HoloLens 2上的人机界面快照。滑块位于左侧，虚拟机械臂模型位于右侧，与真实机械臂重叠。人类操作者正指向关节3并给出向上移动的信号。虚拟机械臂模型也可根据情况放置在其他位置。</p>
+</blockquote>
+<p><strong>任务一：末端定位与构型调整</strong>。主任务是末端执行器移动到视觉空间中的期望点（720， 540）像素。过程中，另一名人类受试者进入工作空间并以别扭姿势伸展身体取工具。操作者通过AR界面拖动对应关节2和3的滑块，改变机械臂构型以改善共处人类的工作体验，而末端定位任务全程未受影响或中断。</p>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/exp1_snap01.jpeg" alt="任务一定性结果"></p>
+<blockquote>
+<p><strong>图4</strong>：任务1的快照。机械臂被控制移动到视觉空间中的期望点，同时操作者通过AR界面施加额外的控制努力，使另一名人类受试者更舒适。(a) t=0.0s：末端执行器从相机帧右下角开始，将在1.6秒内移动到中心的期望点。(b) t=6.0s：操作者开始拖动关节2和3对应的滑块以改变机械臂构型。(c) t=20.1s：机械臂根据指令调整姿态，同时末端在视觉空间中的位置保持不变。(d) t=30.3s：受试者离开后，机器人关节根据操作者命令移回原位。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/exp1_snap02.jpeg" alt="任务一定量结果"></p>
+<blockquote>
+<p><strong>图5</strong>：任务1的结果：(a) 上图：视觉空间中末端执行器的位置误差；下图：施加到关节上的人类控制努力。(b) 视觉空间中末端执行器的轨迹。结果显示，末端位置误差在约1.6秒内收敛到零（图5a上）。在t=6秒至30秒期间，人类通过滑块输入控制量调整关节2和3（图5a下），此时末端位置误差保持接近于零，证明了零空间交互不影响主任务。末端轨迹（图5b）也显示其最终稳定在目标点。</p>
+</blockquote>
+<p><strong>消融实验</strong>：验证了自适应律的必要性。在任务1的前6.5秒（无人为干预阶段），比较了有关闭自适应律的情况。</p>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/exp1_snap03.jpeg" alt="消融实验"></p>
+<blockquote>
+<p><strong>图6</strong>：消融研究结果：(a) 在前6.5秒内，无自适应律（上图）和有自适应律（下图）情况下末端执行器在视觉空间中的位置误差。(b) 任务1全过程中估计的深度与实际深度。结果显示，没有自适应律时，位置误差发散（图6a上）；启用自适应律后，误差收敛（图6a下）。同时，深度参数的估计值 𝑧̂ (𝒒) 逐渐收敛到其真实值（图6b），验证了自适应律的有效性。</p>
+</blockquote>
+<p><strong>任务二：路径跟踪与避障</strong>。主任务是末端执行器在视觉空间中跟踪一个圆形路径。过程中，一名人类受试者将一个工具箱放在工作台上，构成潜在碰撞风险。操作者通过AR界面移动虚拟机械臂的关节（模拟“抓取”并移动），引导真实机械臂本体远离障碍物，同时末端继续执行圆周运动。</p>
+<p><img src="https://arxiv.org/html/2603.08089v1/2603.08089v1/figure/exp2_snap01.jpeg" alt="任务二定性结果"></p>
+<blockquote>
+<p><strong>图7</strong>：任务2的快照。机械臂末端执行器在视觉空间中执行路径跟踪任务，同时操作者通过AR界面引导机械臂本体避免碰撞。(a) t=0.0s：初始状态。(b) t=5.4s：末端开始跟踪圆形路径。(c) t=15.8s：一名人类受试者将工具箱放在工作台上，引发了安全问题。(d) t=31.1s：操作者通过AR界面调整机械臂构型以避障。</p>
+</blockquote>
+<p>实验参数如表I所示，针对不同任务调整了控制增益 𝑲_𝑝 和阻尼系数 𝑐_𝑑。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：1) <strong>提出了一种新颖的自适应视觉控制与零空间交互相结合的控制框架</strong>，首次在未校准视觉环境下实现了冗余机器人主任务执行与人类动态干预的安全解耦。2) <strong>提供了严格的理论保证</strong>，通过李雅普诺夫方法证明了闭环系统在任务空间（位置误差收敛到零）和零空间（实现期望阻尼模型）的稳定性。3) <strong>通过AR引导的机器人实验验证了方法的实用性和有效性</strong>，展示了在突发场景下（如改善人类工作空间、动态避障）的优越性能。</p>
+<p>论文自身提到的局限性主要在于其属于运动学控制范畴，假设关节速度可直接控制。未来工作可扩展到包含机器人动力学的控制中。</p>
+<p>本文的研究对后续工作的启示在于：1) <strong>交互范式的扩展</strong>：证明了零空间是进行安全、非干扰式人机交互的有效通道，可启发更多基于零空间的协作策略，如基于学习的意图识别。2) <strong>多模态传感融合</strong>：本文主要依赖视觉和AR输入，未来可融合力觉、触觉等多模态信息，使交互更自然、鲁棒。3) <strong>向复杂任务推广</strong>：当前任务空间为二维点定位，未来可扩展到更复杂的末端任务（如视觉伺服抓取、装配），并研究在复杂任务下零空间交互的优化与安全性问题。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对人机协作中如何安全有效地结合双方优势的核心问题，提出了一种用于冗余机器人的新型控制方案。该方案的关键在于将**自适应视觉控制**（用于任务空间，适应未知环境）与**零空间交互控制**（用于与人类协作）解耦，从而在不干扰末端执行器主任务的前提下实现灵活交互。通过**李雅普诺夫方法**严格证明了闭环系统的稳定性，确保了任务空间位置误差和零空间阻尼模型的收敛性。实验通过增强现实技术引导机械臂，验证了该控制框架的有效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.08089" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
