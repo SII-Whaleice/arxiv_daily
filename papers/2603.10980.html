@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PPGuide: Steering Diffusion Policies with Performance Predictive Guidance - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>PPGuide: Steering Diffusion Policies with Performance Predictive Guidance</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10980" target="_blank" rel="noreferrer">2603.10980</a></span>
+        <span>作者: Diego Romeres Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>扩散策略已被证明在机器人模仿学习中非常高效，能够学习复杂、多模态的行为。然而，扩散策略生成的行动序列中的误差会随时间推移而累积，可能导致任务失败。现有提升扩散策略鲁棒性的方法主要分为两类：数据中心方法依赖于数据增强或添加专家矫正数据，需要大量人工努力；基于奖励的方法则依赖于密集的奖励信号，而这在现实世界中往往难以获取或设计成本高昂。近年来，推理时引导方法通过调整去噪过程来引导扩散策略，展现出潜力，但这些方法通常需要密集奖励或准确的世界模型，在实践中可能无法获得或计算成本高昂。</p>
+<p>本文针对上述痛点，提出了一种仅需稀疏、二元终端奖励（如成功/失败）即可在推理时引导预训练扩散策略的轻量级框架。其核心思路是：受计算机视觉中基于注意力的多示例学习启发，利用稀疏的轨迹级成败标签，自动识别出轨迹中与成败最相关的观测-行动片段，并以此训练一个轻量级分类器，在推理时提供梯度信号，引导策略远离失败模式、趋向成功行为。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>PPGuide的整体框架包含三个主要阶段：数据收集、离线相关性估计与在线引导。首先，从预训练扩散策略（基础策略）不同训练阶段的检查点收集成功与失败的轨迹数据。接着，通过一个基于注意力的多示例学习模型，自动分析这些轨迹，为其中的观测-行动片段分配“成功相关”、“失败相关”或“不相关”的伪标签。然后，利用这些伪标签数据训练一个轻量级的实例级相关性分类器。最后，在推理时，该分类器为扩散策略的去噪过程提供梯度引导，修正可能失败的行动。</p>
+<p><img src="https://arxiv.org/html/2603.10980v1/2603.10980v1/x1.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图1</strong>：PPGuide框架概览。首先，使用不同训练阶段的策略检查点收集多样化的轨迹数据集。然后，(1) 基于注意力的MIL模型分析这些轨迹，自动将观测-行动片段标记为成功相关、失败相关或不相关。(2) 在这些标记数据上训练一个轻量级分类器，以从观测-行动对预测相关性。最后，在推理时，来自分类器的梯度引导扩散采样过程远离失败模式，同时促进成功相关行为。</p>
+</blockquote>
+<p><strong>核心模块1：基于MIL的离线相关性估计</strong>。核心挑战在于如何利用稀疏的轨迹级成败标签，估计哪些具体的行动对最终结果负有责任。本文将这个问题形式化为一个多示例学习问题：将整个轨迹视为一个“包”，其中的每个观测-行动片段（长度为k的行动块及其对应的观测历史）视为一个“实例”。包的标签（成功/失败）已知，但实例级标签未知。MIL模型的目标是学习一个注意力机制，为每个实例分配权重，高权重意味着该实例对预测包标签（即成败）至关重要。具体采用门控注意力机制，通过一个实例编码器将每个观测-行动对映射为嵌入，然后计算注意力权重，最终通过加权和得到包级表示并进行分类。训练完成后，对于每个轨迹，根据其MIL注意力权重是否超过阈值（基于z-score），将其中的观测-行动片段自动标记为SR（成功相关）、FR（失败相关）或IR（不相关），从而构建用于训练后续引导分类器的伪标签数据集。</p>
+<p><strong>核心模块2：在线实例级引导分类器</strong>。使用上述伪标签数据集，训练一个标准的多类分类器。该分类器输入一个观测-行动对，输出其属于SR、FR、IR三个类别的概率分布。此分类器是轻量级的，旨在推理时提供快速的梯度计算。</p>
+<p><strong>核心模块3：交替分类器引导</strong>。在推理时，修改标准扩散逆过程。在每一步去噪迭代中，基础扩散模型预测噪声。PPGuide额外计算两个梯度：一个是增加行动被分类为SR概率的梯度，另一个是增加行动被分类为FR概率的梯度。修改后的噪声估计由原始噪声估计加上SR梯度（乘以权重w_sr）并减去FR梯度（乘以权重w_fr）构成。论文指出，w_fr通常应远大于w_sr，因为失败模式多样且普遍，需要强排斥，而成功行为稀疏且情境特定，过强的吸引可能破坏轨迹中IR部分的行为。为降低计算开销，PPGuide采用交替引导策略，例如仅在偶数步应用引导，在几乎不影响性能的前提下显著减少了前向传播计算。</p>
+<p>与现有方法相比，PPGuide的创新点在于：1）<strong>无需密集奖励或世界模型</strong>，仅需稀疏的二元成败信号；2）引入<strong>基于注意力的MIL进行自监督的时序相关性分配</strong>，解决了从稀疏轨迹级标签到稠密实例级指导信号的关键映射问题；3）提出了<strong>非对称的梯度引导权重</strong>和<strong>交替引导策略</strong>，在提升鲁棒性的同时保持了效率。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在Robomimic和MimicGen基准的一系列具有挑战性的机器人操作任务上进行，包括长视野、高精度和操作关节物体的任务（如堆叠方块、准备咖啡、厨房场景清理、方形物体运输等）。为评估样本效率，基础扩散策略仅使用每个任务10%的专家演示数据进行训练。PPGuide使用从训练中期检查点（第250、300、350、400、450轮）收集的轨迹数据进行训练，并在后期检查点（第500、550轮）进行评估。</p>
+<p>对比的基线方法包括：基础扩散策略、使用随机采样的扩散策略、PPGuide的恒定引导变体（每步都引导）和PPGuide的随机采样引导变体。PPGuide采用交替引导策略。</p>
+<p><img src="https://arxiv.org/html/2603.10980v1/2603.10980v1/x2.png" alt="任务图示"></p>
+<blockquote>
+<p><strong>图2</strong>：来自Robomimic和MimicGen基准的评估任务示例。这些任务涵盖了长视野、高精度和操作关节物体等不同挑战。</p>
+</blockquote>
+<p>关键实验结果总结如下：在大多数任务和检查点上，PPGuide及其变体（PPGuide-CG）均一致地匹配或超越了所有基线方法。在长视野和精度敏感任务上（如Coffee Preparation, Kitchen, Square Transport），性能提升尤为显著。例如，在Square Transport任务上，PPGuide在多个检查点上将成功率从基线的58%-68%提升至66%-76%，相对提升最高达18个百分点。这表明PPGuide能有效缓解因微小行动偏差随时间累积而导致的错误。</p>
+<p><img src="https://arxiv.org/html/2603.10980v1/2603.10980v1/x3.png" alt="定性结果示例"></p>
+<blockquote>
+<p><strong>图3</strong>：PPGuide引导基础策略在方块插入任务中避免错位的定性示例。上图展示了基础策略的失败轨迹，下图展示了PPGuide引导后的成功轨迹。</p>
+</blockquote>
+<p>消融实验分析：</p>
+<ol>
+<li><strong>引导策略对比</strong>：PPGuide（交替引导）达到了与PPGuide-CG（恒定引导）几乎相同的性能水平，但计算开销更小，更适合实时推理。同时，PPGuide和PPGuide-CG的性能均优于使用随机采样的变体（PPGuide-SS）。</li>
+<li><strong>异构策略泛化</strong>：使用从早期策略（250-450轮）收集的数据训练的PPGuide，能够有效引导完全不同的、训练更充分的后期部署策略（1300-1600轮），并带来显著性能提升（例如在1300轮策略上提升16-18个百分点），证明了其学习到的引导模型具有鲁棒性和可迁移性。</li>
+<li><strong>引导强度敏感性</strong>：如图4所示，性能随引导强度增加而提升，但超过一定阈值后可能下降，表明需要在遵循引导信号和保持数据分布保真度之间进行权衡。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10980v1/2603.10980v1/img/gs.png" alt="引导强度敏感性"></p>
+<blockquote>
+<p><strong>图4</strong>：在Square任务上，不同引导强度下PPGuide的平均性能。PPGuide能在一定范围的引导强度内实现优于基础DP的性能提升。</p>
+</blockquote>
+<ol start="4">
+<li><strong>z-score阈值影响</strong>：用于从MIL注意力权重中划分相关片段的z-score阈值影响伪标签数据的“纯度”。如图5所示，性能在阈值为2.0时达到峰值，表明阈值选择需要权衡，过高或过低都会损害性能。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10980v1/2603.10980v1/img/z-score.png" alt="z-score阈值影响"></p>
+<blockquote>
+<p><strong>图5</strong>：使用不同z-score阈值构建的数据集训练PPGuide，在Square任务上的性能。性能在阈值2.0时最佳，表明PPGuide对此超参数敏感。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了PPGuide，一个<strong>仅需稀疏二元奖励、自监督、轻量级且模型无关</strong>的推理时引导框架，用于提升预训练扩散策略的鲁棒性；2）创新性地将<strong>基于注意力的多示例学习</strong>应用于机器人轨迹分析，解决了从稀疏轨迹级成败信号到稠密行动级相关性估计的关键问题；3）通过系统的实验验证，在多种挑战性操作任务上<strong>一致且显著地</strong>提升了基础扩散策略的性能，特别是在长视野和精度敏感任务上。</p>
+<p>论文提到的局限性包括：1）PPGuide的性能对用于构建伪标签数据集的<strong>z-score阈值敏感</strong>，未来工作需要探索更鲁棒的阈值选择或实例选择方法；2）与所有基于梯度引导的方法一样，需要<strong>调整引导强度超参数</strong>以平衡性能与稳定性。</p>
+<p>本文的启发在于：为利用稀疏反馈提升策略鲁棒性提供了新思路，将弱监督学习（MIL）与生成模型引导相结合。未来工作可以探索如何将类似框架应用于其他类型的策略或生成模型，以及如何在线更新引导分类器以持续适应新数据。此外，对MIL注意力权重的可解释性分析可能有助于理解任务成败的关键决策点。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对扩散策略在机器人操作中因动作序列错误随时间累积导致任务失败的问题，提出PPGuide轻量级引导框架。该方法基于性能预测分类器，通过自监督的注意力多实例学习自动标注策略rollouts中与成败相关的观察-动作块，并训练性能预测器；推理时利用该预测器提供实时梯度，引导预训练扩散策略生成更鲁棒的动作。在Robomimic和MimicGen基准测试的多样任务中验证，PPGuide实现了性能的一致提升。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10980" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

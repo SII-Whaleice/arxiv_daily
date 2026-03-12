@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Learning Adaptive Force Control for Contact-Rich Sample Scraping with Heterogeneous Materials - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Learning Adaptive Force Control for Contact-Rich Sample Scraping with Heterogeneous Materials</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10979" target="_blank" rel="noreferrer">2603.10979</a></span>
+        <span>作者: Gabriella Pizzuto Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在加速科学发现的背景下，AI驱动的机器人对于实验室自动化至关重要。然而，当前系统通常高度专业化且依赖于手工编程，难以适应早期材料发现中普遍存在的、性质异质且不可预测的样品。具体到接触丰富的操作任务，如从样品瓶壁上刮取材料，现有方法存在显著局限。主流方法多采用位置控制器，但此类控制器缺乏必要的顺应性，无法适应多变的接触力。虽然笛卡尔阻抗控制器能提供顺应性和力控制，但其参数（如刚度、阻尼）通常需要手动调整，且难以应对未知的、异质的材料特性（如粘附性、内聚性）以及工具本身的形变（如刮铲弯曲）所带来的挑战。</p>
+<p>本文针对在受限环境（样品瓶）内对异质材料进行精细化刮取这一具体痛点，提出了一种新的控制框架。核心思路是结合一个低层的、参数固定的笛卡尔阻抗控制器来确保稳定、顺应的物理交互，以及一个高层的强化学习智能体，该智能体学习根据感知反馈动态调整施加在末端执行器上的交互力/力矩（即“扳手”），从而实现自适应的力控制。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>整体框架是一个分层控制系统。高层是一个运行在10 Hz的强化学习策略，它接收视觉感知状态和机器人笛卡尔状态（包括外部扳手反馈），输出一个混合动作命令。该命令作为目标发送给运行在500 Hz的低层笛卡尔阻抗控制器，由后者生成柔顺的关节扭矩来驱动机器人。</p>
+<p><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/pipeline.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：提出的自主样品刮取控制架构。高层RL策略接收视觉状态（$s_{\text{p}}=[v_{1},v_{2},v_{3}]^{T}$，其中$v_{i}=[c_{ix},c_{iy},c_{iz},p_{i}]^{T}$表示每个材料簇的质心和残留百分比）以及机器人的笛卡尔状态和外部扳手（$x,\dot{x},F_{\text{ext}}$）。策略以10 Hz频率输出混合动作命令（$\boldsymbol{a}<em>{t}=[f</em>{x}^{c},\tau_{y}^{c},z^{D}]^{T}$），定义了x轴期望力、y轴期望扭矩和z轴期望位置。该命令作为目标发送给500 Hz运行的笛卡尔阻抗控制器，由其生成柔顺的关节扭矩（$\tau_{c}$）。</p>
+</blockquote>
+<p>核心模块包括：</p>
+<ol>
+<li><strong>感知管道</strong>：为RL策略提供材料位置信息。其流程为：RGB-D输入 → YOLO检测小瓶并生成2D边界框 → GrabCut算法分割小瓶前景 → 动态深度阈值过滤（如图4所示）以分离最靠近相机的材料前表面 → 基于颜色的k-means聚类过滤刮铲 → 对剩余材料区域再次进行k-means聚类，输出最多三个材料簇的3D质心坐标$(c_x, c_y, c_z)$和残留百分比$p$，构成视觉状态$s_p$。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/perception_pipeline.png" alt="感知管道"></p>
+<blockquote>
+<p><strong>图3</strong>：提出的感知管道。从RGB-D输入开始，YOLO定位小瓶，并通过GrabCut进行分割。深度过滤隔离前表面材料，基于颜色的过滤去除刮铲。然后在感兴趣区域（ROI）上进行k-means聚类，得到材料簇，每个簇由其质心$(c_x, c_y, c_z)$和残留百分比$(p)$表示。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/depth_filtering.png" alt="深度过滤"></p>
+<blockquote>
+<p><strong>图4</strong>：用于检测最靠近相机的材料的动态深度阈值方法。阈值通过基于用户定义比率（例如，0.5对应小瓶的前半部分）在最近和最远深度测量值之间插值计算。</p>
+</blockquote>
+<ol start="2">
+<li><p><strong>强化学习智能体</strong>：其任务是学习指令笛卡尔扳手$\boldsymbol{F}_{c}^{ext}$。策略基于马尔可夫决策过程定义。</p>
+<ul>
+<li><strong>状态空间</strong>：包含末端执行器状态（位置、方向、速度标量）、估计的外部扳手（$F_x, F_y, F_z, T_x, T_y, T_z$）以及感知管道提供的材料簇信息。</li>
+<li><strong>动作空间</strong>：$\boldsymbol{a}<em>{t}=[f</em>{x}^{c},\tau_{y}^{c},z^{D}]^{T}$。这是一个解耦的混合空间：$f_{x}^{c}$是沿x轴（朝向瓶壁）的指令力，用于维持接触；$\tau_{y}^{c}$是绕y轴的指令扭矩，用于产生刮取运动；$z^{D}$是z轴的期望位置，用于控制垂直清扫。</li>
+<li><strong>奖励函数</strong>：$r_t = R_M + R_E - \lambda_C R_C$。其中$R_M = \frac{\Delta m_t}{|\boldsymbol{F}_{ext,t}|_2}$是效率奖励，鼓励用更小的力移除更多材料；$R_E$是在达到50%和90%任务完成度时给予的稀疏里程碑奖励，防止策略过于保守；$R_C$是对工具非功能部分与瓶身碰撞的惩罚，权重$\lambda_C=0.01$通过贝叶斯优化确定。</li>
+</ul>
+</li>
+<li><p><strong>笛卡尔阻抗控制器</strong>：作为低层控制器，提供稳定的柔顺交互基础。其控制律叠加了三部分扭矩：笛卡尔阻抗扭矩（提供质量-弹簧-阻尼行为）、零空间扭矩（管理关节构型以避免极限）以及由RL策略指令扳手$\boldsymbol{F}<em>{c}^{ext}$通过雅可比矩阵转换得到的指令外部扳手扭矩（$\boldsymbol{\tau}</em>{c}^{ext}=\boldsymbol{J}(\boldsymbol{q})^{T}\boldsymbol{F}<em>{c}^{ext}$）。该控制器的阻抗参数固定，RL只学习上层的$\boldsymbol{F}</em>{c}^{ext}$。</p>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/scraping_diagram.png" alt="任务阶段"></p>
+<blockquote>
+<p><strong>图2</strong>：自主瓶内样品刮取任务的顺序阶段：（左）工具插入，施加侧向力$F_x$和扭矩$\tau_y$对抗瓶壁，RGB-D相机捕获视觉状态$s_p$；（中）RL策略基于实时感知反馈$s_p$调整$F_x$、$\tau_y$和垂直位置$z^D$，控制接触扳手和刮取方向；（右）最终向上清扫，调整$F_x$以清除残留材料，被刮下的颗粒沉降在瓶底。</p>
+</blockquote>
+<p>与现有方法相比，本文的创新点在于：</p>
+<ul>
+<li><strong>解耦学习</strong>：将高层的力/力矩学习与底层的关节阻抗控制分离，简化了RL的动作空间，使其专注于适应材料特性的交互动力学，有利于仿真到现实的迁移。</li>
+<li><strong>感知引导的力适应</strong>：RL策略的决策不仅基于力反馈，还结合了实时视觉反馈（材料位置和残留量），实现了“力感知”的刮取。</li>
+<li><strong>异质材料建模</strong>：在仿真中，材料被建模为数百个离散球体的集合，每个球体通过Perlin噪声程序化生成唯一的脱离力阈值，从而创建了丰富多样的训练数据分布。</li>
+</ul>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验平台与数据集</strong>：仿真环境基于MuJoCo物理模拟器搭建，包含Franka Research 3机器人、刮铲和样品瓶。真实实验使用相同的Franka Research 3机器人，配备Intel Realsense D405 RGB-D相机和钢制刮铲。使用了五种具有挑战性的真实材料进行验证：液体面团、液体玉米糊、干燥玉米糊、结晶盐、结晶糖。</p>
+<p><strong>对比方法</strong>：基线方法为使用固定扳手配置（4N，根据收敛RL策略的平均交互扳手经验确定）的笛卡尔阻抗控制器。</p>
+<p><strong>关键实验结果</strong>：<br>RL策略在仿真中训练后，以零样本方式迁移到真实机器人。性能评估采用相对成功率$S_{\text{rel}} = S_{\text{robot}} / S_{\text{human}} \times 100%$，其中$S_{\text{robot}}$和$S_{\text{human}}$分别为机器人和人类科学家刮取后的重量测量成功率。</p>
+<p><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/Samples/dough/slurry_dough.png" alt="定性结果表"><br><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/Samples/Cornflour/liq_cornflour.png" alt="定性结果表"><br><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/Samples/Cornflour/dried_corn.png" alt="定性结果表"><br><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/Samples/Crystal/salt.png" alt="定性结果表"><br><img src="https://arxiv.org/html/2603.10979v1/2603.10979v1/figures/Samples/Crystal/sugar.png" alt="定性结果表"></p>
+<blockquote>
+<p><strong>表I</strong>：五种材料样品的定性结果，从左至右列为原始样品、基线方法（固定扳手）刮取后的样品、RL方法（自适应扳手）刮取后的样品。可视化对比显示，RL方法在不同材料上均能更有效地清除瓶壁附着物。</p>
+</blockquote>
+<p>定量结果如表II所示。自适应RL方法在五种材料上的平均相对成功率为**75.36%<strong>，而固定扳手基线方法的平均相对成功率为</strong>64.44%**，RL方法平均 outperforms 基线 **10.9%**。性能提升在结晶糖上最为显著（从41.0%提升至79.6%），这表明RL策略对于处理高粘附性、易碎材料具有更强的适应能力。</p>
+<p><strong>消融实验</strong>：论文指出，奖励函数中的所有项（效率奖励$R_M$、里程碑奖励$R_E$、接触惩罚$R_C$）对于实现高效、安全、完整的任务性能都是必要的。接触惩罚权重$\lambda_C$是唯一通过贝叶斯优化正式调整的超参数，以平衡任务性能与安全接触行为。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了一种新颖的自适应控制框架，将低层固定参数的笛卡尔阻抗控制器与高层强化学习代理相结合，使机器人能够学习并动态调整用于刮取异质材料的末端交互扳手。</li>
+<li>设计了一个高效的多阶段感知管道，能够自主定位样品瓶并检测瓶内材料的位置和分布，为RL策略提供关键的视觉反馈。</li>
+<li>在仿真和真实化学实验室环境中对所提方法进行了全面的实证评估，成功实现了从仿真到现实的零样本策略迁移，并在多种异质材料上验证了其优于固定策略的性能。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，当前工作仅针对单一刮取工具和相对简单的材料粒子模型。真实世界的材料特性（如粘弹性、塑性变形）更为复杂。</p>
+<p><strong>对后续研究的启示</strong>：本工作展示了将学习型高层决策与模型型底层控制相结合在处理接触丰富、需适应不确定环境任务上的潜力。未来方向包括：将框架扩展到更复杂的工具和材料模型；探索多任务学习，使一个策略能处理实验室中多种接触式操作；以及进一步研究如何将更丰富的感官信息（如触觉）集成到决策过程中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人从样品瓶壁刮取异质材料时，因材料特性不均匀且不可预测而导致操作困难的核心问题，提出了一种自适应力控制框架。该方法结合底层笛卡尔阻抗控制器（保证稳定柔顺交互）与高层强化学习智能体（基于视觉反馈动态调整末端力/力矩）。通过在仿真中使用Perlin噪声模拟异质材料特性训练策略，并迁移至真实机器人。实验表明，该方法在五种不同材料设置下平均性能优于固定力矩基线10.9%，成功实现了自适应刮取操作。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10979" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
