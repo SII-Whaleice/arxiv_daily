@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DiT4DiT: Jointly Modeling Video Dynamics and Actions for Generalizable Robot Control - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DiT4DiT: Jointly Modeling Video Dynamics and Actions for Generalizable Robot Control</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10448" target="_blank" rel="noreferrer">2603.10448</a></span>
+        <span>作者: Shuo Yang Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型已成为机器人学习的一个有前景的范式，但其表征主要继承自静态图像-文本预训练，物理动态只能从相对有限的动作数据中学习。相比之下，生成式视频模型编码了丰富的时空结构和隐含物理知识，使其成为机器人操作的潜在基础模型，但其潜力在现有文献中尚未被充分探索。现有方法通常采用多阶段而非端到端的方式，例如使用视频模型合成额外训练数据或提取潜在表征来训练逆向动力学模型，这使得控制过程间接，且未解决如何将视频生成模型整合为策略学习主干的核心问题。</p>
+<p>本文针对上述痛点，提出将视频生成本身作为策略学习的有效代理目标，并探索如何提取视频模型学习到的时空表征并与动作生成耦合。核心思路是提出一个端到端的视频-动作模型，通过级联的视频扩散变换器和动作扩散变换器，在视频生成过程中提取中间去噪特征作为动作预测的时序条件，并使用双流匹配目标进行联合训练。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DiT4DiT是一个统一的端到端视频-动作模型，其核心是一个双扩散变换器架构，旨在联合优化视频和动作生成。与直接将观察映射到动作的VLA策略不同，DiT4DiT遵循预测视频动态-逆向动力学的范式：首先从视频DiT的推理中采样视频动态，然后通过反转采样的视频动态来预测动作。</p>
+<p><img src="https://arxiv.org/html/2603.10448v1/2603.10448v1/x1.png" alt="方法框架总览"></p>
+<blockquote>
+<p><strong>图2</strong>：DiT4DiT框架总览。顶部：给定当前观察和语言目标，视频DiT预测未来动态，并在特定流时间步暴露中间生成特征；这些特征作为条件输入给动作DiT以推断控制轨迹。两个模型通过用于视频生成和动作预测的双流匹配目标进行联合优化。底部：通过视频DiT生成的视觉规划。</p>
+</blockquote>
+<p><strong>整体流程</strong>：模型输入包括当前观察帧 $\mathbf{o}_t$、机器人本体感觉状态 $s$ 和语言目标 $l$。视频DiT以 $\mathbf{o}_t$ 和 $l$ 为条件，预测未来帧的动态，并在去噪过程的特定时间步 $\tau_f$ 提取中间隐藏特征 $\mathbf{h}_t^{\tau_f}$。动作DiT则以 $\mathbf{h}<em>t^{\tau_f}$ 和 $s$ 为条件，预测动作轨迹。输出是未来帧 $\mathbf{o}</em>{t+1}$ 和动作 $\mathbf{a}_t$。</p>
+<p><strong>核心模块与技术细节</strong>：</p>
+<ol>
+<li><p><strong>视频DiT</strong>：以Cosmos-Predict2.5-2B模型初始化，包含因果视频VAE和视频扩散变换器。VAE将像素空间观察压缩为潜在表示 $\mathbf{z}<em>t^0, \mathbf{z}</em>{t+1}^0$。扩散变换器采用流预测参数化，并以语言指令为条件。关键创新在于，模型并非使用最终去噪的视频输出，而是通过前向钩子机制在流时间步 $\tau_f$ 拦截中间隐藏激活（来自特定Transformer块或跨层平均），将生成过程转化为丰富的视觉令牌供下游任务使用：$\mathbf{h}<em>{t}^{\tau_f}=\mathcal{H}\big[v</em>{\theta}^{\text{video}}\big]\big(\mathbf{z}<em>{t+1}^{\tau_f},\tau_f\mid\mathbf{z}</em>{t}^{0},l\big)$。</p>
+</li>
+<li><p><strong>动作DiT</strong>：一个独立的流匹配模型，基于GR00T-N1的架构。它由一系列Transformer块组成，使用自适应层归一化注入扩散时间步信息，并通过交叉注意力层关注从视频主干提取的视觉特征 $\mathbf{h}_{t}^{\tau_f}$。其输入序列是本体感觉状态嵌入、编码的含噪动作轨迹以及一组用于运动规划任务的可学习“未来令牌”的拼接。网络最终通过线性投影预测动作序列的速度向量场。</p>
+</li>
+<li><p><strong>联合训练与三时间步方案</strong>：采用双流匹配机制进行联合优化。一个核心挑战是平衡生成建模和特征提取的不同需求，因此提出了<strong>非对称三时间步方案</strong>（如图3所示）：</p>
+<ul>
+<li>**视频时间步 $\tau_v$**：从均匀分布 $\mathcal{U}[0,1]$ 中采样，使模型学习完整的去噪轨迹。</li>
+<li>**特征提取时间步 $\tau_f$**：固定为一个确定值，以确保为下游动作模块提供稳定、一致的输入信号。</li>
+<li>**动作时间步 $\tau_a$**：从Beta分布中采样（$\tau_a = 1-\sigma, \sigma\sim\text{Beta}(\alpha,\beta)$），这种有偏的连续时间采样策略将更多训练容量分配给流轨迹中最关键的阶段。</li>
+</ul>
+</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10448v1/2603.10448v1/x2.png" alt="三时间步设计"></p>
+<blockquote>
+<p><strong>图3</strong>：非对称三时间步设计。视频模块使用均匀采样（$\tau_v$）以捕获完整去噪轨迹，而动作模块使用Beta采样（$\tau_a$）以聚焦关键控制阶段。同时，从演化的隐藏状态（$h_t^1 \rightarrow h_t^0$）中，在一个固定的确定性时间步（$\tau_f$）提取稳定的视觉条件。</p>
+</blockquote>
+<p><strong>联合训练目标</strong>为视频流匹配损失和动作流匹配损失的加权和：$\mathcal{L}^{\text{total}}<em>{t} = \mathcal{L}</em>{\text{action}} + \lambda \cdot \mathcal{L}<em>{\text{video}}$。其中，$\mathcal{L}</em>{\text{video}}$ 训练视频DiT预测将当前观察和语言目标导向未来潜在状态的速度；$\mathcal{L}<em>{\text{action}}$ 训练动作DiT学习将含噪动作映射到目标动作速度，该预测以机器人本体感觉状态 $s$ 和从视频主干在时间步 $\tau_f$ 提取的隐藏特征 $\mathbf{h}</em>{t}^{\tau_f}$ 为条件。</p>
+<p><strong>与现有方法的创新点</strong>：1) 首次系统性验证视频生成作为机器人控制的有效且高效的缩放代理目标；2) 提出从视频生成过程的<strong>中间去噪特征</strong>（而非最终重建帧）中提取时序条件，使策略基于支配物理交互的生成视觉动态；3) 设计了<strong>双流匹配联合训练范式</strong>及<strong>三时间步方案</strong>，实现了视频与动作生成的端到端协同优化，避免了多阶段训练的割裂。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在仿真和真实世界环境中进行了广泛评估。主要仿真基准包括LIBERO（90个长视野任务）和RoboCasa-GR1（24个桌面操作任务）。真实世界实验在Unitree G1机器人上进行。实验平台使用了Cosmos-Predict2.5-2B作为视频主干，Qwen3-2B用于语言编码，GR00T-N1作为动作DiT的初始化。</p>
+<p><strong>对比方法</strong>：与当前先进的VLA模型进行对比，包括 $\pi_{0.5}$、CogVLA、GR00T系列模型等。同时，为了验证视频生成作为代理目标的优越性，还与基于目标级语义对齐的“Grounding”方法和基于VLM的隐式世界建模方法“FLARE-style”进行了预训练效率对比。</p>
+<p><strong>关键实验结果</strong>：</p>
+<ol>
+<li><strong>仿真性能</strong>：在LIBERO基准上，DiT4DiT达到了**98.6%<strong>的平均成功率，显著优于$\pi_{0.5}$（90.3%）和CogVLA（94.1%）。在更具挑战性的RoboCasa-GR1 24任务套件上，达到了</strong>50.8%**的平均成功率，大幅超越了高度优化的预训练策略GR00T系列（如GR00T-N1.5为32.0%）。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10448v1/2603.10448v1/x3.png" alt="仿真结果对比"></p>
+<blockquote>
+<p><strong>图4</strong>：在RoboCasa-GR1基准上的成功率对比。DiT4DiT在24个任务中的平均成功率（50.8%）显著高于所有基线方法。</p>
+</blockquote>
+<ol start="2">
+<li><strong>样本效率与收敛速度</strong>：如图1所示，与语义中心的基线方法相比，视频生成代理目标展现出<strong>超过10倍的样本效率</strong>和<strong>高达7倍的收敛加速</strong>。这验证了视频生成不仅是高效训练任务，更是可扩展的代理目标。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10448v1/2603.10448v1/x5.png" alt="代理目标对比"></p>
+<blockquote>
+<p><strong>图1</strong>：可扩展机器人策略学习的代理目标对比。视频生成作为最强的缩放代理，相比语义中心基线，产生了更高的样本效率（&gt;10倍）、更快的收敛速度（7倍）以及更优的缩放趋势。</p>
+</blockquote>
+<ol start="3">
+<li><strong>真实世界性能与零样本泛化</strong>：在Unitree G1机器人上，DiT4DiT在“Arrange Flower”、“Stack Cup”等精度要求高的任务中表现出高准确性，优于预训练基线（GR00T-N1.5）和参数匹配的基线。同时，在仿真和现实中对未见过的物体、类别变化和数量变化表现出强大的零样本泛化能力。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10448v1/2603.10448v1/imgs/real_task_gene_exp.png" alt="真实世界任务"></p>
+<blockquote>
+<p><strong>图7</strong>：真实世界任务执行示例。DiT4DiT仅依靠单个自我中心摄像头，成功完成了精确操作任务，并展示了对新物体和场景的零样本泛化能力。</p>
+</blockquote>
+<ol start="4">
+<li><strong>消融实验</strong>：<ul>
+<li><strong>特征提取时间步 $\tau_f$ 的影响</strong>：实验表明，在去噪过程的中期（$\tau_f \approx 0.5$）提取特征能获得最佳性能，过早（噪声多）或过晚（细节过拟合）都会损害动作预测。</li>
+<li><strong>动作时间步 $\tau_a$ 采样策略</strong>：与均匀采样相比，使用Beta分布采样（偏向于更小的 $\tau_a$，即更接近干净数据）能带来性能提升。</li>
+<li><strong>联合训练 vs. 两阶段训练</strong>：端到端联合训练显著优于先训练视频DiT再固定其权重训练动作DiT的两阶段方法，证明了联合优化使动作模型学会从视频生成过程中提取更有效的特征。</li>
+</ul>
+</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：1) 通过实证验证了<strong>视频生成是机器人策略学习一个高效且可扩展的代理目标</strong>，能显著提升样本效率和收敛速度。2) 提出了<strong>DiT4DiT框架</strong>，首次将视频扩散变换器与动作扩散变换器通过双流匹配目标进行端到端联合训练，利用视频生成过程中的中间特征为动作预测提供时序 grounded 的条件。3) 在仿真和真实世界基准上实现了<strong>最先进的性能</strong>，并展示了卓越的零样本泛化能力。</p>
+<p><strong>局限性</strong>：论文提到，该方法依赖于大规模、高质量的视频数据集进行预训练，这可能限制其在数据稀缺领域的应用。此外，框架中使用的视频VAE和扩散模型计算开销较大，对部署的实时性构成挑战。</p>
+<p><strong>后续启示</strong>：本工作表明，生成式世界模型（尤其是视频模型）可以作为学习物理交互和时空动态的强大先验，为构建更通用、高效的机器人策略开辟了新方向。未来的研究可以探索更轻量化的视频表征提取方式、将更多模态（如触觉、力觉）纳入联合生成框架，以及研究如何将互联网规模的视频知识更有效地迁移到具体的机器人控制任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对现有视觉-语言-动作模型依赖静态图像预训练、难以学习物理动态的问题，提出DiT4DiT模型。其核心方法是将视频扩散变换器与动作扩散变换器耦合，通过提取视频生成过程中的中间去噪特征作为动作预测的时序条件，并采用双流匹配目标实现联合训练。实验表明，该模型在LIBERO和RoboCasa GR1基准上分别达到98.6%和50.8%的平均成功率，且样本效率提升10倍以上，收敛速度加快7倍，显著优于现有方法。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10448" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

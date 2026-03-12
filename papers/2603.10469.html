@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DepthCache: Depth-Guided Training-Free Visual Token Merging for Vision-Language-Action Model Inference - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>DepthCache: Depth-Guided Training-Free Visual Token Merging for Vision-Language-Action Model Inference</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10469" target="_blank" rel="noreferrer">2603.10469</a></span>
+        <span>作者: Lijun Zhu Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作模型在通用机器人操作任务中展现出巨大潜力，但其推理延迟高昂，主要瓶颈在于视觉编码器产生的大量视觉标记需要由大语言模型处理。现有方法主要通过推理时标记剪枝来加速，即根据任务相关性丢弃部分标记。然而，剪枝会不可逆地破坏标记间的空间关系，严重损害机器人操作所需的精细空间推理能力。另一种方法是标记合并，它通过聚合而非丢弃来减少标记数量，但现有方法通常需要在视觉编码器内部进行逐层合并，且对所有图像区域采用统一的合并比率，既缺乏跨架构的通用性，也忽略了任务相关的近场工作区与遥远背景之间的空间差异性。</p>
+<p>本文针对上述痛点，提出了利用深度信息作为结构先验来指导标记压缩的新视角。深度图（从仿真器或RGB-D传感器直接获得）天然地划分了场景的近场和远场区域。本文首次将深度从一种感知模态重新定位为一种结构先验，用于实现空间差异化的、无需训练的视觉标记压缩。核心思路是：根据深度对视觉标记进行分区，对近处工作空间保留高分辨率，对远处背景进行激进压缩，并利用时序冗余将合并过程分散在连续帧中，以保持表征稳定性。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DepthCache是一个无需训练、无需修改模型的视觉标记压缩框架。其整体流程分为针对静态主摄像头的处理管线（Primary View Pipeline）和针对手腕辅助摄像头的处理管线（Auxiliary View Pipeline）。</p>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x1.png" alt="方法总览"></p>
+<blockquote>
+<p><strong>图2</strong>：DepthCache方法总览。顶部主视图管线形成一个循环过程：初始化计算双重保护集，基于深度的分区分配差异化合并比率，渐进式合并在连续帧中减少标记，直到场景变化触发重新初始化。底部辅助视图管线采用一个两状态机，根据末端执行器运动来门控手腕摄像头的压缩。</p>
+</blockquote>
+<p><strong>主视图：深度引导的渐进式标记合并</strong><br>该管线是一个循环过程：场景初始化 → 基于深度的分区 → 渐进式合并 → 变化检测 → 重新初始化。</p>
+<ol>
+<li><p><strong>场景初始化</strong>：在前N个热身帧中，系统执行标准前向传播，同时收集两种互补的保护信号。<strong>基于注意力的语义保护</strong>：累积LLM跨注意力权重，将超过动态阈值（均值+标准差）的标记加入保护集<code>P_att</code>，以识别任务相关实体（如目标物体）。<strong>基于深度的几何保护</strong>：从深度图计算空间梯度，将梯度高于阈值的标记加入保护集<code>P_edge</code>，以保留物体边界。最终的保护集<code>P</code>是两者的并集，在初始化时计算一次，避免每帧提取注意力。</p>
+</li>
+<li><p><strong>基于深度的区域划分</strong>：对于不在保护集<code>P</code>内的标记，根据其深度值进行K-Means聚类，划分为K个区域。每个区域<code>R_k</code>被分配一个与其平均深度<code>d_bar_k</code>成线性比例的合并比率<code>r_k</code>（公式1）。保护集中的标记合并比率为0（即不合并）。</p>
+</li>
+<li><p><strong>渐进式标记合并</strong>：这是核心创新。与现有方法（如ToMe）在单次前向传播中完成所有合并不同，DepthCache将合并过程分散在连续的时间轴上。在每个深度区域<code>R_k</code>内，使用二分图软匹配算法构建合并对。目标合并数量<code>m_k</code>根据该区域的合并比率<code>r_k</code>和大小确定。然后，这些合并被线性分散在一个包含W帧的窗口内执行（公式2），每帧只合并计划中相似度最高的部分配对，并使用大小加权平均来维持跨多轮合并的标记表征无偏性。这确保了跨帧的合并拓扑相对稳定，避免了单帧剧烈压缩带来的动作犹豫。</p>
+</li>
+<li><p><strong>动态恢复与重新初始化</strong>：系统监控每个区域中深度变化超过阈值的动态标记比例。若比例超过阈值<code>γ</code>，则将该区域恢复至完整标记分辨率。此外，系统监控语义保护集<code>P_att</code>内标记的平均深度变化（在机械臂未抓握物体时），若变化超过阈值<code>δ_reinit</code>，则触发完整的重新初始化流程，以应对目标物体被独立移动等场景结构变化。</p>
+</li>
+</ol>
+<p><strong>辅助视图：运动自适应的标记缩减</strong><br>手腕摄像头动态不同。DepthCache采用一个由夹爪开合稳定性和末端执行器运动幅度共同控制的轻量级两状态机。当夹爪开合稳定且末端运动显著时，系统进入“合并”状态，压缩图像；当夹爪进行开/闭转换且末端运动较小时，系统切换到“全视图”状态，保留完整分辨率。通过检查整个预测的动作块，系统可以预判运动趋势并提前切换状态，消除时滞。</p>
+<p><strong>整体创新点</strong>：1) <strong>空间差异化压缩</strong>：首次利用深度作为外部结构先验，实现近场细节保留、远场激进压缩。2) <strong>时序渐进合并</strong>：将合并过程分散在连续帧中，利用帧间冗余，确保表征一致性，避免单帧剧烈压缩。3) <strong>模型无关性</strong>：所有操作均在视觉编码器外部进行，无需修改模型或重新训练，可泛化至不同VLA架构。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在LIBERO仿真基准（包含Spatial, Object, Goal, Long四个任务套件，共40个任务）上评估。对比了三种不同架构的VLA模型：π_0.5 (3.3B)、OpenVLA (7B)、GR00T (2.2B)。Baseline方法包括剪枝类的FastV、SP-VLA和合并类的ToSA。评估指标包括任务成功率、推理延迟、加速比和标记保留率<code>ρ</code>。真实世界实验在配备双RealSense D435相机的PIPER 6-DoF机械臂上进行。</p>
+<p><strong>主要仿真结果</strong>：</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="仿真结果对比"></p>
+<blockquote>
+<p><strong>图1</strong>：DepthCache在LIBERO基准上对三种VLA架构的加速效果和成功率。顶部：各模型的加速比和成功率；底部：直接应用标记合并（ToSA，左）导致抓取时犹豫；DepthCache（右）在降低延迟的同时保持了流畅执行。</p>
+</blockquote>
+<p>如表I所示，DepthCache在所有三种VLA架构上实现了1.07–1.28倍的加速，平均成功率下降小于1%。相比之下，剪枝方法FastV在π_0.5和OpenVLA上分别导致20.3%和12.7%的成功率下降；SP-VLA在获得1.50倍加速的同时仍有4.8%的下降。合并方法ToSA在π_0.5上甚至导致24.1%的成功率下降且无加速。这证实了DepthCache在保持性能的同时实现加速的有效性。</p>
+<p><strong>真实世界实验结果</strong>：<br>在三个核心任务（Pick &amp; Place， Stack Blocks， Open Drawer &amp; Place）中，DepthCache加持的π_0.5策略取得了与基线相当的成功率（52/60 vs. 55/60），同时实现了1.33倍的推理加速（表II）。</p>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x2.png" alt="真实世界任务执行"></p>
+<blockquote>
+<p><strong>图3</strong>：使用DepthCache增强的π_0.5执行真实世界核心任务。(a) 堆叠积木；(b) 打开抽屉并放置物品。</p>
+</blockquote>
+<p>在两个扩展场景中：1) <strong>顺序多物体分拣</strong>：DepthCache将总任务时间减少了22.7%（28.6秒→22.1秒），成功率相当（表III）。<br>2) <strong>扰动恢复</strong>：在机械臂运动过程中手动移动目标物体，DepthCache提供的更低延迟使策略能更频繁地重新规划，将恢复时间缩短了21.3%（17.4秒→13.7秒），并略微提高了成功率（11/15→12/15）。</p>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x3.png" alt="多物体排序对比"></p>
+<blockquote>
+<p><strong>图4</strong>：顺序多物体分拣对比。顶部：基线π_0.5。底部：π_0.5 + DepthCache。时间差距在连续的拾取-放置循环中累积。</p>
+</blockquote>
+<p><strong>消融实验</strong>：<br>消融实验在π_0.5模型上进行，分析了各组件贡献（对应论文中表IV及图5-7）。</p>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x4.png" alt="组件分析图1"></p>
+<blockquote>
+<p><strong>图5</strong>：消融实验组件分析图示之一，展示了移除“深度分区”组件对性能的影响。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x5.png" alt="组件分析图2"></p>
+<blockquote>
+<p><strong>图6</strong>：消融实验组件分析图示之二，展示了移除“渐进合并”组件对性能的影响。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.10469v1/2603.10469v1/x6.png" alt="组件分析图3"></p>
+<blockquote>
+<p><strong>图7</strong>：消融实验组件分析图示之三，展示了移除“双重保护”组件对性能的影响。</p>
+</blockquote>
+<p>关键发现如下：</p>
+<ul>
+<li><strong>深度分区</strong>是最关键的组件。将其替换为均匀合并比率会导致平均成功率大幅下降18.2%，在需要精细空间操作的Object和Long任务上分别下降22.0%和25.0%。</li>
+<li><strong>渐进合并</strong>重要性排名第二。采用一次性合并（而非渐进式）会导致平均成功率下降16.6%，在Object任务上暴跌29.0%，因为突变的视觉信号破坏了动作轨迹的平滑性。</li>
+<li><strong>双重保护</strong>：移除后速度提升至1.48倍，但成功率下降7.3%，证实了保护机制用压缩空间换取安全性的权衡。</li>
+<li><strong>重新初始化</strong>：主要对场景几何结构会变化的Spatial和Long任务有益（分别提升7.1%和6.7%），对静态场景的Object任务影响可忽略。</li>
+<li><strong>辅助视图管线</strong>：将其移除会使加速比从1.28倍降至1.06倍，而对成功率影响极小（+0.2%），验证了手腕摄像头状态机设计的有效性和安全性。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了首个利用深度作为外部结构先验，实现空间差异化、无需训练的VLA模型视觉标记压缩框架DepthCache。</li>
+<li>设计了一种时序相干的渐进式合并管道，将标记合并分散在连续帧中，并结合深度比例分区与双重语义-几何保护机制，解决了现有合并方法的跨帧不稳定和均匀比率问题。</li>
+<li>在三种不同架构的VLA模型和仿真/真实世界任务上进行了广泛验证，实现了显著的推理加速（最高1.28倍）且性能损失极低（平均成功率下降&lt;1%），显著优于现有的剪枝和合并基线。</li>
+</ol>
+<p><strong>局限性</strong>：论文指出，DepthCache的性能依赖于可用的深度信息。在仅有RGB观测的场景中，需要额外估计深度，这可能会引入误差或计算开销。此外，框架中的一些超参数（如热身帧数N、合并窗口W、深度聚类数K）需要根据具体任务和硬件进行调整。</p>
+<p><strong>启示</strong>：DepthCache的成功表明，利用场景固有的结构性先验（如深度）来指导推理时优化，是一条高效且通用的路径。这启发后续研究可以探索其他模态（如触觉、力觉）或任务上下文信息作为先验，来指导模型的计算资源动态分配。其“模型无关”的设计理念也为将类似优化技术移植到其他多模态大模型（如图像-文本、视频-语言模型）提供了思路。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作模型推理延迟高的问题，提出无需训练的视觉令牌压缩框架DepthCache。其核心技术是利用深度先验进行空间分区，对近场和远场区域采用差异化合并比例，并跨帧分布合并过程以利用时序冗余。实验表明，该方法在LIBERO基准上实现了最高1.28倍的推理加速，且平均任务成功率下降小于1%，显著优于现有剪枝与合并基线。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10469" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

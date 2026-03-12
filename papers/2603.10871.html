@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>FG-CLTP: Fine-Grained Contrastive Language Tactile Pretraining for Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>FG-CLTP: Fine-Grained Contrastive Language Tactile Pretraining for Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10871" target="_blank" rel="noreferrer">2603.10871</a></span>
+        <span>作者: Shuo Wang Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，将触觉感知融入视觉-语言-动作（VLA）基础模型已成为机器人感知的重要方向。主流方法如UniTouch、TVL和CLTP等，通过对比学习将触觉信号（如2D触觉图像或3D点云）与自然语言描述对齐，以利用大语言模型的语义推理能力。然而，这些方法存在一个关键局限：其触觉-语言对齐主要停留在定性描述层面（如“粗糙”、“坚硬”），忽视了对于精细操作至关重要的定量接触状态，例如力的大小、接触几何和主轴方向。这种“词汇瓶颈”导致高层语义推理与底层物理执行之间的链接被切断，使得策略难以在需要精确力控的接触密集型任务中泛化。</p>
+<p>本文针对现有触觉表示缺乏定量物理信息的问题，提出了“定量-语义对齐”的新视角。核心思路是引入一种离散数值标记化策略，将连续的物理接触属性（如深度、位置、角度）转化为离散的语言标记，从而在语言潜在空间中显式地注入物理度量，实现从定性描述到定量控制的触觉感知提升。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>FG-CLTP框架旨在学习一个统一且物理接地的触觉表示。其整体流程分为两个阶段：首先进行细粒度对比语言-触觉预训练，得到一个能够同时理解语义和定量物理信息的触觉编码器；然后，将该编码器集成到一个基于流匹配的3D触觉-语言-动作（3D-TLA）策略中，用于下游操作任务。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图1</strong>：FG-CLTP框架总览。左侧为细粒度对比语言-触觉预训练（FG-CLTP）方法，将3D触觉点云与包含定量接触状态的语言描述对齐。预训练后的编码器被集成到右侧的基于流匹配的策略（3D-TLA）中，实现基于触觉的多模态推理和动作生成。</p>
+</blockquote>
+<p><strong>核心模块与技术细节：</strong></p>
+<ol>
+<li><p><strong>统一3D触觉表示</strong>：输入为触觉传感器的3D变形点云。不同于无序点云，触觉点云具有固定的拓扑结构，对应物理传感器标记点的位置。定义静止状态标记点集 $\mathcal{M}<em>{rest}$ 和接触状态标记点集 $\mathcal{M}</em>{t}$，则输入 $\mathcal{M}<em>{t}$ 隐式编码了3D变形场 $\Delta\mathcal{M}</em>{t} = \mathcal{M}<em>{t} - \mathcal{M}</em>{rest}$。这种表示显式地捕捉了法向变形和切向剪切模式，为复杂接触交互提供了直接的物理线索。</p>
+</li>
+<li><p><strong>离散数值标记化</strong>：为解决连续物理状态与离散语言标记之间的鸿沟，论文提出将连续的触觉属性（如接触深度、接触面积、主轴方向、接触位置）离散化为多个区间（bin），并为每个区间创建唯一的标记，添加到语言编码器的词汇表中。例如，接触深度被映射为从 <code>&lt;depth_0.0&gt;</code> 到 <code>&lt;depth_4.0&gt;</code> 的标记。这些数字标记被嵌入到自然语言描述中，形成“数字化增强”的提示文本。</p>
+</li>
+<li><p><strong>对比语言触觉预训练</strong>：模型以预训练的CLIP架构为骨干，包含触觉点云编码器 $E_T$、语言编码器 $E_L$ 和图像编码器 $E_I$。为在引入新数字标记的同时避免灾难性遗忘，采用部分微调策略：冻结 $E_L$ 中原始CLIP词汇的嵌入，仅优化新数字标记的嵌入。通过InfoNCE损失进行多模态（触觉T、语言L、图像I）对比学习，最大化匹配样本对之间的余弦相似度。总对齐损失 $\mathcal{L}_{Align}$ 是各模态间双向对比损失的加权和。</p>
+</li>
+<li><p><strong>辅助物理回归</strong>：为进一步增强模型对精细物理细节的编码能力，在触觉编码器上附加一个轻量级回归头（MLP），使用均方误差（MSE）损失直接监督预测归一化的物理状态向量 $\mathbf{y}<em>i$（包含深度、位置等属性）。最终训练目标为对比损失与回归损失之和：$\mathcal{L}</em>{Total}=\mathcal{L}<em>{Align}+\mathcal{L}</em>{Regre}$。</p>
+</li>
+<li><p><strong>3D-TLA策略学习</strong>：下游策略基于 $\pi_{0.5}$ 架构构建。语言指令、视觉观测和触觉3D点云分别通过PaliGemma、SigLIP和FG-CLTP触觉编码器进行标记化。拼接后的标记输入Gemma-2B主干网络提取高级时空特征，用于条件化动作生成。采用流匹配来建模接触密集型操作的非线性动力学。训练分为两个阶段：先冻结主干网络仅训练对齐MLP，然后通过LoRA联合微调MLP和主干网络。</p>
+</li>
+</ol>
+<p><strong>创新点</strong>：与现有方法相比，FG-CLTP的核心创新在于提出了“定量-语义对齐”策略，通过离散数值标记化将明确的物理度量注入语言空间，并结合辅助回归损失，使模型能够同时理解“是什么”（语义）和“是多少”（物理量），从而弥合了语义推理与精确控制之间的差距。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：模型基于ULIP-2。使用提出的Contact3D数据集（包含136个物体，10万个样本）进行训练和评估。3D触觉输入统一采样529个点。对比的基线方法包括TVL、UniTouch、AnyTouch和CLTP。</p>
+<p><img src="https://arxiv.org/html/2603.10871v1/2603.10871v1/x1.png" alt="数据集概述"></p>
+<blockquote>
+<p><strong>图2</strong>：Contact3D数据集概览。该数据集集成了真实世界和模拟的多传感器数据，通过按压、滑动和旋转等基本操作实现自动化收集，并提供了全面的接触状态标注。</p>
+</blockquote>
+<p><strong>离线基准评估</strong>：</p>
+<ol>
+<li><strong>接触状态分类</strong>：冻结预训练的触觉编码器，训练线性探针进行分类。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10871v1/2603.10871v1/x3.png" alt="分类结果"></p>
+<blockquote>
+<p><strong>图4</strong>：接触状态分类结果。FG-CLTP在形状、深度和位置分类上分别达到90.6%、97.6%和97.6%的准确率，显著优于基于视觉的触觉表示方法。</p>
+</blockquote>
+<ol start="2">
+<li><strong>接触状态回归</strong>：评估模型对连续接触属性（深度、位置、面积、主轴角度、剪切方向）的预测能力。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.10871v1/2603.10871v1/x4.png" alt="回归结果"></p>
+<blockquote>
+<p><strong>图5</strong>：接触状态回归结果对比。FG-CLTP在五项回归任务上均取得最佳性能（最低MAE/RMSE，最高R²）。与最接近的竞争者CLTP相比，宏平均MAE降低了约52.6%（从0.152降至0.072）。</p>
+</blockquote>
+<p><strong>消融实验</strong>：</p>
+<p><img src="https://arxiv.org/html/2603.10871v1/2603.10871v1/x5.png" alt="消融实验"></p>
+<blockquote>
+<p><strong>图6</strong>：消融研究结果。实验表明，离散数值标记化（Tokenization）和辅助回归损失（Regression）都是提升模型性能的关键组件，二者结合效果最佳。</p>
+</blockquote>
+<p><strong>机器人操作任务评估</strong>：在四个接触密集型的真实机器人操作任务（插拔连接器、拧瓶盖、精细插入、轴孔装配）上评估集成FG-CLTP触觉表示的3D-TLA策略。</p>
+<p><img src="https://arxiv.org/html/2603.10871v1/2603.10871v1/x6.png" alt="操作任务结果"></p>
+<blockquote>
+<p><strong>图7</strong>：真实世界机器人操作任务的成功率。FG-CLTP (3D-TLA)在所有任务上均大幅优于仅使用视觉（VLA）或使用其他触觉表示（CLTP-TLA）的基线方法。</p>
+</blockquote>
+<p><strong>关键结果总结</strong>：</p>
+<ul>
+<li>FG-CLTP在接触状态分类任务上达到95.9%的准确率。</li>
+<li>在回归任务上，宏平均R²达到0.960，显著优于UniTouch (0.686)和AnyTouch (0.655)。</li>
+<li>与CLTP相比，回归宏平均MAE降低52.6%。</li>
+<li>统一的3D点云表示实现了仅3.5%的模拟到真实差距。</li>
+<li>在真实机器人操作任务中，集成FG-CLTP的3D-TLA策略相比纯视觉VLA基线平均成功率提升超过30%。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li>提出了FG-CLTP框架，通过离散数值标记化策略，首次实现了触觉感知中定性语言语义与定量物理接触状态的对齐，为精细操作奠定了感知基础。</li>
+<li>构建了大规模、多模态的Contact3D数据集，包含10万个带有显式接触状态标注的3D触觉点云-语言对。</li>
+<li>开发了3D-TLA下游策略，将学习到的细粒度触觉表示无缝集成到基于流匹配的VLA模型中，显著提升了接触密集型操作任务的性能。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，当前方法依赖于高质量的模拟数据（TacFlex）来生成带有精确物理标注的大规模数据集。尽管模拟到真实的差距很小（3.5%），但在极端变形或复杂材料相互作用的情况下，模拟的保真度可能仍存在局限。</p>
+<p><strong>对后续研究的启示</strong>：</p>
+<ol>
+<li><strong>定量语义对齐范式</strong>：FG-CLTP展示了一种将连续物理量嵌入离散语义空间的有效途径，这一范式可推广至其他需要精确物理推理的多模态学习任务中。</li>
+<li><strong>传感器无关表示</strong>：基于3D变形点云的统一表示有效解耦了接触几何与传感器特定伪影，为跨不同触觉传感器的通用表示学习提供了可行方案。</li>
+<li><strong>感知与控制闭环</strong>：工作表明，为VLA模型注入物理接地的细粒度触觉反馈，能显著改善其在接触复杂任务中的决策与控制精度，推动了更紧密的感知-动作一体化研究。</li>
+</ol>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对机器人操作中现有触觉表征依赖定性描述、缺乏对力、几何等定量接触状态建模的问题，提出了细粒度对比语言触觉预训练框架FG-CLTP。其关键技术是构建了一个包含超10万对3D触觉点云-语言的数据集，并采用离散化数值标记化机制，将物理度量与语义对齐。实验表明，该模型在分类任务上达到95.9%的准确率，回归误差降低52.6%，且仿真到现实的差距仅为3.5%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10871" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

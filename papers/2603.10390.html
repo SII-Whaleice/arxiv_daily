@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ScanDP: Generalizable 3D Scanning with Diffusion Policy - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>ScanDP: Generalizable 3D Scanning with Diffusion Policy</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.10390" target="_blank" rel="noreferrer">2603.10390</a></span>
+        <span>作者: Takeshi Oishi Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>目前，自动化3D扫描方法主要分为基于规则和基于学习两类。基于规则的方法（如前沿探索）依赖启发式策略，在复杂环境中适应性差。基于学习的方法，特别是强化学习（RL），通过试错优化扫描策略，但存在两个关键局限性：一是需要大规模训练数据，成本高昂；二是难以泛化到未见过的物体类别。模仿学习（IL）作为一种数据驱动方法，能以更高的样本效率学习专家策略，但传统IL方法在3D扫描任务中仍存在行为冗余或不可预测的问题。</p>
+<p>本文针对3D扫描任务中数据效率低、泛化能力弱以及模仿学习策略行为次优的痛点，提出了一种新视角：将扩散策略（Diffusion Policy）应用于3D扫描，并结合占据栅格地图（Occupancy Grid Map， OGM）的空间表示来提升鲁棒性和泛化性。核心思路是利用扩散策略从少量人类演示中学习扫描策略，并通过OGM整合历史观测以处理噪声和几何多样性，最后引入基于“气泡”的路径优化来确保轨迹安全平滑。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>ScanDP框架旨在通过生成相机运动全局路径来实现高效、高精度的3D扫描。在每一步 <code>t</code>，策略接收当前相机位姿 <code>x_t</code> 和深度图 <code>D_t</code> 作为观测 <code>o_t</code>，输出未来 <code>N</code> 步动作（相机位姿） <code>a_{t:t+N-1}</code>。扫描持续进行直到达到预设时间步长 <code>T</code>，最终输出由所有深度图融合而成的点云。</p>
+<p><img src="https://arxiv.org/html/2603.10390v1/2603.10390v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：ScanDP方法整体框架。上半部分为路径生成（Path Generation），基于占据栅格地图（OGM）和当前相机位姿，通过扩散策略生成动作序列。下半部分为路径优化（Path Optimization），通过基于气泡的碰撞过滤和视点提取来优化生成的轨迹，确保其安全平滑。</p>
+</blockquote>
+<p>整体框架分为路径生成与路径优化两大核心模块。</p>
+<p><strong>1. 路径生成模块</strong><br>该模块负责根据历史观测生成未来的相机运动动作。其核心是采用占据栅格地图（OGM）作为环境表示。</p>
+<ul>
+<li><strong>OGM表示与更新</strong>：OGM <code>O_t</code> 是一个3D体素网格，每个网格 <code>m</code> 关联一个占据概率 <code>p(m|o_{1:t})</code>。通过相机位姿 <code>x_t</code> 和对应的点云 <code>P_t</code>（由深度图 <code>D_t</code> 反投影得到）来增量更新OGM。使用Bresenham线算法确定被击中的网格 <code>l_hit</code> 和光线穿过但未被击中的网格 <code>l_miss</code>。采用对数概率（log-odds）进行贝叶斯更新：<code>L_{1:t}(m) = L_{1:t-1}(m) + L_t(m)</code>，其中 <code>L_t(m)</code> 对 <code>l_hit</code> 设为0.85，对 <code>l_miss</code> 设为-0.4。与以往工作不同，本文在编码过程中保留原始概率值 <code>p</code>，而非将其分类为“占据”、“空闲”或“未知”。</li>
+<li><strong>OGM编码</strong>：为了从稀疏的OGM中提取特征，采用稀疏卷积（Sparse Convolution）编码器 <code>Θ_sc</code>，将OGM <code>O_t</code> 编码为特征向量 <code>e_ogm</code>。</li>
+<li><strong>动作生成</strong>：策略建模为一个去噪扩散概率模型（DDPM）。模型的条件输入是拼接后的特征 <code>e = e_cam ⊕ e_ogm</code>，其中 <code>e_cam</code> 是由MLP编码的历史相机位姿特征。在推理时，从标准正态分布采样初始噪声动作 <code>a^K</code>，通过迭代去噪（公式3）得到最终动作 <code>a^0</code>。噪声预测网络 <code>ε_θ</code> 以噪声动作 <code>a^k</code>、时间步索引 <code>k</code> 和条件特征 <code>e</code> 为输入，预测噪声。训练目标是最小化真实噪声与预测噪声之间的均方误差（公式4）。最终输出为 <code>N</code> 步动作序列，构成相机位姿序列 <code>X</code>。</li>
+</ul>
+<p><strong>2. 路径优化模块</strong><br>此模块对扩散策略生成的原始动作序列进行后处理，以解决IL策略可能产生的意外行为，并优化模仿人类演示中可能存在的非最优动作。</p>
+<ul>
+<li><strong>基于气泡的碰撞过滤</strong>：为确保路径安全，该方法在OGM中识别占据概率超过阈值 <code>κ_occ</code>（设为0.9）的网格作为障碍物。对于路径上每个相机位姿的平移 <code>t_i</code>，计算其到最近障碍物网格的欧氏距离作为“气泡”半径 <code>r_i</code>。仅保留 <code>r_i ≥ r_min</code>（<code>r_min = 0.1m</code>）的安全位姿，得到无碰撞位姿序列 <code>X_free</code>。</li>
+<li><strong>视点提取</strong>：在保证安全的前提下，进一步优化路径平滑度。该步骤旨在用更少的位姿点 <code>X_opt</code> 来近似原始安全路径 <code>X_free</code>，同时保证重建误差 <code>L</code>（定义为原始路径上任一点到近似轨迹上最近点的最大距离）不超过阈值 <code>η</code>。这是一个在约束下最小化 <code>|X_opt|</code> 的优化问题，通过动态规划求解。最终根据优化后的位姿序列 <code>X_opt</code> 控制相机运动。</li>
+</ul>
+<p><strong>创新点</strong>：与现有方法（如使用图像的DP或使用点云的DP3）相比，ScanDP的核心创新在于：1) <strong>感知表示</strong>：采用OGM而非原始点云或图像，通过概率融合显式建模空间占据不确定性，提升了噪声鲁棒性。2) <strong>策略学习</strong>：结合扩散策略，从少量演示中学习连续动作空间下的扫描策略。3) <strong>安全与平滑</strong>：独创性地引入基于气泡的碰撞过滤和视点提取后优化步骤，确保了生成轨迹的安全性与效率。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：实验在Genesis物理仿真器中进行。训练数据仅使用<strong>Stanford Bunny</strong>模型的5条人类演示轨迹（每条500步）。评估在未见过的物体（Armadillo, Dragon, Spot）上进行，并测试了物体尺寸缩放（×1.0， ×1.5）的情况。输入深度图分辨率为224×224，视场（FoV）为45°×45°。OGM覆盖边长为0.8m的立方体空间，网格分辨率为0.02m。</p>
+<p><strong>对比方法</strong>：</p>
+<ol>
+<li>Random：在动作空间内随机生成位姿，并用旅行商问题（TSP）求解最短访问路径。</li>
+<li>Random Hemisphere：在物体上方的半球面上随机撒点，并用TSP访问。</li>
+<li>Uniform Hemisphere：在半球面上用斐波那契网格均匀生成点，并用TSP访问。</li>
+<li>扩散策略（DP）[7]：使用单张深度图作为输入的原始Diffusion Policy。</li>
+<li>3D扩散策略（DP3）[39]：使用点云作为输入的Diffusion Policy变体。</li>
+</ol>
+<p><strong>评估指标</strong>：覆盖率（Coverage）和路径长度（Path Length）。</p>
+<p><strong>关键实验结果</strong>：<br>如表II所示，ScanDP在所有未见过的物体和尺寸上均取得了最高的覆盖率（平均值94.0% ± 4.3%），且方差最低，表现稳定。而DP和DP3的覆盖率分别为87% ± 11%和89% ± 11%，且对初始位置更敏感。</p>
+<p><img src="https://arxiv.org/html/2603.10390v1/2603.10390v1/x2.png" alt="路径长度对比（尺寸×1.0）"></p>
+<blockquote>
+<p><strong>图3</strong>：在原始尺寸（×1.0）物体上，ScanDP（橙色线）能以更短的移动距离达到更高的覆盖率，扫描效率优于DP（蓝色）和DP3（绿色）。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.10390v1/2603.10390v1/x3.png" alt="路径长度对比（尺寸×1.5）"></p>
+<blockquote>
+<p><strong>图4</strong>：在放大尺寸（×1.5）物体上，ScanDP（橙色）同样能以更短的路径达到高覆盖率，优势明显。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.10390v1/2603.10390v1/x4.png" alt="路径可视化对比"></p>
+<blockquote>
+<p><strong>图5</strong>：DP3（左）和ScanDP（右）的扫描路径可视化。ScanDP的路径（经优化后）更短、更平滑。DP3在扫描未见物体时容易陷入局部区域（图中红框）。</p>
+</blockquote>
+<p><strong>扫描效率</strong>：如图3和图4所示，与DP和DP3相比，ScanDP能以更短的移动距离达到相同或更高的覆盖率。路径优化模块使总移动距离平均减少了32%。</p>
+<p><strong>噪声鲁棒性</strong>：如表III所示，当向输入深度图添加高斯噪声（标准差0.1）时，ScanDP仍能保持88%的覆盖率，而DP3在噪声标准差仅为0.01时覆盖率就下降了20%。这表明OGM通过多观测概率融合，有效平均了单次观测中的噪声影响。</p>
+<p><strong>FoV泛化性</strong>：如表IV所示，当相机FoV改变时（模拟不同型号RealSense相机），ScanDP凭借OGM的构建，仍能保持稳定的扫描性能（覆盖率在83%-97%之间），而DP3的性能则波动较大（58%-62%）。</p>
+<p><strong>消融实验</strong>：如表V所示，关键设计选择的影响如下：</p>
+<ol>
+<li><strong>OGM表示</strong>：使用阈值化（分类为占据/空闲/未知）的OGM会显著降低性能，这表明保留连续的占据概率值 <code>p</code> 对策略编码至关重要。</li>
+<li><strong>网格分辨率</strong>：将网格分辨率从0.02m降低到0.04m会因对小尺寸或自遮挡部分保真度下降，导致覆盖率降至65.49%。将分辨率提高到0.01m则超出了GPU内存限制。</li>
+</ol>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>高泛化性</strong>：提出ScanDP框架，仅需对单一物体（Stanford Bunny）进行少量演示训练，即可泛化到形状、尺寸各异的未见物体上，实现高效、完整的3D扫描。</li>
+<li><strong>数据高效与鲁棒性</strong>：通过结合扩散策略和OGM表示，实现了数据高效的策略学习，并显著提升了对于传感器噪声和相机视场变化的鲁棒性。</li>
+<li><strong>安全平滑的路径规划</strong>：引入了基于气泡的碰撞过滤和视点提取的后优化步骤，确保了生成轨迹的无碰撞性与平滑性，解决了模仿学习中常见的次优行为问题。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到，OGM的构建和稀疏卷积操作会带来额外的计算开销。此外，路径优化中的气泡假设目标物体附近没有障碍物，这在更复杂的杂乱环境中可能需要扩展。</p>
+<p><strong>研究启示</strong>：ScanDP展示了将概率占据表示与生成式动作策略（扩散模型）结合在主动感知任务中的潜力。未来的工作可以探索：1) 更高效的OGM表示与更新机制；2) 将路径优化模块以可微分方式集成到策略训练中；3) 将该框架应用于更复杂的现实世界场景，如动态环境或存在移动障碍物的场景。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>论文针对基于学习的3D扫描方法数据需求大、泛化能力差的核心问题，提出ScanDP框架。关键技术采用扩散策略模仿人类扫描，结合占据栅格映射提升噪声鲁棒性和几何处理能力，以及球体空间表示与路径优化的混合方法确保路径安全高效。实验表明，在形状尺度多样的未见物体上，ScanDP相比基线方法实现了更高覆盖率、更短路径，且对传感器噪声保持鲁棒，验证了实际应用的可行性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.10390" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

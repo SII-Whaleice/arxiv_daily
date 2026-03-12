@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Kinodynamic Motion Retargeting for Humanoid Locomotion via Multi-Contact Whole-Body Trajectory Optimization - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Kinodynamic Motion Retargeting for Humanoid Locomotion via Multi-Contact Whole-Body Trajectory Optimization</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09956" target="_blank" rel="noreferrer">2603.09956</a></span>
+        <span>作者: Maegan Tucker Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>人形机器人运动仿生领域的主流方法是通过模仿学习，将人类运动捕捉数据转化为机器人参考轨迹。然而，直接将人类运动映射到形态不同的机器人上存在挑战，因此需要运动重定向过程。现有方法（如PHC、GMR）主要基于纯运动学优化，仅考虑空间姿态匹配，而忽略了刚体动力学和接触互补性约束。这不可避免地引入了物理上不一致的伪影，例如脚滑、地面穿透和动态不可行的运动过渡。这些伪影会持续影响下游模仿学习策略的训练，迫使智能体学习补偿这些物理上不可能的参考，从而严重限制了策略的样本效率和最终性能。</p>
+<p>本文针对纯运动学重定向方法无法保证动态可行性的核心痛点，提出了一个动力学感知的新视角。该方法将重定向过程建模为一个多接触、全身轨迹优化问题。其核心思路是：在重定向过程中，不仅利用运动捕捉的空间轨迹数据，还整合地面反作用力测量数据，以生物力学原理估计脚跟-脚趾接触序列，并显式地施加刚体动力学与接触互补性约束，从而生成动态可行、平滑的参考轨迹。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>KDMR框架是一个端到端流程，旨在将人类运动捕捉和地面反作用力数据转换为适用于人形机器人的关节位置目标。整体流程分为两个主要步骤：1）数据处理，将原始标记点轨迹和GRF数据转换为人体模型姿态和接触状态；2）运动动力学运动重定向，将一系列人体姿态和接触状态转换为相应的机器人轨迹。</p>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x2.png" alt="算法总览"></p>
+<blockquote>
+<p><strong>图3</strong>：KDMR算法总览。左侧为数据处理阶段，将原始标记点和GRF数据转换为人体姿态和接触状态；右侧为运动动力学重定向阶段，通过运动学和动力学两级优化，生成机器人关节轨迹。</p>
+</blockquote>
+<p><strong>核心模块一：数据处理与接触状态估计</strong><br>首先，使用OpenSim软件，通过逆运动学将3D标记点数据拟合到人体骨骼模型，得到人体关节构型，并通过前向运动学计算目标连杆（如髋、膝、踝关节）的姿态序列。关键创新在于利用GRF数据估计接触状态。基于生物力学知识，人类步行的垂直GRF曲线呈现特征性的双峰形态。KDMR通过分析单足的垂直GRF曲线，识别出中步态下凹阶段作为全脚掌接触期，其前后非零力阶段分别严格提取为仅脚跟接触和仅脚趾接触期，从而得到鲁棒的离散接触状态分解。同时，GRF数据会根据目标机器人与人类受试者的质量比进行动态缩放，以补偿形态差异。</p>
+<p><strong>核心模块二：运动学重定向</strong><br>此阶段旨在获得一个初始的、几何上匹配的机器人关节轨迹。考虑到机器人（浮动基座）与人体模型的形态差异，该方法将重定向建模为一个带关节限位的逆运动学优化问题。为了高效求解，将位置层级的非线性优化在速度层级进行线性化求解。通过建立人体连杆与机器人连杆之间的拓扑对应关系，构建一个微分逆运动学问题，求解关节速度，并积分得到初始参考轨迹 𝒒_ref。此步骤与GMR等纯运动学方法概念相似，但作为后续动力学优化的初始化。</p>
+<p><strong>核心模块三：动力学重定向</strong><br>这是KDMR的核心创新模块。其目的是调整运动学参考轨迹 𝒒_ref，使其严格满足机器人的动力学方程和接触约束，消除物理伪影。优化问题基于完整的浮动基座动力学方程（公式3），并显式地包含了作用于脚跟和脚趾接触点的地面反作用力。</p>
+<p>接触约束根据估计的接触状态动态施加：对于处于摆动相的接触点，其接触力为零；对于处于支撑相的接触点，则施加零速度、零加速度约束（公式4，5）和地面穿透约束（公式6）。此外，为了防止脚滑，对支撑相的接触力施加线性化的摩擦锥约束（公式7，8，9）。整个动力学优化问题以运动学参考轨迹 𝒒_ref 和缩放后的GRF作为跟踪目标，同时优化机器人的状态轨迹（位置、速度、加速度）、关节扭矩以及各接触点的地面反作用力，以最小化跟踪误差并满足所有物理约束，最终输出动态可行的关节位置轨迹。</p>
+<p>与现有方法相比，KDMR的创新点具体体现在：1）<strong>动力学可行性</strong>：首次在重定向框架中显式、完整地施加了多接触刚体动力学约束，而非仅进行运动学匹配或事后动态修正。2）<strong>接触建模</strong>：利用GRF数据，以生物力学原理自动、精确地估计复杂的脚跟-脚趾滚动接触序列，并将其整合到优化问题中。3）<strong>联合优化</strong>：将运动学匹配（几何一致性）与动力学可行性（物理一致性）在一个统一的优化框架中解决。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验使用了包含同步运动与力测量的开源生物力学数据集AMASS。对比的基线方法是当前最先进的纯运动学重定向方法GMR。评估主要在三个维度进行：1）重定向运动本身的动态可行性与平滑性；2）生成的GRF与原始人类GRF数据的跟踪精度；3）使用BeyondMimic模仿学习框架训练的下游控制策略的收敛速度与最终性能。</p>
+<p><strong>动态可行性与平滑性</strong>：通过计算参考轨迹的“动态残差”（即不施加控制输入时，轨迹满足动力学方程的程度）来评估动态可行性。KDMR的动力学残差显著低于GMR，证明其生成的轨迹更符合物理规律。</p>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x5.png" alt="动态残差对比"></p>
+<blockquote>
+<p><strong>图5</strong>：KDMR与GMR生成轨迹的动态残差对比。KDMR的残差始终接近零，远低于GMR，表明其动态可行性极高。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x6.png" alt="运动学误差对比"></p>
+<blockquote>
+<p><strong>图6</strong>：KDMR与GMR在跟踪人体关节角度时的运动学误差对比。两者误差相当，表明KDMR在提升动态可行性的同时，未牺牲运动学跟踪精度。</p>
+</blockquote>
+<p><strong>GRF跟踪精度</strong>：比较由KDMR优化得到的GRF与经过质量缩放后的人类参考GRF。KDMR能更准确地复现人类GRF的幅值变化趋势，其均方根误差（RMSE）远低于从GMR轨迹通过逆动力学计算得到的GRF。</p>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x7.png" alt="GRF跟踪对比"></p>
+<blockquote>
+<p><strong>图7</strong>：KDMR优化得到的GRF（红色）与缩放后的人类参考GRF（黑色）对比，显示KDMR能有效跟踪复杂的GRF模式。</p>
+</blockquote>
+<p><strong>下游策略性能</strong>：使用KDMR和GMR生成的参考轨迹，分别在BeyondMimic框架中训练人形机器人行走策略。实验表明，使用KDMR参考轨迹训练的策略收敛速度更快，且最终达到的步态更稳定、自然。</p>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x8.png" alt="训练曲线对比"></p>
+<blockquote>
+<p><strong>图8</strong>：使用KDMR和GMR参考轨迹训练的策略，其回报随训练步数的变化。KDMR策略收敛更快且更稳定。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x9.png" alt="步态特征对比"></p>
+<blockquote>
+<p><strong>图9</strong>：学习到的策略的步态特征（步长、步高、步速）对比。KDMR策略产生了更接近人类参考、更一致的步态。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x10.png" alt="运动轨迹定性对比"></p>
+<blockquote>
+<p><strong>图10</strong>：KDMR与GMR生成的重定向运动序列定性对比。KDMR的脚部轨迹更平滑，无穿透或滑动。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x11.png" alt="策略运动定性对比"></p>
+<blockquote>
+<p><strong>图11</strong>：由KDMR和GMR参考轨迹训练出的策略所生成的运动序列定性对比。KDMR策略的步态更自然、稳定。</p>
+</blockquote>
+<p><strong>消融实验</strong>：论文通过消融实验验证了动力学优化模块和GRF引导接触估计模块的重要性。移除动力学约束会导致脚滑和动态不可行；仅使用简单启发式规则（如基于高度）估计接触状态，而不使用GRF数据，会导致接触时序错误，进而产生不自然的运动模式和更高的动力学残差。</p>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x12.png" alt="消融实验：接触状态"></p>
+<blockquote>
+<p><strong>图12</strong>：不同接触状态估计方法对比。基于GRF的方法（KDMR）能准确估计脚跟-脚趾滚动序列，而基于高度的方法则会产生错误时序。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09956v1/2603.09956v1/x13.png" alt="消融实验：动态残差"></p>
+<blockquote>
+<p><strong>图13</strong>：消融研究的动态残差对比。完整的KDMR方法（蓝色）残差最低，移除动力学优化（红色）或使用启发式接触估计（绿色）均会导致残差升高。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1）提出了一个完整的运动动力学运动重定向（KDMR）流程，通过联合优化运动学和全身动力学，生成数学上保证平滑且动态可行的参考轨迹。2）提出了一种受生物力学启发的、基于时序GRF数据计算接触状态和力分布的方法，使生成的轨迹能复现自然的人类脚跟-脚趾滚动步态。3）通过系统性的实验，证明了KDMR生成的参考轨迹在动态可行性、GRF跟踪精度以及下游模仿学习策略的样本效率和最终性能上，均显著优于纯运动学重定向基线（GMR）。</p>
+<p>论文自身提到的局限性主要在于对GRF数据的依赖。虽然文中提到在GRF数据不可用时，可以使用现有工具箱从运动数据中估计，但这可能会引入误差。</p>
+<p>本研究对后续工作的启示在于：首先，它强调了在运动重定向中显式考虑动力学约束的必要性，这对于实现物理一致且可直接用于机器人控制的运动至关重要。其次，该方法展示了利用多模态传感数据（运动捕捉+力测量）来精细化建模复杂接触交互的潜力，为生成更复杂、更拟人的运动技能（如跑、跳）提供了框架。最后，KDMR生成的优质参考轨迹可以作为一种高效的“运动先验”，显著提升模仿学习等数据驱动方法的训练效率和性能上限。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对人形机器人运动重定向中传统纯运动学方法仅依赖运动捕捉数据，导致脚部滑动、地面穿透等物理不一致伪影的问题，提出了KinoDynamic Motion Retargeting (KDMR)框架。该方法将重定向建模为多接触全身轨迹优化，核心是强制刚体动力学与接触互补约束，并集成地面反作用力数据以自动检测脚跟-脚趾接触事件。实验表明，KDMR在动态可行性、地面反作用力跟踪准确性和下游策略训练效率上显著优于纯运动学基线，生成动态可行的参考轨迹，加速策略收敛并提升运动稳定性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09956" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

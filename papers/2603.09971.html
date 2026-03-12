@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>TiPToP: A Modular Open-Vocabulary Planning System for Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>TiPToP: A Modular Open-Vocabulary Planning System for Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09971" target="_blank" rel="noreferrer">2603.09971</a></span>
+        <span>作者: Tomás Lozano-Pérez Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>机器人操作领域长期追求构建一个“开箱即用”的系统：能够部署在任意机器人上，根据自然语言指令操作任意物体，而无需针对特定物体、环境或机器人本体进行调优。目前存在两种主流方法。一方面，视觉-语言-动作模型提供了一种吸引人的端到端输入-输出规范，直接从图像和语言生成动作，但需要大量的训练数据，且缺乏可靠的跨本体泛化能力，故障难以诊断。另一方面，任务与运动规划为多步骤操作提供了一个结构化框架，能联合推理离散动作序列和连续几何约束，但以往的系统通常缺乏通用性，且实现方式与特定硬件、感知和控制栈紧密耦合，难以访问和构建。</p>
+<p>本文针对VLA模型需要大量数据、TAMP系统难以部署和泛化的痛点，提出了一种新的视角：将预训练的基础视觉语言模型与GPU加速的TAMP相结合，构建一个模块化、无需机器人数据训练的系统。其核心思路是，利用基础模型从单次RGB图像观测和语言指令中构建面向对象的3D场景表示和符号化目标，然后由TAMP系统基于此进行几何和任务结构的显式推理，生成完整的无碰撞操作轨迹。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>TiPToP系统采用模块化架构，输入为立体RGB图像对和自然语言指令，输出为机器人关节轨迹和夹爪命令。整个流程分为感知、规划和执行三个模块。</p>
+<p><img src="https://arxiv.org/html/2603.09971v1/2603.09971v1/x1.png" alt="系统总览"></p>
+<blockquote>
+<p><strong>图0</strong>：TiPToP系统总览。系统接受立体RGB图像对和自然语言指令作为输入，输出机器人关节轨迹。(a) 感知模块利用学习到的深度估计、抓取预测、物体检测和分割构建以对象为中心的3D场景表示。(b) 规划模块使用GPU并行化的TAMP寻找可行的操作计划。(c) 执行模块使用关节阻抗控制器跟踪规划好的轨迹。</p>
+</blockquote>
+<p><strong>感知模块</strong> 接收初始观测、关节配置和语言指令，生成包含每个物体网格、候选抓取位姿以及符号化目标的场景表示。它包含两个并行分支：</p>
+<ol>
+<li><strong>3D视觉分支</strong>：使用FoundationStereo从立体图像对预测稠密深度图，并将其反投影到世界坐标系形成场景点云。随后，使用M2T2模型在整个场景点云上预测带置信度排序的6自由度抓取位姿。</li>
+<li><strong>语义分支</strong>：使用视觉语言模型Gemini Robotics-ER 1.5，通过一次查询同时完成物体检测（输出标签和2D边界框）和任务目标语义落地，将语言指令转化为符号化目标谓词（当前仅支持<code>On(a,b)</code>）。接着，使用SAM-2根据每个检测到的边界框生成像素级分割掩码。</li>
+</ol>
+<p>两个分支的输出在<strong>输出合并</strong>阶段进行融合：通过RANSAC拟合主导平面作为桌子；利用每个物体的分割掩码从场景点云中提取对应点，并计算其凸包以形成水密网格（作为物体几何的保守估计）；将M2T2预测的抓取位姿通过最近邻查询分配给对应的物体。</p>
+<p><img src="https://arxiv.org/html/2603.09971v1/2603.09971v1/x2.png" alt="感知模块"></p>
+<blockquote>
+<p><strong>图1</strong>：感知模块示意图。(a) FoundationStereo预测的深度图，物体边界清晰。(b) M2T2在场景点云上预测的抓取位姿（颜色对应置信度）。(c) Gemini预测的带标签物体边界框和符号化目标<code>𝒢</code>。</p>
+</blockquote>
+<p><strong>规划模块</strong> 使用GPU并行化的TAMP算法cuTAMP进行规划。给定符号化目标<code>𝒢</code>，首先通过符号规划器枚举候选的<strong>计划骨架</strong>（即未绑定连续参数的符号动作序列）。对于每个骨架，cuTAMP初始化大量<strong>粒子</strong>，通过采样来填充未绑定的连续参数（抓取位姿、放置位姿、机器人构型）。随后，通过可微分优化对所有粒子进行并行优化，以满足避障、稳定放置和运动学可行性等约束。对于满足约束的粒子，调用GPU加速的运动规划器cuRobo求解出无碰撞、时间参数化的轨迹。最终输出是一个完整的操作计划，包含关节位置、速度和夹爪命令序列。</p>
+<p><strong>执行模块</strong> 使用关节阻抗控制器在机器人上开环地跟踪规划好的轨迹。系统不监控执行过程，也不基于执行时的观测进行重新规划。</p>
+<p>与现有方法相比，TiPToP的创新点主要体现在：1) <strong>模块化集成</strong>：首次将多种最先进的预训练基础模型（深度估计、抓取预测、VLM、分割）与高性能TAMP规划器紧密结合，构建了完整的零数据操作流水线。2) <strong>零机器人数据</strong>：整个系统无需任何机器人演示数据进行训练，仅依赖预训练模型和规划推理。3) <strong>GPU加速的几何推理</strong>：采用cuTAMP和cuRobo，实现了比传统采样式TAMP更高效的任务与运动规划。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在仿真和真实世界中对TiPToP进行了评估。<strong>仿真环境</strong>使用IsaacSim，<strong>真实世界</strong>在DROID硬件平台（Franka FR3机械臂，腕部ZED Mini立体相机）上进行，包括系统开发者使用的设置和一个外部评估团队独立操作的设置。评估了总计<strong>28个</strong>桌面操作任务场景。对比的<strong>基线方法</strong>是<code>π0.5-DROID</code>，这是一个在350小时DROID本体特定演示数据上微调过的VLA模型。</p>
+<p>关键实验结果总结如下：在全部165次试验（28个场景）中，TiPToP的总体成功率为**74.6%<strong>，任务进度为</strong>52.4%<strong>；而<code>π0.5-DROID</code>的总体成功率为</strong>55/165 (33.3%)<strong>，任务进度为</strong>52.4%**。按任务类别分析：</p>
+<ul>
+<li><strong>简单任务</strong>：两者表现相当，TiPToP任务进度略高（84.0% vs 79.5%），<code>π0.5-DROID</code>成功率略高（27/40 vs 22/40）。</li>
+<li><strong>干扰物任务</strong>：TiPToP明显优于基线，成功率为<strong>60.0%</strong> (27/45)，远高于基线的<strong>26.7%</strong> (12/45)。</li>
+<li><strong>语义任务</strong>：TiPToP优势更显著，成功率为<strong>65.0%</strong> (26/40)，而基线仅为<strong>25.0%</strong> (10/40)，且在8个场景中的4个上成功率为0。</li>
+<li><strong>多步骤任务</strong>：TiPToP成功率为<strong>57.5%</strong> (23/40)，基线为<strong>15.0%</strong> (6/40)，其中在仿真的“彩色积木入碗”任务中，TiPToP取得9/10成功，而基线为0/10。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.09971v1/2603.09971v1/x3.png" alt="实验结果表"></p>
+<blockquote>
+<p><strong>表I</strong>：28个评估场景的性能对比。SR为成功率，TP为任务进度。每个类别底部的行显示了汇总的SR（总和）和TP（平均值）。“总体”行汇总了所有场景。加粗为最佳结果。TiPToP在干扰物、语义和多步骤任务上显著优于<code>π0.5-DROID</code>。</p>
+</blockquote>
+<p><img src="https://arxiv.org/html/2603.09971v1/2603.09971v1/figures/sankey-failures.png" alt="失败模式分析"></p>
+<blockquote>
+<p><strong>图5</strong>：TiPToP在173次试验中的失败模式分析。主要失败原因包括：感知错误（如分割、深度估计、目标落地）、规划失败（无解）、执行错误（抓取滑落、跟踪误差）等。该图揭示了模块化架构便于进行故障溯源。</p>
+</blockquote>
+<p><strong>消融实验与分析</strong>：论文通过失败案例分析了各组件局限。感知模块使用<strong>凸包近似物体几何</strong>，对香蕉等凹形物体处理不佳，导致抓取和放置失败。<strong>小物体抓取</strong>（如腰果、AirPods）和<strong>抓取后物体滑落</strong>是主要执行问题，因为TiPToP采用开环执行，缺乏<code>π0.5-DROID</code>那样的闭环重试和调整能力。在时间效率上，TiPToP的<strong>规划时间</strong>（数秒到数十秒）加上执行时间，在简单任务上常快于持续运行的VLA，但在需要重试的任务中，其单次尝试失败即导致总体任务失败，而VLA可通过持续尝试最终成功。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) 提出了一个<strong>完整、模块化、开源的</strong>操作系统TiPToP，它<strong>无需任何机器人数据</strong>，结合预训练基础模型与TAMP，在多样化的桌面操作任务上达到了与经过大量数据微调的VLA模型相当或更优的性能。2) 通过详尽的实验和<strong>失败模式分析</strong>，实证了模块化架构在系统诊断和针对性改进方面的优势，并明确了当前局限。3) 展示了系统易于在新机器人本体上部署的特性（如UR5e, WidowX）。</p>
+<p>论文指出的<strong>局限性</strong>包括：系统是<strong>开环执行</strong>的，无法应对动态变化或执行误差；感知模块对物体几何的<strong>凸包近似过于简单</strong>，无法处理复杂形状；缺乏对<strong>小物体和易滑落物体</strong>的鲁棒抓取策略；目前主要支持<code>Pick</code>和<code>Place</code>基元，技能扩展性有待验证。</p>
+<p>这项工作对后续研究的<strong>启示</strong>在于：它证明了<strong>模块化、基于规划的系统</strong>是实现通用、可解释机器人操作的一条有效路径，其零数据需求降低了部署门槛。未来工作可以专注于：为感知模块引入更精细的3D重建和物理属性预测；为规划模块增加<strong>执行监控和重新规划</strong>能力以应对不确定性；以及探索更多样化的技能基元，并保持系统的易扩展性。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>TiPToP旨在解决机器人多步操纵任务中通用性差、部署难的核心问题，实现从RGB图像和自然语言指令直接规划。该系统采用模块化架构，结合预训练视觉基础模型进行物体检测、分割与抓取预测，并利用GPU加速的任务与运动规划器（cuTAMP）生成可行动作序列。实验在28个桌面任务中评估，TiPToP无需机器人数据，性能匹配或优于需350小时演示微调的VLA模型π0.5-DROID，展示了零数据下的高效性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09971" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

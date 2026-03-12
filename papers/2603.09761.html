@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>MuxGel: Simultaneous Dual-Modal Visuo-Tactile Sensing via Spatially Multiplexing and Deep Reconstruction - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>MuxGel: Simultaneous Dual-Modal Visuo-Tactile Sensing via Spatially Multiplexing and Deep Reconstruction</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.09761" target="_blank" rel="noreferrer">2603.09761</a></span>
+        <span>作者: Yu She Team</span>
+        <span>日期: 2026-03-10</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>在机器人灵巧操作中，视觉和触觉感知的融合至关重要。视觉提供全局规划和接近阶段的上下文，而触觉则提供接触检测、力调节和精细操作的局部反馈。然而，现有基于视觉的触觉传感器（如GelSight、TacTip、DelTact等）大多依赖不透明的内部涂层来捕捉接触变形，这导致其无法感知外部环境，仅在物理接触时工作。这造成了操作过程中的“感知缺口”：当末端执行器接近物体时，外部摄像头常被遮挡，而触觉传感器在接触前无法提供视觉引导。</p>
+<p>为解决此问题，现有双模态方法引入了新的权衡：增加独立摄像头会增大指尖尺寸并引入视差；使用带稀疏标记的透明弹性体则限制了触觉空间分辨率；而模式切换设计（通过机械或材料特性在视觉和触觉模式间切换）无法在关键的接触阶段同时提供两种模态信息，限制了整个操作周期的连续感知。</p>
+<p>本文针对现有方法无法在<strong>同一时间、同一位置</strong>提供<strong>高分辨率</strong>视觉与触觉感知的核心痛点，提出了通过<strong>空间复用</strong>和<strong>深度重建</strong>实现同步双模态感知的新视角。其核心思路是：设计一种棋盘格图案的涂层，将触觉敏感区域（涂层）与视觉透明窗口（无涂层）交错排列，从而通过单个摄像头同时捕获外部视觉和接触引发的触觉信号；随后，利用一个深度重建网络从混合输入中解耦并恢复出全分辨率的视觉和触觉图像。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>MuxGel框架包含硬件设计、仿真数据生成和深度重建网络三个核心部分。</p>
+<p><strong>硬件设计</strong>：MuxGel的硬件核心是一种空间复用涂层策略。它在标准GelSight硅胶垫的制造过程中，使用棋盘格图案模具选择性施加灰色朗伯涂层，从而形成交替的涂层（触觉）区域和透明（视觉）区域。该方法保持了标准GelSight-Style硅胶垫的几何形状和机械接口，仅需更换硅胶垫即可集成，无需光学或机械重新设计。论文评估了三种棋盘格配置（2x2, 4x4, 8x8），并制作了全涂层（纯触觉）和全透明（纯视觉）垫作为基准。</p>
+<p><strong>仿真数据生成</strong>：为降低真实数据收集成本并实现大规模训练，论文构建了一个基于物理的随机化仿真流程。</p>
+<p><img src="https://arxiv.org/html/2603.09761v1/2603.09761v1/x1.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图3</strong>：视觉-触觉数据生成的大规模物理仿真流程。包含背景、物体、触觉和参考图像的合成。</p>
+</blockquote>
+<p>该流程使用MuJoCo物理引擎和Google Scanned Objects数据集，通过渲染获取物体RGB图像和深度图。触觉交互通过结合深度图与专为GelSight Mini优化的Taxim模拟器来仿真，生成原始触觉图像。为缩小仿真到真实的差距，流程引入了多种域随机化：1) 使用IndoorCVPR数据集背景并施加散焦模糊来模拟视觉景深；2) 对触觉和视觉图像应用<strong>关联的颜色抖动</strong>，迫使网络学习结构差异而非颜色偏移；3) 模拟传感器内部共享光照环境，根据接触掩膜对视觉图像进行重光照；4) 使用<strong>随机波动的棋盘格掩膜</strong>替代完美几何图案，以模拟制造公差和透镜畸变。最终，合成空间复用输入图像和作为光照先验与理想复用布局的参考图像。整个流程动态生成数据，形成近乎无限的训练集。</p>
+<p><strong>重建框架</strong>：论文提出了muxNet，一个双流重建网络，用于从混合输入中解耦视觉和触觉信号。</p>
+<p><img src="https://arxiv.org/html/2603.09761v1/2603.09761v1/x2.png" alt="网络架构"></p>
+<blockquote>
+<p><strong>图4</strong>：双流muxNet架构概述。一个共享的ResNet-34编码器处理输入，两个任务特定的解码器分别重建视觉和触觉模态。触觉分支支持绝对预测（选项A）和残差预测（选项B）。</p>
+</blockquote>
+<p>网络采用共享编码器（基于ImageNet预训练的ResNet-34，其第一层卷积被调整为接受6通道输入）和两个任务特定解码器（U-Net风格）的结构。输入是由当前复用图像和非接触参考图像沿通道维度拼接而成的6通道张量。视觉解码器直接重建视觉RGB图像。触觉解码器采用<strong>残差重建</strong>公式，预测接触引起的触觉差异图，然后将其添加到非接触触觉背景上以获得最终触觉图像。训练分为两阶段：1) <strong>仿真预训练</strong>，使用像素级L1损失和触觉图像梯度损失；2) <strong>真实数据微调</strong>，在损失函数中增加结构相似性损失和感知损失，并应用基于物理的数据增强。模型选择依据一个结合了触觉与视觉的SSIM和LPIPS分数的加权评分。</p>
+<p>与现有方法相比，MuxGel的创新点具体体现在：1) <strong>硬件上</strong>，通过简单的棋盘格涂层修改实现空间复用，保持了与现有GelSight类传感器的即插即用兼容性；2) <strong>算法上</strong>，提出了一个结合<strong>关联域随机化</strong>的仿真到真实流程，以及一个利用<strong>非接触参考图像</strong>和<strong>残差学习</strong>的双流重建网络，有效解决了从混合信号中解耦双模态信息的病态问题。</p>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：评估使用了自建的<strong>真实世界数据集</strong>，通过一个自动化三轴线性运动平台采集。使用了5种几何形状（球体、边缘、方形、实心八边形、空心八边形）和5种颜色的共25个压头，在5个空间位置和多个按压深度下，对5种硅胶垫配置（纯触觉、纯视觉、2x2, 4x4, 8x8复用）进行数据采集。泛化能力在<strong>9个未见过的物体</strong>（如螺母、杏仁、乐高块、石头、牛油果等）上进行测试。对比了三种网络架构变体：单输入、双输入-绝对触觉和双输入-残差触觉。</p>
+<p><strong>关键结果</strong>：</p>
+<ol>
+<li><strong>架构与训练策略对比</strong>：在未见物体上的定量评估表明，经过真实数据微调的双输入-残差触觉模型取得了最佳的整体触觉重建性能。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09761v1/2603.09761v1/figures/modelComparison.jpg" alt="定性对比"></p>
+<blockquote>
+<p><strong>图7</strong>：在杏仁物体上的定性重建结果。顶部为视觉重建，底部为触觉重建。从左至右分别为：真实值；零样本仿真模型；真实数据微调模型。可见微调后的DI-ResT模型在触觉细节和视觉保真度上表现最佳。</p>
+</blockquote>
+<p>表I数据显示，微调后的DI-ResT模型将触觉RMSE降低至0.0287，显著优于最好的零样本基线（0.0830），同时将触觉LPIPS从DI-AbsT的0.1082大幅降低至0.0489，表明其能更准确地恢复毫米级真实接触变形并提升感知质量。</p>
+<ol start="2">
+<li><strong>棋盘格配置消融实验</strong>：不同配置的性能揭示了硬件布局带来的模态权衡。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09761v1/2603.09761v1/figures/unseenObj.jpg" alt="未见物体重建"></p>
+<blockquote>
+<p><strong>图6</strong>：使用微调后DI-ResT模型对真实未见物体进行视觉-触觉重建的示例。展示了原始复用输入、重建的视觉输出（恢复被遮挡区域）和重建的触觉输出（恢复局部高频接触变形）。</p>
+</blockquote>
+<p>表II数据显示，对于触觉重建，<strong>4x4配置</strong>在所有指标上表现最佳，其区块大小为恢复局部接触变形提供了有效的感受野尺度。对于视觉重建，<strong>8x8配置</strong>表现最好，因为更小、更密集的遮挡区域最小化了视觉内容的空间间隙，便于网络插值。考虑到机器人操作通常依赖高保真的局部接触数据，论文选择4x4配置作为后续操作实验的最佳硬件设置。</p>
+<ol start="3">
+<li><strong>机器人抓取演示</strong>：论文进一步展示了MuxGel在视觉-触觉伺服抓取任务中的实用性。双模态反馈同时促进了接触前的对准和接触后的交互，成功抓取了多种未见物体。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.09761v1/2603.09761v1/figures/grasp.jpg" alt="抓取实验"></p>
+<blockquote>
+<p><strong>图8</strong>：视觉-触觉伺服抓取实验。展示了集成MuxGel的机器人夹爪成功抓取多种未见物体。右侧系统界面实时显示了原始传感器输入、重建的视觉和触觉图像。</p>
+</blockquote>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献包括：1) 提出了一种新颖的<strong>空间复用硬件设计</strong>（MuxGel），通过棋盘格涂层实现了同步双模态感知，且与现有GelSight类传感器硬件兼容；2) 开发了一个包含<strong>大规模随机化仿真</strong>和<strong>双流残差重建网络</strong>的完整软件框架，能够从混合输入中有效解耦出高保真的视觉和触觉信号；3) 通过系统的实验验证了该框架在未见物体上的泛化能力及其在机器人操作任务中的实用性。</p>
+<p>论文自身提到的局限性在于，由于视觉和触觉融合的内在特性，硬件配置存在固有的权衡：触觉感知优先考虑局部高频变形细节，而视觉感知优先考虑全局结构上下文。更密集的视觉窗口（如8x8）有利于视觉重建，但可能削弱触觉信号的空间分辨率。</p>
+<p>本工作对后续研究的启示在于：首先，<strong>空间复用</strong>为在紧凑形态下集成多模态感知提供了新思路；其次，<strong>关联的域随机化</strong>和<strong>参考图像引导的残差学习</strong>策略，对于解决类似的多模态信号解耦和仿真到真实迁移问题具有借鉴意义；最后，该框架为机器人实现<strong>从接近到接触的连续、同步感知与控制</strong>奠定了基础，有望推动更智能、更灵巧的机器人操作系统的开发。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文解决现有视觉触觉传感器中不透明涂层阻挡预接触视觉的核心问题，提出MuxGel传感器。其关键技术包括：采用棋盘格图案的空间复用设计，交织触觉敏感区与透明视觉窗口，通过单一摄像头同步采集双模态信号；并开发基于U-Net的深度学习重建框架，结合仿真到现实管道，恢复高保真触觉与视觉图像。实验表明，该传感器在抓取任务中能同时支持接触前对齐与接触后交互，增强了现有视觉触觉传感器的感知能力，且无需硬件改造即可兼容集成。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.09761" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
