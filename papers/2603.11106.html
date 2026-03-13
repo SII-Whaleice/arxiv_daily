@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RC-NF: Robot-Conditioned Normalizing Flow for Real-Time Anomaly Detection in Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>RC-NF: Robot-Conditioned Normalizing Flow for Real-Time Anomaly Detection in Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.11106" target="_blank" rel="noreferrer">2603.11106</a></span>
+        <span>作者: Yu-Gang Jiang Team</span>
+        <span>日期: 2026-03-11</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>随着视觉-语言-动作模型的发展，机器人能够执行日益复杂的任务。然而，通过模仿学习训练的VLA模型在动态环境中可靠性不足，在分布外场景下容易失败。现有运行时监控方法主要存在两类局限性：一类方法将故障检测视为机器人状态分类问题，需要穷举所有异常情况或手动定义前提条件，难以处理真实世界操作的组合复杂性；另一类方法引入高级VLM进行监控，但依赖多步推理，导致数秒延迟，无法及时干预。本文针对VLA模型在动态环境中对实时、准确异常检测的需求，提出了一种新的视角：将异常检测建模为对机器人状态与任务相关物体轨迹联合分布是否偏离正常任务执行的监控问题。其核心思路是提出一个仅需正样本进行无监督训练的机器人条件归一化流模型，通过解耦处理任务感知的机器人状态和物体状态，实时计算概率密度作为异常分数，实现对任务级和状态级OOD的快速检测与处理。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>RC-NF作为一个实时运行时监控模块，其整体流程是：输入视频流、机器人本体感知和任务提示，输出异常分数以触发纠正行为。</p>
+<p><img src="https://arxiv.org/html/2603.11106v1/2603.11106v1/figures/main.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：RC-NF框架总览。（左）SAM2从视频流中提取物体掩码并网格采样为点集，任务提示通过球面均匀编码，机器人本体感知提供关节、夹爪和位姿状态。（中）RC-NF利用这些信号作为条件，在提出的RCPQNet的仿射耦合层中应用K次可逆变换，计算当前任务的异常分数。（右）当异常分数超过阈值时，异常检测与处理模块通过任务级OOD的任务重规划或状态级OOD的任务回滚来触发纠正行为。</p>
+</blockquote>
+<p>具体而言，视频流经SAM2分割获得物体掩码，再通过网格采样得到物体形状的点集表示 $\mathcal{X}$。任务提示被映射到半径为 $\mathcal{R}$ 的T维超球面向量上，形成任务嵌入 $\tau$，以确保任务间在潜在空间的最大分离。机器人状态 $s$ 包括T维的关节状态、夹爪状态和笛卡尔位姿。条件 $c = (s, \tau)$ 被输入到RC-NF中。</p>
+<p>RC-NF基于归一化流框架，将点集 $\mathcal{X}$ 通过一系列以 $c$ 为条件的可逆变换 $f_c$ 映射到一个高斯潜在分布 $\mathcal{Z} \sim \mathcal{N}(\mu_{\text{task}}, I)$，其中均值 $\mu_{\text{task}}$ 由任务嵌入 $\tau$ 广播得到。给定观测 $x$ 和条件 $c$，其条件对数似然计算为：$\log p_{X\mid C}(x\mid c) = \log p_{Z\mid C}(z\mid c) + \sum_{i=1}^{K}\log\left|\det\frac{\partial f_{i,c}!\left(y_{i-1}\right)}{\partial y_{i-1}}\right|$。训练时最大化该似然，推理时其负值即为异常分数。</p>
+<p>核心创新在于其仿射耦合层——机器人条件点查询网络。在标准Glow模型的仿射耦合层中，参数 $\gamma, \beta$ 由神经网络从输入的一部分计算得出。RC-NF将其替换为RCPQNet，该网络以分割的点集 $x_b$ 和条件 $c$ 为输入，生成与任务和机器人状态上下文相关的仿射变换参数 $\gamma, \beta$，从而实现对 $x_t$ 的条件变换。</p>
+<p><img src="https://arxiv.org/html/2603.11106v1/2603.11106v1/figures/method.png" alt="RCPQNet结构"></p>
+<blockquote>
+<p><strong>图3</strong>：机器人条件点查询网络作为RC-NF中的仿射耦合层，用于生成平移和缩放参数。</p>
+</blockquote>
+<p>RCPQNet包含两个关键组件：</p>
+<ol>
+<li><strong>任务感知的机器人条件查询</strong>：机器人状态 $s$ 通过线性层投影后，由任务嵌入 $\tau$ 通过FiLM进行调制，生成任务特定的查询令牌。该令牌编码了机器人状态上下文和任务目标，作为动态键来从后续特征记忆中检索相关信息。</li>
+<li><strong>双分支点特征编码</strong>：该模块对点集进行特征提取以生成记忆令牌。<ul>
+<li><strong>动态形状分支</strong>：对每一帧的点进行中心化和归一化，消除平移和缩放效应，提取形状特征。</li>
+<li><strong>位置残差分支</strong>：专注于补偿形状归一化过程中丢失的原始位置信息。<br>两个分支的特征分别通过MLP升维、平均池化得到帧级表示，再经各自的GRU捕获时序依赖，最后通过Transformer编码器生成记忆向量。<br>查询令牌与记忆向量在Transformer中进行交叉注意力交互，最终输出仿射参数 $\gamma, \beta$。这种设计解耦了机器人状态和物体特征的处理，同时保留了它们的交互特征。</li>
+</ul>
+</li>
+</ol>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验使用了LIBERO-10数据集进行训练，并在新提出的<strong>LIBERO-Anomaly-10</strong>基准上进行评估。该基准包含三种操作特异性异常类型：夹爪未闭合、夹爪打滑和空间错位。对比基线包括两类：1) 基于VLM的监控方法（使用GPT-5、Gemini 2.5 Pro、Claude 4.5实现Sentinel）；2) 基于流匹配的无监督故障检测方法FailDetect。评估指标为AUC和AP。</p>
+<p>关键定量结果如表1所示。RC-NF在所有异常类型和指标上均达到最佳性能，平均AUC为0.9309，平均AP为0.9494，相比之前的最佳方法分别提升了约8%和10%。VLM方法在前两种异常上表现尚可，但在空间错位异常上性能骤降至接近随机水平（AUC≈0.5，AP≈0.4），凸显了其在视觉语义与空间推理对齐上的困难。FailDetect由于将机器人状态和图像特征简单拼接，导致特征纠缠和失衡，性能显著低于RC-NF。</p>
+<p><img src="https://arxiv.org/html/2603.11106v1/2603.11106v1/figures/RCPQ.png" alt="异常分数可视化"></p>
+<blockquote>
+<p><strong>图4</strong>：任务“拿起书并将其放入手推车的后隔间”的异常分数可视化。x轴为时间步，y轴为异常分数，红色虚线标记异常发生时刻 $t_{\text{anomaly}}$。RC-NF在异常发生前分数稳定在-2左右，异常发生后迅速升高，曲线平滑稳定。</p>
+</blockquote>
+<p>消融实验（表2）验证了RCPQNet各组件的贡献：</p>
+<ol>
+<li><strong>移除任务嵌入</strong>（行2）：模型性能在空间错位异常上下降近三倍，因为模型无法区分不同指令下相似的物体轨迹。</li>
+<li><strong>移除机器人状态</strong>（行3）：在夹爪未闭合异常上AUC下降最大（从0.9312降至0.6327），因为该异常主要体现在机器人与物体的相对运动上，缺少机器人状态无法有效检测。</li>
+<li><strong>移除位置残差分支</strong>（行4）：性能普遍下降，尤其在空间错位异常上AP从0.9585降至0.8072。</li>
+<li><strong>移除动态形状分支</strong>（行5）：性能严重下降，特别是在空间错位异常上AUC低至0.1022，表明形状信息对于检测语义-空间错位至关重要。</li>
+</ol>
+<p><img src="https://arxiv.org/html/2603.11106v1/2603.11106v1/figures/exp_sim.png" alt="真实世界实验对比"></p>
+<blockquote>
+<p><strong>图5</strong>：真实世界中，在执行“将球放入打开的抽屉”任务时，抽屉中途关闭的场景下，对比 $\pi_{0}$ 与 $\pi_{0}$ + RC-NF的表现。RC-NF能及时检测到异常并触发重规划，使机器人先重新打开抽屉再放入球，而基线 $\pi_{0}$ 则因抽屉关闭而失败。</p>
+</blockquote>
+<p>真实世界实验在Franka Research 3机械臂上进行，使用VLA模型 $\pi_{0}$ 作为策略基线。RC-NF作为即插即用模块，延迟低于100毫秒。实验表明，RC-NF能有效处理任务级OOD（如环境状态改变）和状态级OOD（如物体从夹爪滑落），通过触发高级重规划或低级回滚（归位程序）来纠正错误，显著增强了VLA系统的鲁棒性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1）提出了RC-NF，一种基于机器人条件归一化流的无监督异常检测模型，其创新的RCPQNet模块能有效解耦并融合机器人状态、任务嵌入和物体点集特征；2）引入了LIBERO-Anomaly-10基准，专注于机器人操作中的三类特异性异常；3）通过仿真和真实实验验证了RC-NF能实现低于100毫秒的实时检测，并能作为即插即用模块增强VLA模型对任务级和状态级OOD的适应性。</p>
+<p>论文提到的局限性包括：RC-NF的计算开销随点集规模和流步骤数增加；其性能依赖于SAM2等分割模型的质量；目前主要针对单臂、单物体的操作场景。</p>
+<p>这项工作为机器人实时监控提供了新思路：将异常检测定义为对机器人-物体运动联合分布的条件密度估计问题，通过解耦的特征处理和条件归一化流实现高效推理。其对任务级和状态级OOD的区分与处理机制，为构建分层、鲁棒的机器人控制系统提供了实用方案。未来工作可探索更高效的点集表示、扩展到多物体多臂场景，以及与其他预测或规划模块进行更紧密的集成。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作模型在动态环境中因分布外条件导致的执行失败问题，提出机器人条件归一化流方法进行实时异常检测。RC-NF在归一化流中解耦任务感知的机器人与物体状态处理，仅需正样本进行无监督训练，并通过概率密度函数计算异常分数。在LIBERO-Anomaly-10基准测试中，RC-NF在所有异常类型上性能最优；真实实验表明，其作为即插即用模块响应延迟低于100毫秒，显著提升了VLA系统的鲁棒性与适应性。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.11106" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

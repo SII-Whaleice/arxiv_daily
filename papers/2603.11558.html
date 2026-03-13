@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>RoboClaw: An Agentic Framework for Scalable Long-Horizon Robotic Tasks</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.11558" target="_blank" rel="noreferrer">2603.11558</a></span>
+        <span>作者: Yao Mu Team</span>
+        <span>日期: 2026-03-12</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>当前，视觉-语言-动作系统在语言驱动的机器人操作中展现出巨大潜力，但其扩展到长时程任务仍面临挑战。主流方法通常将数据收集、策略学习和部署视为分离的流水线阶段，这导致了对人工环境重置的重度依赖，以及在执行由多个策略组成的复杂任务时表现脆弱。不同阶段通常由不同人员处理，引入了信息鸿沟，使得任务状态、子任务边界或成功标准的语义解释在系统各阶段难以保持一致。训练数据覆盖的状态分布也常常无法反映部署时遇到的情况，导致训练与执行之间的不匹配。</p>
+<p>本文针对上述“数据收集-策略学习-任务执行”全生命周期中的语义不一致与人力成本高昂的痛点，提出了一个统一的全新视角：构建一个由单一智能体驱动的、贯穿机器人策略生命周期的框架。本文的核心思路是：引入一个基于视觉语言模型的元控制器，将数据收集、策略学习和长时程任务执行统一在同一个智能体循环中，并通过创新的“纠缠动作对”机制实现自主数据收集，从而在减少人力依赖的同时，提升任务执行的鲁棒性。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>RoboClaw的整体框架是一个闭环的智能体交互周期，其核心是一个现成的视觉语言模型作为高层控制器，负责基于视觉观察和系统上下文进行推理，以决定调用哪个技能。</p>
+<p><img src="https://arxiv.org/html/2603.11558v1/2603.11558v1/figure/teaser.jpg" alt="方法框架"></p>
+<blockquote>
+<p><strong>图2</strong>：RoboClaw系统架构。一个视觉语言模型作为元控制器，在上下文学习范式下运行。多模态观察与结构化记忆（角色身份、任务级记忆和工作记忆）相结合，形成决策上下文。通过思维链推理，智能体生成高层决策并通过统一的MCP执行接口调用工具。同一个智能体核心同时管理数据收集和策略部署，确保整个系统生命周期内控制语义的一致性。</p>
+</blockquote>
+<p>系统在三个层次上进行抽象：策略、工具和技能。<strong>策略</strong>指产生底层电机动作的机器人基础模型，在本文中实现为VLA模型。<strong>工具</strong>是通过模型上下文协议（MCP）调用的系统接口，例如“启动策略”、“终止策略”、“环境总结”。<strong>技能</strong>是编排工具的可复用程序，例如“长时程执行”技能会先调用“环境总结”，再调用“启动策略”来执行操作策略。</p>
+<p><strong>自主数据收集与纠缠动作对</strong>：这是框架的核心创新模块。为了减少数据收集中的人工重置，RoboClaw为每个操作策略学习一个前向执行策略和一个逆向重置策略。前向交互收集轨迹，一旦智能体判定子任务成功完成，便会触发重置策略将环境状态恢复到可重用的前提条件区域。这两个轨迹共同构成一个“纠缠动作对”，使得环境无需人工干预即可自动返回初始状态，从而实现连续的在线数据收集。具体而言，前向策略生成动作序列，重置策略生成恢复动作序列。所有收集的轨迹都存储在数据集D中用于后续策略学习。</p>
+<p><strong>部署时的过程监督与技能调度</strong>：在任务执行阶段，RoboClaw作为任务执行器，组合先前学习的策略来完成长时程任务。智能体遵循与数据收集阶段相同的闭环决策结构，基于当前观察和结构化记忆选择下一个子任务。执行过程中，智能体通过查询环境摘要和机器人状态来监控任务进度。这些反馈信号被写入工作记忆，用于评估当前子任务是否完成。如果满足成功条件，则更新任务级记忆并转向下一个子任务；否则，智能体可能会重试同一策略或切换到另一个前向策略。如果检测到重复失败或意外环境状态，RoboClaw会尝试通过重新规划和选择替代技能进行恢复。当自主恢复失败或触发安全条件时，智能体通过MCP接口的“呼叫人类”工具请求人工干预。此外，部署期间生成的轨迹会被记录并纳入数据集D，用于进一步细化技能策略，形成一个统一的、持续改进的生命周期学习框架。</p>
+<p><img src="https://arxiv.org/html/2603.11558v1/2603.11558v1/figure/RoboClaw.png" alt="数据收集流程"></p>
+<blockquote>
+<p><strong>图3</strong>：RoboClaw自主数据收集工作流程。该图展示了智能体与用户交互以启动机器人数据收集任务的过程。智能体使用MCP工具自主处理视觉观察，评估环境的初始状态，并制定任务计划。随后，它持续执行前向-逆向操作循环，同时在执行过程中实时监控异常，从而持续获取机器人操作数据集。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p>实验在AgiBot G01双臂移动操作机器人平台上进行，评估了四个真实世界场景：卧室梳妆台、厨房货架、学习桌和便利店货架。这些场景涉及物品整理与取放等多阶段操作任务。研究回答了四个关键问题。</p>
+<p><strong>1. RoboClaw能否显著提高数据收集效率？</strong><br>与纯粹依赖人工演示和手动重置环境的基线方法相比，在收集相同数量数据的情况下，RoboClaw大幅减少了所需的人力时间。如图4(a)所示，基线方法所需的人力时间约为RoboClaw的2.16倍。在图4(b)中，基线在模型 rollout 过程中需要的人工干预是RoboClaw的8.04倍。这表明纠缠动作对机制能有效实现自主数据收集，降低数据获取成本。</p>
+<p><img src="https://arxiv.org/html/2603.11558v1/2603.11558v1/figure/eap_data.png" alt="人力与成功率对比"></p>
+<blockquote>
+<p><strong>图4</strong>：(a) 收集相同数量数据所需的相对人力时间。(b) rollout执行期间的相对人工干预次数。所有值均相对于本文方法进行了归一化（Ours = 1）。(c) 梳妆台整理任务上各迭代轮次的成功率。RoboClaw显著优于端到端VLA基线以及四个独立子任务成功率的乘积计算出的预期成功率。这种改进源于RoboClaw监控任务进度并在发生故障时自动调用恢复策略的能力。结果为20次试验的平均值。</p>
+</blockquote>
+<p><strong>2. RoboClaw能否提高子任务策略的成功率？</strong><br>论文评估了四个具体子任务策略：身体乳放置、妆前乳放置、口红插入和纸巾擦拭。通过多轮迭代的自主数据收集和策略微调，这些策略的成功率随迭代次数增加而持续提升。例如，口红插入任务的成功率从第1轮的2/50提升到第5轮的23/50；纸巾擦拭任务从11/50提升到26/50。逆向重置策略也表现出较高的成功率（例如，妆前乳任务为38/50）。这验证了闭环、迭代式数据收集对提升单一技能性能的有效性。</p>
+<p><strong>3. RoboClaw能否提升机器人在复杂长时程任务上的性能？</strong><br>在包含四个子任务（放置身体乳、妆前乳、口红，并用纸巾擦拭）的梳妆台整理长时程任务中，RoboClaw取得了显著优势。如图4(c)所示，RoboClaw的成功率（约75%）远高于一个端到端的VLA基线（约20%），也高于将四个独立子任务成功率简单相乘得到的“预期成功率”（约30%）。性能提升的关键在于RoboClaw的智能体能够在执行过程中监控任务进度，并在子任务失败时自动调用恢复策略或进行重试，从而防止错误累积，提高了整体任务的鲁棒性。</p>
+<p><strong>4. RoboClaw能否从失败中学习？</strong><br>部署阶段产生的轨迹（包括成功和失败的）会被记录并反馈到训练数据集中，用于持续改进策略库。这种设计使系统能够在整个生命周期中积累经验，实现性能的持续提升。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献可概括为三点：第一，提出了一个统一的机器人生命周期智能体框架，将数据收集、策略学习和长时程任务执行整合在单一智能体循环中，确保了全流程语义一致性，并将人力负担降低了53.7%。第二，提出了“纠缠动作对”这一数据引擎，通过耦合前向操作与逆向恢复行为形成自重置循环，实现了学习驱动的自主数据收集，将数据收集所需人力时间减少了约54%。第三，设计了一个基于上下文驱动的决策架构，利用VLM进行高层推理，实现了对长时程任务执行过程的实时监督、技能动态编排和状态监控，将长时程任务成功率提升了25%。</p>
+<p>论文自身提到的局限性包括：系统性能在很大程度上依赖于底层VLM的推理和规划能力；当前实验主要在结构化程度较高的桌面操作场景中进行。</p>
+<p>这项工作对后续研究的启示在于：它展示了一种构建“自驱动”机器人系统的可行路径，即通过统一的设计使机器人能够自主收集数据、执行任务并从经验中学习，逐步减少对人类监督的依赖。其“纠缠动作对”的思想为自动化、可持续的机器人技能学习提供了新工具。同时，该框架强调了保持训练与部署阶段语义一致性的重要性，这对于构建稳健的长时程决策系统具有普遍意义。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对视觉-语言-动作（VLA）系统在扩展至长视界机器人任务时面临的挑战，提出RoboClaw智能框架。其关键技术为“纠缠动作对”（EAP），通过耦合前向操作行为与逆向恢复动作，形成自重置循环，实现自主数据收集与策略持续优化。实验证明，该框架在真实长视界任务中成功率较基线方法提升25%，人类时间投入减少53.7%。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.11558" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

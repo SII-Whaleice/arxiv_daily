@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Ada3Drift: Adaptive Training-Time Drifting for One-Step 3D Visuomotor Robotic Manipulation - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Ada3Drift: Adaptive Training-Time Drifting for One-Step 3D Visuomotor Robotic Manipulation</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.11984" target="_blank" rel="noreferrer">2603.11984</a></span>
+        <span>作者: Shuaicheng Liu Team</span>
+        <span>日期: 2026-03-12</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>基于扩散模型的视觉运动策略通过迭代去噪有效捕捉了多模态动作分布，但其高昂的推理延迟（通常需要10-100次网络前向传播，NFE）限制了其在实时机器人控制中的应用。近期基于流匹配和一致性模型的方法实现了单步生成，但牺牲了保持不同动作模式的能力，导致多模态行为被平均化，产生物理上不可行的轨迹（例如，绕过障碍物的左右两种策略被平均为直接撞向障碍物的轨迹）。本文观察到机器人领域存在“计算预算不对称”的特性：训练可离线进行无延迟限制，而推理必须满足严格的实时要求。基于此，本文提出将迭代细化的过程从推理时转移到训练时，以在保持单步推理效率的同时，恢复多模态保真度。其核心思路是：在训练时学习一个自适应漂移场，将预测的动作吸引向专家演示的模式，并排斥其他生成样本，从而实现从3D点云观测到高保真动作的单步生成。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>Ada3Drift的整体框架是一个单步生成模型。输入为当前时刻的机器人本体感知状态 $\mathbf{s}_t$ 和3D点云 $\mathbf{P}<em>t$，输出为未来 $H=16$ 步的动作轨迹 $\hat{\mathbf{a}}</em>{t:t+H}$。整个系统仅在训练时引入迭代优化机制，在推理时仅需一次前向传播（1 NFE）。</p>
+<p><img src="https://arxiv.org/html/2603.11984v1/2603.11984v1/figs/rollout.png" alt="方法框架"></p>
+<blockquote>
+<p><strong>图3</strong>：Ada3Drift整体架构。左侧：基于1D U-Net的无时间步动作生成器，将高斯噪声 $\mathbf{z}$ 映射为动作轨迹 $\hat{\mathbf{x}}$。右侧：3D观测编码器提取全局条件向量 $\mathbf{g}$，通过FiLM调制所有残差块。底部（仅训练时使用）：展示了训练时漂移场损失的计算流程，包括多温度聚合和通过Sigmoid调度与MSE损失结合。</p>
+</blockquote>
+<p>核心模块包括：</p>
+<ol>
+<li><strong>3D观测编码器</strong>：沿用DP3的流程，对原始点云进行最远点采样（FPS）固定点数，通过PointNet主干网络提取每步特征，并与本体感知状态编码拼接，最终得到一个全局条件向量 $\mathbf{g}$。</li>
+<li><strong>无时间步动作生成器</strong>：由于所有细化在训练时完成，生成器移除了传统扩散/流模型中用于调节噪声水平的时间步嵌入。其主体是一个1D卷积U-Net，直接将高斯噪声 $\mathbf{z}$ 映射为动作轨迹。网络通过编码器-解码器结构进行下采样和上采样，并在每个残差块中利用FiLM机制注入观测条件 $\mathbf{g}$，确保动作生成与观测上下文紧密耦合。</li>
+<li><strong>训练时漂移场</strong>：这是方法的核心创新。给定一批模型预测 ${\mathbf{x}_i}$ 和专家演示 ${\mathbf{y}<em>j^+}$，首先计算双向亲和矩阵 $A</em>{ij}$（结合行向和列向的softmax归一化），为每个预测软分配到最近的演示模式。漂移场 $V(\mathbf{x}_i)$ 由两部分构成：<strong>吸引项</strong>（加权求和专家演示，将预测拉向真实模式）和<strong>排斥项</strong>（加权求和其他预测，推动预测彼此分开以覆盖所有模式）。</li>
+<li><strong>多尺度场聚合</strong>：为适应不同机器人任务中动作分布几何结构的巨大差异（如紧密聚类与广泛分离的模式），方法聚合了多个温度参数 $\tau \in {0.02, 0.05, 0.2}$ 下的漂移场。小 $\tau$ 捕捉紧密簇，大 $\tau$ 覆盖更广结构。各场通过其期望幅值进行归一化，实现跨尺度的自动平衡。</li>
+<li><strong>Sigmoid调度损失过渡</strong>：针对小样本（10-50条演示）场景下模型初期预测远离数据模式的问题，设计了双阶段训练计划。总损失为漂移损失 $\mathcal{L}<em>{\text{drift}} = |\hat{\mathbf{x}} - \text{sg}(\hat{\mathbf{x}} + V</em>{\text{total}})|^2$ 与MSE损失 $|\mathbf{x} - \mathbf{y}^+|^2$ 的加权和。权重 $w_{\text{drift}}(e)$ 和 $w_{\text{mse}}(e)$ 通过Sigmoid函数随训练周期 $e$ 变化：早期以MSE为主学习粗粒度分布，后期（约70%训练周期后）漂移损失主导以进行模式锐化。</li>
+</ol>
+<p>与现有方法相比，创新点体现在：1) <strong>范式转变</strong>：利用机器人计算不对称性，将迭代细化从推理时移至训练时；2) <strong>自适应设计</strong>：针对机器人小样本、多任务学习的特点，引入了多尺度场聚合和Sigmoid调度损失，而非直接套用图像生成中的固定漂移机制。</p>
+<p><img src="https://arxiv.org/html/2603.11984v1/2603.11984v1/x1.png" alt="漂移场机制"></p>
+<blockquote>
+<p><strong>图2</strong>：自适应漂移机制示意图。(a) 预测 $\hat{\mathbf{x}}$ 通过双向亲和力被吸引向专家模式 $\mathbf{y}^+$ 并相互排斥。同心轮廓线展示了多温度场聚合。(b) Sigmoid调度在训练周期 $0.7E$ 处实现从MSE主导的粗学习到基于漂移的模式锐化的过渡。</p>
+</blockquote>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：在三个仿真基准上进行评估：<strong>Adroit</strong>（3个灵巧手操作任务）、<strong>Meta-World</strong>（34个 Sawyer 机械臂任务，按难度分组）和 <strong>RoboTwin</strong>（8个需要精确3D空间推理的任务）。此外，在真实的 Agilx Cobot Magic 机器人上设计了5个操作任务进行实物验证。每个任务使用10条（仿真）或20条（实物）专家演示进行训练。</p>
+<p><strong>对比方法</strong>：</p>
+<ul>
+<li><strong>图像基线</strong>：Diffusion Policy (DP), AdaFlow, Consistency Policy (CP)。</li>
+<li><strong>3D点云基线</strong>：DP3, Simple DP3, FlowPolicy, MP1。其中DP、DP3、Simple DP3为多步方法（10 NFE），CP、FlowPolicy、MP1和Ada3Drift为单步方法（1 NFE）。</li>
+</ul>
+<p><strong>关键结果</strong>：<br>在Adroit和Meta-World上，Ada3Drift在仅使用1 NFE的情况下，取得了与需要10 NFE的扩散基线（DP3）相当或更优的性能。具体而言，在Adroit的三个任务（Hammer, Door, Pen）上，Ada3Drift取得了平均 <strong>79.5%</strong> 的成功率，优于所有其他单步方法（FlowPolicy: 65.4%, MP1: 68.7%）。在Meta-World整体上，其平均成功率为 **79.2%**，与最好的单步方法MP1（78.6%）相当，并显著优于FlowPolicy（77.0%）。</p>
+<p><img src="https://arxiv.org/static/browse/0.3.4/images/arxiv-logo-one-color-white.svg" alt="主要结果表"></p>
+<blockquote>
+<p><strong>表1</strong>：在Adroit和Meta-World上的性能对比。Ada3Drift（1 NFE）在Adroit上平均性能最佳，在Meta-World上与顶级单步方法性能相当，显著超越了Flow Matching类方法（如FlowPolicy），证明了其解决模式平均问题的有效性。</p>
+</blockquote>
+<p>在RoboTwin的8个任务上，Ada3Drift的平均成功率为 **85.4%**，显著优于FlowPolicy的77.1%和MP1的81.3%，凸显了其在复杂3D场景下的优势。在真实机器人实验中，Ada3Drift在5个任务上的平均成功率达到 **82.0%**，同样优于对比的单步基线。</p>
+<p><img src="https://arxiv.org/html/2603.11984v1/2603.11984v1/figs/real_world.png" alt="真实世界结果"></p>
+<blockquote>
+<p><strong>图4</strong>：真实世界机器人任务上的定性结果。Ada3Drift成功完成了涉及精确抓取和放置的任务，而基线方法（如FlowPolicy）由于模式平均问题，在需要多模态策略的任务（如“避障抓取”）中失败，产生了碰撞障碍物的平均化动作。</p>
+</blockquote>
+<p><strong>消融实验</strong>：<br>论文通过消融研究验证了各核心组件的贡献。移除<strong>多温度聚合</strong>会导致在动作尺度差异大的多任务设置中性能下降。移除<strong>Sigmoid调度</strong>（即全程使用漂移损失）会因早期训练不稳定而导致性能严重下降。移除<strong>排斥项</strong>会使预测聚集到少数主导模式，降低多样性。这些实验共同证明了每个设计对于在少样本机器人学习范式中成功应用训练时漂移的必要性。</p>
+<h2 id="总结与启发">总结与启发</h2>
+<p>本文的核心贡献在于：1) <strong>提出了训练时漂移的新范式</strong>，利用机器人系统的计算预算不对称性，将保持多模态保真度的迭代优化过程从推理时移至训练时，从而实现了高保真度的单步动作生成。2) <strong>设计了一套针对少样本机器人学习场景的自适应机制</strong>，包括处理不同任务几何结构的多尺度漂移场聚合，以及稳定少样本训练的两阶段Sigmoid调度损失。3) <strong>在多个仿真和真实机器人基准测试上实现了最先进的性能</strong>，仅需1 NFE即匹配或超越了需要10倍推理计算的多步扩散策略。</p>
+<p>论文提到的局限性包括：方法性能依赖于专家演示的质量；训练时漂移场的计算增加了额外的训练成本（尽管推理成本极低）。</p>
+<p>这项工作对后续研究的启示在于：它揭示了利用系统固有约束（如训练-推理计算不对称）来重新设计算法范式的潜力。对于其他同样面临“高质量输出需求”与“低延迟推理需求”矛盾的领域（如实时视频生成、交互式系统），将复杂计算离线化的思路具有借鉴意义。此外，针对特定领域（如机器人的少样本、多任务）设计自适应组件，而非直接迁移通用方法，是提升性能的关键。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对一步3D视动机器人操作中，单步生成方法因平均化多模态动作而丧失保真度的问题，提出Ada3Drift。该方法在训练时引入自适应漂移场，吸引预测动作向专家演示模式靠拢并排斥其他样本，结合sigmoid-scheduled损失转换和多尺度场聚合技术。实验在Adroit、Meta-World和RoboTwin基准及真实任务中证明，Ada3Drift实现最先进性能，且函数评估次数比基于扩散的方法减少10倍。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.11984" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>

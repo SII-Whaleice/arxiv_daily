@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Concurrent Prehensile and Nonprehensile Manipulation: A Practical Approach to Multi-Stage Dexterous Tasks - Robotics arXiv Daily</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/styles.css"/>
+  <link rel="stylesheet" href="../assets/detail.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+</head>
+<body>
+  <div class="bg-orbit"></div>
+  <header class="site-header">
+    <div class="brand">
+      <a href="../index.html" class="back-link">← 返回列表</a>
+    </div>
+  </header>
+  <main class="detail-main">
+    <article class="detail-card">
+      <span class="detail-category">Manipulation</span>
+      <h1>Concurrent Prehensile and Nonprehensile Manipulation: A Practical Approach to Multi-Stage Dexterous Tasks</h1>
+      <div class="detail-meta">
+        <span>arXiv: <a href="http://arxiv.org/abs/2603.11655" target="_blank" rel="noreferrer">2603.11655</a></span>
+        <span>作者: Daniel Seita Team</span>
+        <span>日期: 2026-03-12</span>
+      </div>
+      <section class="detail-body">
+        <h2>📝 详细解读</h2>
+        <h2 id="研究背景与动机">研究背景与动机</h2>
+<p>灵巧手操控的研究主要集中于单对象、短时程的技能，例如抓取或手内操作。主流方法包括基于模拟的强化学习和端到端的模仿学习（如扩散策略）。然而，这些方法在处理需要同时进行抓握（prehensile，如稳定抓持物体）和非抓握（nonprehensile，如推、拉）交互的长时程、接触丰富的多阶段任务时面临关键挑战。核心痛点是数据需求与泛化能力之间的矛盾：收集长时程灵巧手演示既耗时又费力，而端到端策略在数据有限的情况下难以泛化到多样化的物体几何形状和初始摆放位置。</p>
+<p>本文针对“如何使用少量真实演示，学习能够跨物体实例和摆放位置泛化的长时程、接触丰富的灵巧多任务操作”这一根本性问题，提出了<strong>对象中心技能抽象</strong>的新视角。核心思路是：将演示分解为具有明确时间边界的、可重用的对象中心技能，并通过<strong>检索-对齐-执行</strong>的范式，根据当前观测的物体几何形状检索相关技能、将其对齐到当前物体状态并执行，从而高效复用演示数据。</p>
+<h2 id="方法详解">方法详解</h2>
+<p>DexMulti方法将多阶段任务分解为对象中心技能，并在执行时进行检索和回放。整体流程分为离线处理与在线执行两大部分。</p>
+<p><img src="https://arxiv.org/html/2603.11655v1/2603.11655v1/x1.png" alt="方法总览"></p>
+<blockquote>
+<p><strong>图2</strong>：方法整体框架。(1) <strong>感知</strong>：多视角RGB-D输入结合语言条件分割，生成对象中心的点云和接触图。(2) <strong>离线处理</strong>：利用交互信号将演示分割为对象中心技能，并以规范形式存储。(3) <strong>在线执行</strong>：不确定性感知的状态估计器跟踪物体质心和偏航角。通过点云匹配检索技能，在姿态不确定性下对齐，并通过检索-对齐-执行范式执行。面板(A-D)对应正文章节IV-A至IV-D。</p>
+</blockquote>
+<p><strong>1. 感知模块</strong>：给定多视角RGB-D图像和语言指令，使用Grounding DINO进行2D目标检测，再使用SAM2进行实时实例分割与跟踪。将分割后的像素反投影到3D，经过去噪、聚类和最远点采样，为每个任务相关物体生成一个固定大小为512点的对象中心点云。</p>
+<p><strong>2. 对象中心技能分解（离线）</strong>：每个完整的多阶段演示被分割成K个对象中心技能段。分割边界由<strong>手-物体交互信号</strong>决定：将灵巧手建模为由关节状态通过前向运动学得到的点云，并计算手点云与每个物体点云之间的几何接近度作为软接触信号。针对物体o_k，其对应技能段σ_i,k的起始<strong>关键帧</strong>被定义为检测到持续手-物体接触的第一个时间步。每个技能段被转换并存储在一个<strong>规范的对象中心坐标系</strong>中：计算该技能关键帧时刻物体点云的质心c和通过主成分分析(PCA)得到的规范偏航角ψ_canon，将所有点、末端执行器位姿和手部关节指令都变换到此规范框架下，形成与物体平移（以及当偏航角可观测时与旋转）无关的技能库。</p>
+<p><strong>3. 对象中心状态估计（在线）</strong>：使用扩展卡尔曼滤波器(EKF)实时估计每个物体的质心c_t和偏航角ψ_t。位置观测来自分割点云的质心；偏航角通过水平投影点云的PCA计算，但仅当物体几何形状具有足够的各向异性时才被视为可观测。系统会计算一个连续的<strong>可观测性分数</strong>，并通过滞后阈值处理产生一个二元的偏航角可观测标志𝕀_t^obs。当偏航角被判定为不可观测时（例如对于圆形或无纹理物体），则抑制方向更新并保持任务级偏航角ψ_t^task不变，以防止错误的旋转估计。这种显式的可观测性推理对于稳定操作至关重要。</p>
+<p><strong>4. 检索-对齐-执行（在线）</strong>：</p>
+<ul>
+<li><strong>检索</strong>：给定当前观测到的物体点云P_k^obs，通过计算其在规范空间中的倒角距离(Chamfer Distance)来检索最匹配的演示技能。当偏航角可观测时，直接使用估计的ψ_t^task进行匹配；当不可观测时，则在离散的偏航角假设集Θ上进行最小化，以同时确定最佳演示i<em>和相对对齐偏航角θ</em>。对于多阶段任务，使用所有任务相关物体的联合评分进行检索，确保跨子任务的技能配对一致。</li>
+<li><strong>对齐</strong>：检索后，机器人进行闭环对齐，追踪被检索技能的第一个规范动作（该动作已使用实时物体状态估计转换到世界坐标系）。在每个控制步骤，使用Pyroki优化器求解一个滚动时域运动规划问题，以跟踪目标位姿，同时满足碰撞避免、关节限位和轨迹平滑性约束。</li>
+<li><strong>执行</strong>：对齐收敛后，机器人通过位姿插值平滑过渡，然后以<strong>开环</strong>方式执行技能的剩余部分，使用在对齐结束时固定的物体位姿(c_fixed, ψ_fixed)将规范轨迹回放到世界坐标系中。这避免了在接触丰富的操作过程中因持续姿态重估计带来的不稳定性。对于多阶段任务，此过程按顺序应用于每个子任务。</li>
+</ul>
+<h2 id="实验与结果">实验与结果</h2>
+<p><strong>实验设置</strong>：使用xArm 7机械臂，配备两种灵巧手（16-DoF的Allegro Hand和LEAP Hand）和两个Intel RealSense L515 RGB-D相机。评估了三个需要连续交互的多任务操作问题：(1) <strong>Grasp+Pull</strong>：抓取物体并拉开抽屉；(2) <strong>Grasp+Open</strong>：抓取物体并打开容器盖；(3) <strong>Grasp+Grasp</strong>：连续抓取两个物体而不释放第一个。所有任务均需在操作第二个物体时保持对第一个物体的稳定抓握。物体形状、大小和初始位置均随机化（在±25 cm工作空间内）。使用约40个演示（每个任务-物体组合3-4个）进行训练和评估。</p>
+<p><strong>对比基线</strong>：</p>
+<ol>
+<li><strong>Image-based DP</strong>：基于RGB图像的扩散策略。</li>
+<li>**DP3 (raw point cloud)**：基于原始场景点云的扩散策略。</li>
+<li><strong>Object-centric point cloud diffusion</strong>：基于对象中心点云的扩散策略（最强基线）。</li>
+</ol>
+<p><strong>关键实验结果</strong>：<br>在LEAP Hand上的整体任务成功率如表I所示。DexMulti在训练物体和测试物体上均 consistently outperforms 扩散策略基线。例如，在Grasp+Open任务上，对训练物体的成功率为23/34（约68%），对测试物体为22/31（约71%），而最强的对象中心DP3基线分别为12/34（约35%）和12/31（约39%）。平均而言，DexMulti在训练物体上取得了约66%的平均成功率，仅需每个物体3-4个演示，性能是扩散策略基线的2-3倍。</p>
+<p><img src="https://arxiv.org/html/2603.11655v1/2603.11655v1/x4.png" alt="定性结果与失败分析"></p>
+<blockquote>
+<p><strong>图5</strong>：定性鲁棒性与失败案例分析。<strong>上行</strong>：方法在执行过程中受到中等外部扰动时仍然有效。<strong>下行左</strong>：第一阶段抓握香蕉失败，难以保持稳定的力平衡。<strong>下行右</strong>：拉开阶段失败，手未在正确位置接触抽屉把手。</p>
+</blockquote>
+<p><strong>样本效率分析</strong>：针对Grasp+Open任务，研究了演示数量和质量的影响。</p>
+<ul>
+<li><strong>演示数量</strong>：如图6左所示，DexMiulti仅需<strong>5个演示</strong>即可达到100%成功率，并在此后的所有数据规模下保持完美性能。而对象中心DP3基线在5和10个演示时完全失败，即使在20-50个演示下成功率也仅为30-40%。</li>
+<li><strong>演示多样性</strong>：如图6右所示，在固定总演示数为44个的情况下，增加训练物体的种类（多样性）能提升所有方法的性能，但DexMulti始终优于基线。</li>
+</ul>
+<p><img src="https://arxiv.org/html/2603.11655v1/2603.11655v1/x5.png" alt="样本效率分析"></p>
+<blockquote>
+<p><strong>图6</strong>：样本效率分析。<strong>左</strong>：固定物体，改变演示数量（5,10,20,50）。<strong>右</strong>：改变不同训练物体的数量（4,7,11），总演示数固定为44个。</p>
+</blockquote>
+<p><strong>消融实验与泛化</strong>：</p>
+<ul>
+<li><strong>状态估计表示</strong>：将完整的6D姿态跟踪（使用FoundationPose）与本文的质心+偏航角表示进行对比。在偏航角不可观测的物体（如圆形马克杯）上，6D姿态跟踪器因错误的方向估计而导致操作失败，而本文方法通过抑制不可观测的偏航角更新保持了鲁棒性。</li>
+<li><strong>跨灵巧手泛化</strong>：在未对Allegro Hand进行任何算法修改或重新调参的情况下，直接将为LEAP Hand收集的演示库用于Allegro Hand，在Grasp+Open任务上取得了17/20的成功率，证明了该方法在不同机械结构灵巧手之间的可迁移性。</li>
+</ul>
+<h2 id="总结与启发">总结与启发</h2>
+<p><strong>核心贡献</strong>：</p>
+<ol>
+<li><strong>问题形式化</strong>：形式化了需要并发抓握与非抓握交互的灵巧多任务操作问题，这是一个日常生活中常见但在机器人研究中未被充分探索的场景。</li>
+<li><strong>方法框架</strong>：提出了一种用于长时程灵巧任务的<strong>对象中心技能抽象</strong>，包括基于交互信号的实用关键帧提取流程，以及一个<strong>检索-对齐-执行</strong>框架，该框架通过复用和对齐演示技能，显著提升了空间泛化能力并降低了对演示数据量的需求。</li>
+<li><strong>实证验证</strong>：在超过1000次真实世界实验中进行了全面评估，证明了该方法在有限演示下的高效性、对未见物体的泛化能力以及跨不同灵巧手平台的迁移性。</li>
+</ol>
+<p><strong>局限性</strong>：论文提到的方法依赖于物体位于平面上的假设（简化了姿态表示）。此外，技能执行阶段的开环回放可能在对齐误差或动态干扰下积累误差。接触敏感阶段（如抓握）的失败仍然是主要的失败模式。</p>
+<p><strong>对后续研究的启示</strong>：本文证明了基于技能抽象和检索的方法在数据高效的灵巧操作中具有巨大潜力。后续工作可以探索将技能参数化以适应更广泛的几何变化，引入基于触觉或力反馈的闭环控制来改善接触敏感阶段，以及将该框架扩展到非平面场景和更多阶段的任务中。</p>
+
+      </section>
+      <section class="detail-tldr">
+        <h2>💡 一句话总结</h2>
+        <p>本文针对灵巧手在多阶段任务中同时进行抓握与非抓握操作的核心挑战，提出DexMulti方法。该方法将演示分解为物体中心技能，采用“检索-对齐-执行”范式，通过不确定性感知估计器对齐物体位姿。在三个真实世界多阶段任务中，仅需每个物体3-4次演示即达到66%平均成功率，性能超越扩散策略基线2-3倍，且能泛化至未见物体及±25 cm空间变化。</p>
+      </section>
+      <div class="detail-actions">
+        <a href="http://arxiv.org/abs/2603.11655" target="_blank" rel="noreferrer" class="btn">查看 arXiv 原文</a>
+        <a href="../index.html" class="btn btn-outline">返回列表</a>
+      </div>
+    </article>
+  </main>
+  <footer class="site-footer">
+    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>本页由 GitHub Actions 定时更新</span>
+  </footer>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],throwOnError:false})"></script>
+</body>
+</html>
