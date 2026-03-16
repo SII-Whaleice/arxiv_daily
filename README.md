@@ -1,11 +1,11 @@
-# Robotics arXiv Daily (Web)
+# Embodied arXiv Daily (Web)
 
-This repo hosts a static site that displays the latest robotics papers from Robotics arXiv Daily. A GitHub Actions workflow periodically fetches the source page, generates short Chinese summaries, and writes data to `data/papers.json` for the site to render.
+This repo hosts a static site that displays the latest papers on embodied intelligence, embodied navigation/grasping, and end-to-end autonomous driving. A GitHub Actions workflow periodically queries the arXiv API with tailored search keywords, generates short Chinese summaries, and writes data to `data/papers.json` for the site to render.
 
 ## How it works
 
 - Static site: `index.html` + `assets/`
-- Data source: `https://jiangranlv.github.io/robotics_arXiv_daily/`
+- Data source: arXiv API (auto-driving & embodied intelligence related query)
 - Scheduler: `.github/workflows/update.yml`
 - Fetcher: `scripts/fetch_papers.js`
 - User submit flow: homepage input -> GitHub Issue -> `.github/workflows/issue_add.yml`

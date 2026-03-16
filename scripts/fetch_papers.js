@@ -199,7 +199,7 @@ const buildDetailPage = (paper) => {
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>${paper.title} - Robotics arXiv Daily</title>
+  <title>${paper.title} - Embodied arXiv Daily</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
@@ -238,7 +238,7 @@ const buildDetailPage = (paper) => {
     </article>
   </main>
   <footer class="site-footer">
-    <span>数据抓取来源于 Robotics arXiv Daily</span>
+    <span>数据抓取来源于 arXiv API（自动驾驶 &amp; 具身智能相关检索）</span>
     <span>本页由 GitHub Actions 定时更新</span>
   </footer>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
