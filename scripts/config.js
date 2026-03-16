@@ -1,6 +1,8 @@
 const path = require("path");
 
-const SOURCE_URL = "https://jiangranlv.github.io/robotics_arXiv_daily/";
+// 仅用于在生成的数据中标记来源说明，不再直接抓取该 URL。
+// 实际论文列表由 scripts/fetch_papers.js 通过 arXiv API 拉取。
+const SOURCE_URL = "arXiv API: auto-driving + embodied navigation/manipulation";
 const OUTPUT_PATH = path.join("data", "papers.json");
 const MAX_ITEMS = Number(process.env.MAX_ITEMS || 60);
 const LLM_ENABLE = String(process.env.LLM_ENABLE || "true") !== "false";

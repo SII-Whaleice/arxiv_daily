@@ -31,53 +31,72 @@ const readExisting = (filePath) => {
   }
 };
 
-/* ── parse table rows from source page ───────────────── */
+/* ── fetch candidate papers from arXiv API ───────────── */
 
-const extractCurrentCategory = (html, pos) => {
-  const before = html.slice(0, pos);
-  const headings = [...before.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
-  if (!headings.length) return "";
-  return stripTags(headings[headings.length - 1][1]);
-};
-
-const extractItems = (html) => {
-  const rowRegex = /<tr>([\s\S]*?)<\/tr>/gi;
-  const items = [];
-  const seen = new Set();
-
+// 从 arXiv Atom Feed 中解析出 entry 列表
+const extractEntriesFromAtom = (xml) => {
+  const entries = [];
+  const entryRegex = /<entry>([\s\S]*?)<\/entry>/gi;
   let match;
-  while ((match = rowRegex.exec(html)) !== null) {
-    const row = match[1];
-    const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
-      m[1]
+  while ((match = entryRegex.exec(xml)) !== null) {
+    const entry = match[1];
+
+    const idMatch = entry.match(/<id>([\s\S]*?)<\/id>/i);
+    const id = idMatch ? idMatch[1].trim() : "";
+    if (!id || !id.includes("arxiv.org/abs/")) continue;
+
+    const titleMatch = entry.match(/<title>([\s\S]*?)<\/title>/i);
+    const title = titleMatch ? stripTags(titleMatch[1]) : "arXiv Paper";
+
+    const publishedMatch = entry.match(/<published>([\s\S]*?)<\/published>/i);
+    const date = publishedMatch ? publishedMatch[1].trim().slice(0, 10) : "";
+
+    const authorNames = [...entry.matchAll(/<name>([\s\S]*?)<\/name>/gi)].map(
+      (m) => stripTags(m[1])
     );
-    if (cells.length < 4) continue;
+    const authors = authorNames.join(", ");
 
-    // Col 0: date, Col 1: title (<strong>), Col 2: authors, Col 3: PDF link
-    const titleRaw = stripTags(cells[1]);
-    const dateRaw = stripTags(cells[0]);
-    const authorsRaw = stripTags(cells[2]);
+    const catMatch = entry.match(/<category[^>]*term=["']([^"']+)["']/i);
+    const category = catMatch ? catMatch[1].trim() : "";
 
-    const linkMatch = cells[3].match(
-      /<a[^>]*href=["'](https?:\/\/arxiv\.org\/abs\/[^"']+)["']/i
-    );
-    const url = linkMatch ? linkMatch[1] : null;
-    if (!url || seen.has(url)) continue;
-
-    const category = extractCurrentCategory(html, match.index);
-
-    items.push({
-      url,
-      title: titleRaw || "arXiv Paper",
-      date: dateRaw,
-      authors: authorsRaw,
+    entries.push({
+      url: id,
+      title,
+      date,
+      authors,
       category,
     });
-    seen.add(url);
 
-    if (items.length >= MAX_ITEMS) break;
+    if (entries.length >= MAX_ITEMS) break;
   }
+  return entries;
+};
 
+// 构造针对自动驾驶 + 具身智能的搜索查询，并从 arXiv API 拉取候选论文
+const fetchCandidateItemsFromArxiv = async () => {
+  const baseUrl = "https://export.arxiv.org/api/query";
+  // 关注 cs.RO / cs.CV / cs.LG 中，带有自动驾驶 / 具身 / 导航 / 抓取等关键词的论文
+  const searchQuery =
+    '((cat:cs.RO OR cat:cs.CV OR cat:cs.LG) AND (all:"autonomous driving" OR all:"end-to-end driving" OR all:"self-driving" OR all:"embodied" OR all:"embodied navigation" OR all:"navigation" OR all:"grasping" OR all:"manipulation"))';
+
+  const params = new URLSearchParams({
+    search_query: searchQuery,
+    sortBy: "submittedDate",
+    sortOrder: "descending",
+    max_results: String(MAX_ITEMS * 2), // 多抓一点，后面再用 LLM 过滤
+  });
+
+  const url = `${baseUrl}?${params.toString()}`;
+  console.log(`\n========== Phase 1: 从 arXiv API 抓取候选论文 ==========`);
+  console.log(`Query URL: ${url}`);
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch arXiv API: ${res.status}`);
+  }
+  const xml = await res.text();
+  const items = extractEntriesFromAtom(xml);
+  console.log(`从 arXiv API 解析到 ${items.length} 篇候选论文`);
   return items;
 };
 
@@ -433,16 +452,8 @@ const main = async () => {
     console.log("FORCE_ARXIV_INPUT 已提供，但 FORCE_ADD_SINGLE 未开启，忽略单篇强制入库参数。");
   }
 
-  const response = await fetch(SOURCE_URL);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch source: ${response.status}`);
-  }
-
-  const html = await response.text();
-  const allItems = extractItems(html);
-
-  console.log(`\n========== Phase 1: 解析 ==========`);
-  console.log(`从源页面解析到 ${allItems.length} 篇论文`);
+  // Phase 1: 从 arXiv API 拉取候选论文（自动驾驶 + 具身导航/抓取相关）
+  const allItems = await fetchCandidateItemsFromArxiv();
 
   const existing = readExisting(outputPath);
 
